@@ -1,0 +1,13 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <ItemGroup>
+    <PackageReference Include="System.Data.OleDb" />
+    <PackageReference Include="System.Text.Json" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\MMIv8_Ktype.Api\MMIv8_Ktype.Api.csproj" />
+    <ProjectReference Include="..\MMIv8_Ktype.Models\MMIv8_Ktype.Models.csproj" />
+  </ItemGroup>
+
+</Project>

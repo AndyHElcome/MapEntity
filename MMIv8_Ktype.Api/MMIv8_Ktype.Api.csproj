@@ -1,0 +1,5 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+  <ItemGroup>
+    <ProjectReference Include="..\MMIv8_Ktype.Models\MMIv8_Ktype.Models.csproj" />
+  </ItemGroup>
+</Project>
