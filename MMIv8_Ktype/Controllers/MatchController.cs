@@ -12,22 +12,22 @@ namespace MMIv8_Ktype.Core.Controllers
                                  MappingService MappingService,
                                  BulkMappingService BulkMappingService) : ControllerBase
     {
-        [HttpPost("MatchEntity/GenerateEntityMatchCSV")]
+        [HttpPost("MatchEntity/GenerateEntityMatchCSV")] //TODO change to stream call
         public async Task<IActionResult> GenerateEntityMatchCSV()
         {
             return Ok(await BulkMappingService.GenerateEntityMatch());
         }
 
-        [HttpPost("MatchEntity/GenerateEntityMatchRefineCSV")]
+        [HttpPost("MatchEntity/GenerateEntityMatchRefineCSV")] //TODO change to stream call
         public async Task<IActionResult> GenerateEntityMatchRefineCSV()
         {
             return Ok(await BulkMappingService.GenerateEntityMatchRefine());
         }
 
         [HttpPost("MatchEntity/UpdateMatchedFlag")]
-        public async Task<IActionResult> UpdateMatchedFlag(int KTypNr, int MMI_V8_Key, bool Matched, string? Detail = null)
+        public async Task<IActionResult> UpdateMatchedFlag(int KTypNr, int MMI_V8_Key, bool Flag, string? Detail = null)
         {
-            await MappingService.UpdateMatchedFlag([new UpdateEntityMatchFlag(KTypNr, MMI_V8_Key, Matched, Detail) ]);
+            await MappingService.UpdateMatchedFlag([new UpdateEntityMatchFlag(KTypNr, MMI_V8_Key, Flag, Detail) ]);
             return Ok("updated");
         }
 
@@ -39,9 +39,9 @@ namespace MMIv8_Ktype.Core.Controllers
         }
 
         [HttpPost("MatchEntity/UpdateFailedFlag")]
-        public async Task<IActionResult> UpdateFailedFlag(int KTypNr, int MMI_V8_Key, bool Matched, string? Detail = null)
+        public async Task<IActionResult> UpdateFailedFlag(int KTypNr, int MMI_V8_Key, bool Flag, string? Detail = null)
         {
-            await MappingService.UpdateFailedFlag([new UpdateEntityMatchFlag(KTypNr, MMI_V8_Key, Matched, Detail) ]);
+            await MappingService.UpdateFailedFlag([new UpdateEntityMatchFlag(KTypNr, MMI_V8_Key, Flag, Detail) ]);
             return Ok("updated");
         }
 
@@ -66,7 +66,7 @@ namespace MMIv8_Ktype.Core.Controllers
         }
 
         [HttpPost("MakeModel/CreateMakeModelMatch")]
-        public async Task<IActionResult> CreateModelMatch(ImportMatchMakeModel model)
+        public async Task<IActionResult> CreateMakeModelMatch(ImportMatchMakeModel model)
         {
             await MappingService.CreateModelMatch([model]);
 
@@ -95,7 +95,7 @@ namespace MMIv8_Ktype.Core.Controllers
         }
 
         [HttpPost("Base/UpdateMatchBaseScore")]
-        public async Task<IActionResult> UpdateMatchScore(MatchBaseType MatchBaseType, string MatchHash, decimal NewScore)
+        public async Task<IActionResult> UpdateMatchBaseScore(MatchBaseType MatchBaseType, string MatchHash, decimal NewScore)
         {
             await MappingService.UpdateMatchScore(MatchBaseType, MatchHash, NewScore);
             return Ok("updated");
@@ -108,15 +108,15 @@ namespace MMIv8_Ktype.Core.Controllers
             return Ok("created");
         }
 
-        [HttpPost("Base/ImportMatchBaseCSV")]
-        public async Task<IActionResult> ImportMatchBase(string Path = "C:\\Users\\andy.hargreaves\\OneDrive - Elcome Ltd\\Desktop\\NEW MMI TO KTYPE\\IMPORT_Body.csv")
+        [HttpPost("Base/ImportMatchBaseCSV")] //TODO change to stream call
+        public async Task<IActionResult> ImportMatchBaseCSV(string Path = "C:\\Users\\andy.hargreaves\\OneDrive - Elcome Ltd\\Desktop\\NEW MMI TO KTYPE\\IMPORT_Body.csv")
         {
             await BulkMappingService.ImportMatchBase(Path);
             return Ok("updated");
         }
 
         [HttpPost("Check/EntityMatch")]
-        public async Task<IActionResult> CheckMatchVadlidity(int KtypNr, int MMI_V8_Key)
+        public async Task<IActionResult> EntityMatch(int KtypNr, int MMI_V8_Key)
         {
             return Ok(await MappingService.CheckMatchVadlidity(KtypNr, MMI_V8_Key));
         }

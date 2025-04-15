@@ -1,10 +1,11 @@
 ﻿using MMIv8_Ktype.Models.Util;
+using MMIv8_Ktype.Models.Collections;
 using System.Net.Http.Json;
 using System.Web;
 
 namespace MMIv8_Ktype.Api
 {
-    public abstract class MMIv8_KtypeHttpClient(string EndPoint)
+    public abstract class MMIv8_KtypeHttpClient(string EndPoint) // TODO change to typed http client https://youtu.be/g-JGay_lnWI?si=PcTbMzsieV3CUG4G
     {
         public readonly HttpClient HttpClient = new HttpClient();
         private readonly static string Scheme = "https";
@@ -98,6 +99,14 @@ namespace MMIv8_Ktype.Api
         }
     }
 
+    public class CreateMakeModelMatch : PostCall
+    {
+        public CreateMakeModelMatch(ImportMatchMakeModel model) : base("Match/MakeModel/CreateMakeModelMatch")
+        {
+            this.SetJsonContent(model);
+        }
+    }
+
     public class StorePartialMatchBase : PostCall
     {
         public StorePartialMatchBase(MatchBaseType matchBaseType, string matchHash, decimal? newScore = null) : base("Match/Base/StorePartialMatchBase")
@@ -116,6 +125,25 @@ namespace MMIv8_Ktype.Api
         {
             this.AddParameter("MatchBaseType", matchBaseType.ToString());
             this.AddParameter("MatchHash", matchHash);
+        }
+    }
+
+    public class UpdateMatchBaseScore : PostCall
+    {
+        public UpdateMatchBaseScore(MatchBaseType matchBaseType, string matchHash, decimal newScore) : base("Match/Base/UpdateMatchBaseScore")
+        {
+            this.AddParameter("MatchBaseType", matchBaseType.ToString());
+            this.AddParameter("MatchHash", matchHash);
+            this.AddParameter("NewScore", newScore.ToString() ?? throw new NullReferenceException($"Unexpected null value whilst converting decimal"));
+        }
+    }
+
+    public class EntityMatch : PostCall
+    {
+        public EntityMatch(int KtypNr, int MMI_V8_Key) : base("Match/Check/EntityMatch")
+        {
+            this.AddParameter("KtypNr", KtypNr.ToString());
+            this.AddParameter("MMI_V8_Key", MMI_V8_Key.ToString());
         }
     }
 
