@@ -58,22 +58,14 @@ namespace MMIv8_Ktype.Core.Controllers
             await MappingService.UpdateMatchRefineStatus(MMI_V8_Keys);
             return Ok("updated");
         }
-
-        [HttpPost("MakeModel/GenerateModelMatchCSV")]
+        
+        [HttpPost("MatchMakeModel/GenerateModelMatchCSV")]
         public async Task<IActionResult> GenerateModelMatchCSV()
         {
             return Ok(await BulkMappingService.GenerateModelMatch());
         }
 
-        [HttpPost("MakeModel/CreateMakeModelMatch")]
-        public async Task<IActionResult> CreateMakeModelMatch(ImportMatchMakeModel model)
-        {
-            await MappingService.CreateModelMatch([model]);
-
-            return Ok("created");
-        }
-
-        [HttpPost("MakeModel/ImportModelMatchCSV")]
+        [HttpPost("MatchMakeModel/ImportModelMatchCSV")]
         public async Task<IActionResult> ImportModelMatchCSV(string Path = "D:\\GIT\\MMIv8_Ktype\\Outputs\\modelMatchLoad.csv")
         {
             await BulkMappingService.ImportModelMatch(Path);

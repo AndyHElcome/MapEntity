@@ -61,6 +61,35 @@ namespace MMIv8_Ktype.Core.Services.Mapping
             await Task.WhenAll(tasks);
         }
 
+        public async Task<ObjectId> CreateMakeModelMatch(ImportMatchMakeModel matchMakeModel)
+        {
+            var existingModelMatch = await MatchMakeModelService.GetByModelIds(matchMakeModel);
+
+            if (existingModelMatch is not null)
+            {
+                Log.Information("MakeModelMatch already exists, skipping match: TD '{TD_SourceEntityModelHash}' MMI '{MMI_SourceEntityModelHash}'", matchMakeModel.TD_SourceEntityModelHash, matchMakeModel.MMI_SourceEntityModelHash);
+                return existingModelMatch.MatchID;
+            }
+
+            MatchMakeModel newMatchMakeModel = new(
+                tecDocModel: matchMakeModel.TD_SourceEntityModelHash == string.Empty ? new() : await SourceTecDocEntityModelService.GetById(matchMakeModel.TD_SourceEntityModelHash) ?? new(),
+                mmiv8Model: matchMakeModel.MMI_SourceEntityModelHash == string.Empty ? new() : await SourceMMIv8EntityModelService.GetById(matchMakeModel.MMI_SourceEntityModelHash) ?? new(),
+                versionProvider
+                );
+
+            await MatchMakeModelService.Create(newMatchMakeModel);
+
+            if (newMatchMakeModel.TecDocModel.SourceEntityModelHash is not null && newMatchMakeModel.MMIv8Model.SourceEntityModelHash is not null)
+            {
+                await StoreEntityMatch(newMatchMakeModel);
+
+                var filter = Builders<MatchEntity>.Filter.Eq(c => c.MatchMakeModelMatchID, newMatchMakeModel.MatchID);
+                await RecalculateMatchBase(filter);
+            }
+
+            return newMatchMakeModel.MatchID;
+        }
+
         public async Task DeleteModelMatch(List<ImportMatchMakeModel> matchMakeModels)
         {
             foreach (var matchMakeModel in matchMakeModels)
@@ -80,6 +109,46 @@ namespace MMIv8_Ktype.Core.Services.Mapping
 
                 await MatchEntityService.Delete(filter);
             }
+        }
+
+        public async Task<ObjectId?> DeleteMakeModelMatch(ImportMatchMakeModel matchMakeModel)
+        {
+            var modelMatch = await MatchMakeModelService.GetByModelIds(matchMakeModel);
+
+            if (modelMatch is null)
+            {
+                Log.Information("MakeModelMatch does not exist, skipping deletion: TD '{TD_SourceEntityModelHash}' MMI '{MMI_SourceEntityModelHash}'", matchMakeModel.TD_SourceEntityModelHash, matchMakeModel.MMI_SourceEntityModelHash);
+                return null;
+            }
+
+            await MatchMakeModelService.Delete(modelMatch);
+
+            var filterBuilder = Builders<MatchEntity>.Filter;
+            var filter = filterBuilder.Eq(c => c.MatchMakeModelMatchID, modelMatch.MatchID);
+
+            await MatchEntityService.Delete(filter);
+
+            return modelMatch.MatchID;
+        }
+
+        public async Task<ObjectId?> DeleteMakeModelMatch(ObjectId matchID)
+        {
+            var modelMatch = await MatchMakeModelService.GetById(matchID);
+
+            if (modelMatch is null)
+            {
+                Log.Information("MakeModelMatch does not exist {matchID}", matchID);
+                return null;
+            }
+
+            await MatchMakeModelService.Delete(modelMatch);
+
+            var filterBuilder = Builders<MatchEntity>.Filter;
+            var filter = filterBuilder.Eq(c => c.MatchMakeModelMatchID, modelMatch.MatchID);
+
+            await MatchEntityService.Delete(filter);
+
+            return modelMatch.MatchID;
         }
 
         #endregion
@@ -398,13 +467,13 @@ namespace MMIv8_Ktype.Core.Services.Mapping
             {
                 var newMatches = GenerateEntityMatch(await tecdocEntities.ToListAsync(), await mmiEntities.ToListAsync(), makeModelMatch.MatchID);
 
-
                 await foreach (var match in newMatches)
                 {
                     if (match.Any())
                         createTasks.Add(MatchEntityService.BulkCreateEntityMatch(match.ToList()));
                 }
             }
+
             Task.WaitAll(createTasks.ToArray());
         }
 

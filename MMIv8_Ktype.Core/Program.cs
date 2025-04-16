@@ -11,6 +11,7 @@ using MMIv8_Ktype.Core.Contexts;
 using MMIv8_Ktype.Core.Services.Match;
 using MMIv8_Ktype.Core.Services.Mapping;
 using MMIv8_Ktype.Core.Services.Source;
+using MMIv8_Ktype.Core.Endpoints;
 
 internal class Program
 {
@@ -103,6 +104,7 @@ internal class Program
         app.UseAuthorization();
 
         app.MapControllers();
+        app.MapEndpoints();
 
         app.Run();
     }

@@ -3,7 +3,10 @@ using MMIv8_Ktype.Models.Collections;
 using System.Net.Http.Json;
 using System.Web;
 using Serilog;
+using MongoDB.Bson;
 
+// minimal endpoint https://youtu.be/gsAuFIhXz3g?si=MfaGxzKFgLlgWIbR
+// reflection endpoint mapping https://youtu.be/CkGFV5bekbY?si=GkVIYuPIObrZDMu1
 namespace MMIv8_Ktype.Api
 {
     public sealed class MMIv8_KtypeService
@@ -17,7 +20,27 @@ namespace MMIv8_Ktype.Api
 
         public async Task<MMIv8_Ktype.Models.Collections.Version?> GetCurrentVersion()
         {
-            return await this.GetFromJsonAsync<MMIv8_Ktype.Models.Collections.Version>("version/currentversion");
+            return await _httpClient.GetFromJsonAsync<MMIv8_Ktype.Models.Collections.Version>("Version/CurrentVersion");
+        }
+
+        public async Task<HttpResponseMessage> CreateMakeModelMatch(ImportMatchMakeModel model) 
+        {
+            return await _httpClient.PostAsJsonAsync("api/MatchMakeModel", model);
+        }
+
+        public async Task<HttpResponseMessage> GetMakeModelMatch(ImportMatchMakeModel model) 
+        {
+            return await _httpClient.PostAsJsonAsync("api/MatchMakeModel/GetMakeModelMatch", model);
+        }
+
+        public async Task<MatchMakeModel?> GetMakeModelMatchById(ObjectId MatchID) 
+        {
+            return await _httpClient.GetFromJsonAsync<MMIv8_Ktype.Models.Collections.MatchMakeModel>($"api/MatchMakeModel/GetMakeModelMatchById/{MatchID}");
+        }
+
+        public async Task<HttpResponseMessage> DeleteMakeModelMatch(ObjectId MatchID) 
+        {
+            return await _httpClient.DeleteAsync($"api/MatchMakeModel/DeleteMakeModelMatch/{MatchID}");
         }
 
         private async Task<T?> GetFromJsonAsync<T>(string endPoint)
@@ -77,6 +100,16 @@ namespace MMIv8_Ktype.Api
         {
             foreach (var parameter in parameters)
                 this.AddParameter(parameter);
+        }
+
+        public void AddParameter(object parameters)
+        {
+            this.AddParameter(MMIv8_Ktype.Models.GlobalHelpers.ObjToDictionary(parameters));
+        }
+
+        public void AddParameter(params string[] parameters)
+        {
+            this.AddParameter(MMIv8_Ktype.Models.GlobalHelpers.ObjToDictionary(parameters));
         }
 
         public abstract Task<HttpContent> MakeCall(Serilog.ILogger Log);
