@@ -71,7 +71,7 @@ internal class Program
         Log.Logger = new LoggerConfiguration()
             .MinimumLevel.Debug()
             .WriteTo.Console(outputTemplate: "[{Level:u3}] {Message:l}{NewLine}{Exception}")
-            .WriteTo.File($"..\\MMIv8_Ktype\\Logs\\Log.txt",
+            .WriteTo.File($"..\\MMIv8_Ktype.Core\\Logs\\Log.txt",
                           rollOnFileSizeLimit: true,
                           fileSizeLimitBytes: 1048576,
                           shared: true,
