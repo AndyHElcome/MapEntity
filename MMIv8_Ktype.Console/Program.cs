@@ -2,11 +2,23 @@
 using Serilog.Events;
 using Serilog;
 using System.Reflection;
+using MMIv8_Ktype.Api;
 
 internal class Program
 {
     static async Task Main(string[] args)
     {
+        using var httpClient = new HttpClient();
+        //t.DefaultRequestHeaders.Add("Authorization", "");
+        //t.DefaultRequestHeaders.Add("User-Agent", "");
+        httpClient.DefaultRequestHeaders.Add("Accept", "application/json");
+        httpClient.DefaultRequestHeaders.Add("Cache-Control", "no-cache");
+        httpClient.BaseAddress = new Uri("https://localhost:44304");
+
+        var mmiv8_KtypeService = new MMIv8_KtypeService(httpClient);
+
+        var t = mmiv8_KtypeService.GetCurrentVersion();
+
         Serilog.ILogger Log = new LoggerConfiguration()
         .MinimumLevel.Debug()
         .WriteTo.Console(outputTemplate: "[{Level:u3}] {Message:l}{NewLine}{Exception}")
@@ -25,8 +37,6 @@ internal class Program
             Console.WriteLine("Usage: <ClassName> <ConstructorArgs...>");
             return;
         }
-
-        var t = new MMIv8_Ktype.AccessMdb.Operations.StorePartialMatchBase("","");
 
         string library = args[ 0 ];
         string className = args[ 1 ];

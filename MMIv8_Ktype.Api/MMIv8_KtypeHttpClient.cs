@@ -2,9 +2,42 @@
 using MMIv8_Ktype.Models.Collections;
 using System.Net.Http.Json;
 using System.Web;
+using Serilog;
 
 namespace MMIv8_Ktype.Api
 {
+    public sealed class MMIv8_KtypeService
+    {
+        private readonly HttpClient _httpClient;
+
+        public MMIv8_KtypeService(HttpClient httpClient)
+        {
+            _httpClient = httpClient;
+        }
+
+        public async Task<MMIv8_Ktype.Models.Collections.Version?> GetCurrentVersion()
+        {
+            return await this.GetFromJsonAsync<MMIv8_Ktype.Models.Collections.Version>("version/currentversion");
+        }
+
+        private async Task<T?> GetFromJsonAsync<T>(string endPoint)
+        {
+            try
+            {
+                Log.Information("Making GetFromJsonAsync call to {URI}", _httpClient.BaseAddress + endPoint);
+                var response = await _httpClient.GetFromJsonAsync<T?>(endPoint);
+
+                return response;
+            }
+            catch (Exception ex)
+            {
+                Log.Error(ex, "Making GetFromJsonAsync call to {URI}", _httpClient.BaseAddress + endPoint);
+                throw;
+            }
+
+        }
+    }
+
     public abstract class MMIv8_KtypeHttpClient(string EndPoint) // TODO change to typed http client https://youtu.be/g-JGay_lnWI?si=PcTbMzsieV3CUG4G
     {
         public readonly HttpClient HttpClient = new HttpClient();
