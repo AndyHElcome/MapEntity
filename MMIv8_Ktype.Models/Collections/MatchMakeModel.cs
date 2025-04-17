@@ -21,9 +21,10 @@ namespace MMIv8_Ktype.Models.Collections
         public StatusHistory Status { get; set; }
 
         [Obsolete("VersionProvider Required", true)]
+        [BsonConstructor]
         public MatchMakeModel()
         {
-            throw new NotImplementedException("VersionProvider Required");
+            //throw new NotImplementedException("VersionProvider Required");
         }
 
         public MatchMakeModel(MongoSourceEntityModel tecDocModel, MongoSourceEntityModel mmiv8Model, IVersionProvider versionProvider)
@@ -46,21 +47,6 @@ namespace MMIv8_Ktype.Models.Collections
             //Map(m => m.StatusHistory).TypeConverter<StatusHistoryConverter>();
 
             References<StatusHistoryMap>(m => m.Status);
-        }
-    }
-
-    public class ImportMatchMakeModel
-    {
-        public string TD_SourceEntityModelHash { get; set; } = string.Empty;
-        public string MMI_SourceEntityModelHash { get; set; } = string.Empty;
-        public bool DeleteMatch { get; set; } = false;
-    }
-
-    public sealed class ImportMatchMakeModelMap : ClassMap<ImportMatchMakeModel>
-    {
-        public ImportMatchMakeModelMap()
-        {
-            AutoMap(CultureInfo.InvariantCulture);
         }
     }
 }

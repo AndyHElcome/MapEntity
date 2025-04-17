@@ -1,6 +1,6 @@
 @MMIv8_Ktype_HostAddress = https://localhost:44304
 
-GET {{MMIv8_Ktype_HostAddress}}/Version/CurrentVersion/
+POST {{MMIv8_Ktype_HostAddress}}/Version/GetCurrentVersion/
 Accept: application/json
 Cache-Control: no-cache
 

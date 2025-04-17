@@ -43,14 +43,14 @@ namespace MMIv8_Ktype.AccessMdb.Operations
                 var newScore = reader[ "NewScore" ]?.ToString() ?? throw new NullReferenceException("Unexpected null");
 
 
-                var storePartialMatchBase = new Api.StorePartialMatchBase(
-                    matchBaseType,
-                    matchHash,
-                    Convert.ToDecimal(newScore)
-                    );
+                //var storePartialMatchBase = new Api.StorePartialMatchBase(
+                //    matchBaseType,
+                //    matchHash,
+                //    Convert.ToDecimal(newScore)
+                //    );
 
 
-                var r = await storePartialMatchBase.MakeCall(Log);
+                //var r = await storePartialMatchBase.MakeCall(Log);
 
             }
 

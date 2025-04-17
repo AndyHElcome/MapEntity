@@ -4,6 +4,13 @@ using System.Net.Http.Json;
 using System.Web;
 using Serilog;
 using MongoDB.Bson;
+using System.Net.Http;
+using System.Text.Json;
+using System.Text.Json.Serialization;
+using MMIv8_Ktype.Models;
+using System.Text.Json.Serialization.Metadata;
+using MongoDB.Driver;
+using MMIv8_Ktype.Models.Requests;
 
 // minimal endpoint https://youtu.be/gsAuFIhXz3g?si=MfaGxzKFgLlgWIbR
 // reflection endpoint mapping https://youtu.be/CkGFV5bekbY?si=GkVIYuPIObrZDMu1
@@ -12,211 +19,128 @@ namespace MMIv8_Ktype.Api
     public sealed class MMIv8_KtypeService
     {
         private readonly HttpClient _httpClient;
+        private readonly ILogger Log;
+        private readonly JsonSerializerOptions jsonSerializerOptions = new();
 
-        public MMIv8_KtypeService(HttpClient httpClient)
+        public MMIv8_KtypeService(HttpClient httpClient, ILogger log)
         {
             _httpClient = httpClient;
+            Log = log;
+            jsonSerializerOptions = jsonSerializerOptions.GetJsonSerializerOptions();
+        }
+
+        #region MakeModelMatch
+        public async Task<ObjectId?> CreateMakeModelMatch(MakeModelMatchRequest request)
+        {
+            return await PostRequestHandler<ObjectId>("MatchMakeModel/CreateMakeModelMatch", request);
+        }
+
+        public async Task<MMIv8_Ktype.Models.Collections.MatchMakeModel?> GetMakeModelMatch(MakeModelMatchRequest request)
+        {
+            return await PostRequestHandler<MMIv8_Ktype.Models.Collections.MatchMakeModel>("MatchMakeModel/GetMakeModelMatch", request);
+        }
+
+        public async Task<MatchMakeModel?> GetMakeModelMatchById(ObjectId MatchID)
+        {
+            return await PostRequestHandler<MMIv8_Ktype.Models.Collections.MatchMakeModel>($"MatchMakeModel/GetMakeModelMatchById/{MatchID}");
+        }
+
+        public async Task<ObjectId> DeleteMakeModelMatch(ObjectId MatchID)
+        {
+            return await PostRequestHandler<ObjectId>($"MatchMakeModel/DeleteMakeModelMatch/{MatchID}");
+        }
+
+        public async Task<List<MatchMakeModel>?> GenerateModelMatch()
+        {
+            return await PostRequestHandler<List<MatchMakeModel>>($"MatchMakeModel/GenerateModelMatch");
+        }
+        #endregion
+
+
+        #region Version
+        public async Task<IAsyncCursor<MMIv8_Ktype.Models.Collections.Version>?> GetAll()
+        {
+            return await PostRequestHandler<IAsyncCursor<MMIv8_Ktype.Models.Collections.Version>>("Version/GetAll");
+        }
+
+        public async Task<MMIv8_Ktype.Models.Collections.Version?> GetByVersion(int VersionNumber)
+        {
+            return await PostRequestHandler<MMIv8_Ktype.Models.Collections.Version>($"Version/GetByVersion/{VersionNumber}");
         }
 
         public async Task<MMIv8_Ktype.Models.Collections.Version?> GetCurrentVersion()
         {
-            return await _httpClient.GetFromJsonAsync<MMIv8_Ktype.Models.Collections.Version>("Version/CurrentVersion");
+            return await PostRequestHandler<MMIv8_Ktype.Models.Collections.Version>("Version/CurrentVersion");
         }
 
-        public async Task<HttpResponseMessage> CreateMakeModelMatch(ImportMatchMakeModel model) 
+        public async Task<MMIv8_Ktype.Models.Collections.Version?> CreateVersion(CreateVersionRequest request)
         {
-            return await _httpClient.PostAsJsonAsync("api/MatchMakeModel", model);
+            return await PostRequestHandler<MMIv8_Ktype.Models.Collections.Version>("Version/CreateVersion", request);
         }
+        #endregion
 
-        public async Task<HttpResponseMessage> GetMakeModelMatch(ImportMatchMakeModel model) 
-        {
-            return await _httpClient.PostAsJsonAsync("api/MatchMakeModel/GetMakeModelMatch", model);
-        }
 
-        public async Task<MatchMakeModel?> GetMakeModelMatchById(ObjectId MatchID) 
-        {
-            return await _httpClient.GetFromJsonAsync<MMIv8_Ktype.Models.Collections.MatchMakeModel>($"api/MatchMakeModel/GetMakeModelMatchById/{MatchID}");
-        }
 
-        public async Task<HttpResponseMessage> DeleteMakeModelMatch(ObjectId MatchID) 
-        {
-            return await _httpClient.DeleteAsync($"api/MatchMakeModel/DeleteMakeModelMatch/{MatchID}");
-        }
-
-        private async Task<T?> GetFromJsonAsync<T>(string endPoint)
+        private async Task<TResponse?> PostRequestHandler<TResponse>(string endpoint)
         {
             try
             {
-                Log.Information("Making GetFromJsonAsync call to {URI}", _httpClient.BaseAddress + endPoint);
-                var response = await _httpClient.GetFromJsonAsync<T?>(endPoint);
-
-                return response;
+                Log.Information("Making POST call to {URI} {request} {response}", _httpClient.BaseAddress + endpoint, typeof(TResponse));
+                var response = await _httpClient.PostAsJsonAsync(endpoint, "", jsonSerializerOptions);
+                response.EnsureSuccessStatusCode();
+                return await response.Content.ReadFromJsonAsync<TResponse>(jsonSerializerOptions);
             }
             catch (Exception ex)
             {
-                Log.Error(ex, "Making GetFromJsonAsync call to {URI}", _httpClient.BaseAddress + endPoint);
-                throw;
+                Log.Error(ex, "Error making POST call to {URI} {request} {response}", _httpClient.BaseAddress + endpoint, typeof(TResponse));
+                return default;
             }
-
-        }
-    }
-
-    public abstract class MMIv8_KtypeHttpClient(string EndPoint) // TODO change to typed http client https://youtu.be/g-JGay_lnWI?si=PcTbMzsieV3CUG4G
-    {
-        public readonly HttpClient HttpClient = new HttpClient();
-        private readonly static string Scheme = "https";
-        private readonly static string Host = "localhost";
-        private readonly static int Port = 44304;
-        private readonly string Endpoint = EndPoint;
-
-        public string Query { get => _query; }
-
-        private string _query = string.Empty;
-
-        public Uri URI => new UriBuilder
-        {
-            Scheme = Scheme,
-            Host = Host,
-            Port = Port,
-            Path = Endpoint,
-            Query = Query
-        }.Uri;
-
-
-        public void AddParameter(string name, string value)
-        {
-            var query = HttpUtility.ParseQueryString(URI.Query);
-            query[ name ] = value;
-
-            this._query = query.ToString() ?? throw new NullReferenceException($"Unexpected null value whilst adding parameter to URI Name {name} Value {value}");
         }
 
-        public void AddParameter(KeyValuePair<string, object> parameter)
-        {
-            this.AddParameter(parameter.Key, parameter.Value.ToString() ?? throw new NullReferenceException($"Unexpected null value whilst converting parameter to string parameter {parameter.ToString()}"));
-        }
-
-        public void AddParameter(Dictionary<string, object> parameters)
-        {
-            foreach (var parameter in parameters)
-                this.AddParameter(parameter);
-        }
-
-        public void AddParameter(object parameters)
-        {
-            this.AddParameter(MMIv8_Ktype.Models.GlobalHelpers.ObjToDictionary(parameters));
-        }
-
-        public void AddParameter(params string[] parameters)
-        {
-            this.AddParameter(MMIv8_Ktype.Models.GlobalHelpers.ObjToDictionary(parameters));
-        }
-
-        public abstract Task<HttpContent> MakeCall(Serilog.ILogger Log);
-    }
-
-    public class PostCall(string EndPoint) : MMIv8_KtypeHttpClient(EndPoint)
-    {
-        public HttpContent? Content { get => _content; }
-        private HttpContent? _content;
-
-        public void SetJsonContent(object contentObject)
-        {
-            _content = JsonContent.Create(contentObject);
-        }
-
-        public override async Task<HttpContent> MakeCall(Serilog.ILogger Log)
+        private async Task<TResponse?> PostRequestHandler<TResponse>(string endpoint, IRequest request)
         {
             try
             {
-                this.AddParameter("Cache-Control", "no-cache");
-                Log.Information("Making POST call to {URI} {Content}", this.URI, Content?.ToString() ?? "");
-                var response = await this.HttpClient.PostAsync(this.URI, Content);
-
+                Log.Information("Making POST call to {URI} {request} {response}", _httpClient.BaseAddress + endpoint, typeof(IRequest), typeof(TResponse));
+                var response = await _httpClient.PostAsJsonAsync(endpoint, request, jsonSerializerOptions);
                 response.EnsureSuccessStatusCode();
-
-                return response.Content;
-            }
-            catch (Exception ex) 
-            {
-                Log.Error(ex, "Error making POST call to {URI}", this.URI);
-                throw;
-            }
-        }
-    }
-
-    public class GetCall(string EndPoint) : MMIv8_KtypeHttpClient(EndPoint)
-    {
-        public override async Task<HttpContent> MakeCall(Serilog.ILogger Log)
-        {
-            try
-            {
-                this.AddParameter("Cache-Control", "no-cache");
-                Log.Information("Making GET call to {URI}", this.URI);
-                var response = await this.HttpClient.GetAsync(this.URI);
-                response.EnsureSuccessStatusCode();
-                return response.Content;
+                return await response.Content.ReadFromJsonAsync<TResponse>(jsonSerializerOptions);
             }
             catch (Exception ex)
             {
-                Log.Error(ex, "Error making GET call to {URI}", this.URI);
-                throw;
+                Log.Error(ex, "Error making POST call to {URI} {request} {response}", _httpClient.BaseAddress + endpoint, typeof(IRequest), typeof(TResponse));
+                return default;
             }
         }
-    }
 
-    public class CreateMakeModelMatch : PostCall
-    {
-        public CreateMakeModelMatch(ImportMatchMakeModel model) : base("Match/MakeModel/CreateMakeModelMatch")
+        private async Task<TResponse?> GetRequestHandler<TResponse>(string endpoint)
         {
-            this.SetJsonContent(model);
+            try
+            {
+                Log.Information("Making GET call to {URI} {response}", _httpClient.BaseAddress + endpoint, typeof(TResponse));
+                return await _httpClient.GetFromJsonAsync<TResponse>(endpoint, jsonSerializerOptions);
+            }
+            catch (Exception ex)
+            {
+                Log.Error(ex, "Error GET POST call to {URI} {response}", _httpClient.BaseAddress + endpoint, typeof(TResponse));
+                return default;
+            }
         }
-    }
 
-    public class StorePartialMatchBase : PostCall
-    {
-        public StorePartialMatchBase(MatchBaseType matchBaseType, string matchHash, decimal? newScore = null) : base("Match/Base/StorePartialMatchBase")
+        private async Task<TResponse?> DeleteRequestHandler<TResponse>(string endpoint)
         {
-            this.AddParameter("MatchBaseType", matchBaseType.ToString());
-            this.AddParameter("MatchHash", matchHash);
-
-            if (newScore is not null)
-                this.AddParameter("NewScore", newScore.ToString() ?? throw new NullReferenceException($"Unexpected null value whilst converting decimal"));
-        }
-    }
-
-    public class RemovePartialMatchBase : PostCall
-    {
-        public RemovePartialMatchBase(MatchBaseType matchBaseType, string matchHash) : base("Match/Base/RemovePartialMatchBase")
-        {
-            this.AddParameter("MatchBaseType", matchBaseType.ToString());
-            this.AddParameter("MatchHash", matchHash);
-        }
-    }
-
-    public class UpdateMatchBaseScore : PostCall
-    {
-        public UpdateMatchBaseScore(MatchBaseType matchBaseType, string matchHash, decimal newScore) : base("Match/Base/UpdateMatchBaseScore")
-        {
-            this.AddParameter("MatchBaseType", matchBaseType.ToString());
-            this.AddParameter("MatchHash", matchHash);
-            this.AddParameter("NewScore", newScore.ToString() ?? throw new NullReferenceException($"Unexpected null value whilst converting decimal"));
-        }
-    }
-
-    public class EntityMatch : PostCall
-    {
-        public EntityMatch(int KtypNr, int MMI_V8_Key) : base("Match/Check/EntityMatch")
-        {
-            this.AddParameter("KtypNr", KtypNr.ToString());
-            this.AddParameter("MMI_V8_Key", MMI_V8_Key.ToString());
-        }
-    }
-
-    public class CurrentVersion : GetCall
-    {
-        public CurrentVersion() : base("Version/CurrentVersion")
-        {
+            try
+            {
+                Log.Information("Making DELETE call to {URI} {response}", _httpClient.BaseAddress + endpoint, typeof(TResponse));
+                var response = await _httpClient.DeleteFromJsonAsync<HttpResponseMessage>(endpoint);
+                response.EnsureSuccessStatusCode();
+                return await response.Content.ReadFromJsonAsync<TResponse>();
+            }
+            catch (Exception ex)
+            {
+                Log.Error(ex, "Error DELETE POST call to {URI} {response}", _httpClient.BaseAddress + endpoint, typeof(TResponse));
+                return default;
+            }
         }
     }
 }

@@ -2,6 +2,7 @@
 using MMIv8_Ktype.Models;
 using MMIv8_Ktype.Models.Collections;
 using MMIv8_Ktype.Models.Indexes;
+using MMIv8_Ktype.Models.Requests;
 using MMIv8_Ktype.Models.Status;
 using MongoDB.Bson;
 using MongoDB.Driver;
@@ -51,11 +52,11 @@ namespace MMIv8_Ktype.Core.Services.Match
             return await BaseContext.GetCursor(Collection, filter);
         }
 
-        public async Task<MatchMakeModel?> GetByModelIds(ImportMatchMakeModel model)
+        public async Task<MatchMakeModel?> GetByModelIds(MakeModelMatchRequest request)
         {
             var builder = Builders<MatchMakeModel>.Filter;
-            var filter = builder.Eq(e => e.TecDocModel.SourceEntityModelHash, model.TD_SourceEntityModelHash)
-                       & builder.Eq(e => e.MMIv8Model.SourceEntityModelHash, model.MMI_SourceEntityModelHash);
+            var filter = builder.Eq(e => e.TecDocModel.SourceEntityModelHash, request.TD_SourceEntityModelHash)
+                       & builder.Eq(e => e.MMIv8Model.SourceEntityModelHash, request.MMI_SourceEntityModelHash);
 
             return await BaseContext.GetSingleDocument(Collection, filter);
         }

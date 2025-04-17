@@ -12,6 +12,12 @@ using MMIv8_Ktype.Core.Services.Match;
 using MMIv8_Ktype.Core.Services.Mapping;
 using MMIv8_Ktype.Core.Services.Source;
 using MMIv8_Ktype.Core.Endpoints;
+using System.Reflection;
+using System.Text.Json.Serialization.Metadata;
+using MMIv8_Ktype.Models.Util;
+using System.Text.Json;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.AspNetCore.Mvc;
 
 internal class Program
 {
@@ -24,16 +30,33 @@ internal class Program
         ConventionRegistry.Register("EnumStringConvention", new ConventionPack { new EnumRepresentationConvention(BsonType.String) }, t => true);
         ConventionRegistry.Register("IgnoreIfNullConvention", new ConventionPack { new IgnoreIfNullConvention(true) }, t => true);
 
-        builder.Services.AddControllers().AddJsonOptions(x =>
-        {
-            // serialize enums as strings in api responses 
-            x.JsonSerializerOptions.Converters.Add(new JsonStringEnumConverter());
+        JsonOptions jsonOptions = new();
+        jsonOptions.JsonSerializerOptions.Converters.Add(new JsonStringEnumConverter());
+        jsonOptions.JsonSerializerOptions.Converters.Add(new JsonObjectIdConverter());
+        jsonOptions.JsonSerializerOptions.DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull;
+        jsonOptions.JsonSerializerOptions.NumberHandling = JsonNumberHandling.AllowReadingFromString;
+        jsonOptions.JsonSerializerOptions.PropertyNameCaseInsensitive = true;
+        jsonOptions.JsonSerializerOptions.PropertyNamingPolicy = JsonNamingPolicy.CamelCase;
+        jsonOptions.JsonSerializerOptions.TypeInfoResolver = new DefaultJsonTypeInfoResolver();
+        jsonOptions.JsonSerializerOptions.WriteIndented = true;
 
-            // ignore omitted parameters on models to enable optional params 
-            x.JsonSerializerOptions.DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull;
 
-            x.JsonSerializerOptions.WriteIndented = true;
-        });
+
+        builder.Services.AddControllers().AddJsonOptions(opts => JsonSerializationOptions.ApplyJsonSettings(opts.JsonSerializerOptions));
+
+        builder.Services.Configure<Microsoft.AspNetCore.Http.Json.JsonOptions>(opts => JsonSerializationOptions.ApplyJsonSettings(opts.SerializerOptions));
+
+        //builder.Services.AddControllers().AddJsonOptions(x =>
+        //{
+        //    // serialize enums as strings in api responses 
+        //    x.JsonSerializerOptions.Converters.Add(new JsonStringEnumConverter());
+        //    x.JsonSerializerOptions.Converters.Add(new JsonObjectIdConverter());
+
+        //    // ignore omitted parameters on models to enable optional params 
+        //    x.JsonSerializerOptions.DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull;
+
+        //    x.JsonSerializerOptions.WriteIndented = true;
+        //});
 
         builder.Services.AddSingleton<MongoDBContext>();
         builder.Services.AddScoped<MongoBaseContext>();
@@ -57,14 +80,6 @@ internal class Program
         builder.Services.AddScoped<MappingService>();
 
 
-
-
-        //builder.Services.AddSingleton<IVersionProvider>(provider =>
-        //    {
-        //        return new VersionProviderMongo(VersionService);
-        //    }
-        //);
-
         // Learn more about configuring Swagger/OpenAPI at https://aka.ms/aspnetcore/swashbuckle
         builder.Services.AddEndpointsApiExplorer();
         builder.Services.AddSwaggerGen();
@@ -81,6 +96,8 @@ internal class Program
             .CreateLogger();
 
         builder.Services.AddSingleton(Log.Logger);
+
+        builder.Services.AddEndpoints(Assembly.GetExecutingAssembly());
 
         var app = builder.Build();
 

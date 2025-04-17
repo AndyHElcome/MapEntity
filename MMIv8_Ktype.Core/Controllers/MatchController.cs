@@ -65,12 +65,12 @@ namespace MMIv8_Ktype.Core.Controllers
             return Ok(await BulkMappingService.GenerateModelMatch());
         }
 
-        [HttpPost("MatchMakeModel/ImportModelMatchCSV")]
-        public async Task<IActionResult> ImportModelMatchCSV(string Path = "D:\\GIT\\MMIv8_Ktype\\Outputs\\modelMatchLoad.csv")
-        {
-            await BulkMappingService.ImportModelMatch(Path);
-            return Ok("created");
-        }
+        //[HttpPost("MatchMakeModel/ImportModelMatchCSV")]
+        //public async Task<IActionResult> ImportModelMatchCSV(string Path = "D:\\GIT\\MMIv8_Ktype\\Outputs\\modelMatchLoad.csv")
+        //{
+        //    await BulkMappingService.ImportModelMatch(Path);
+        //    return Ok("created");
+        //}
 
         [HttpPost("Base/StorePartialMatchBase")]
         public async Task<IActionResult> StorePartialMatchBase(MatchBaseType MatchBaseType, string MatchHash, decimal? NewScore = null)

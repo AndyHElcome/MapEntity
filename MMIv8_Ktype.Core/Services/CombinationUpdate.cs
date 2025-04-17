@@ -137,8 +137,11 @@ namespace MMIv8_Ktype.Core.Services
             return this;
         }
 
-        public async Task<ClientBulkWriteResult> CommitBulkWrite()
+        public async Task<ClientBulkWriteResult?> CommitBulkWrite()
         {
+            if (BulkWriteModels.Count == 0)
+                return new ClientBulkWriteResult();
+
             var results = await MMIv8_Ktype.Client.BulkWriteAsync(BulkWriteModels);
             Log.Debug("Matched {Count} {Type} Inserted: {Inserted} Upserted: {Upserted} Modified: {Modified} Deleted: {Deleted}", results.MatchedCount, "typeof(T)", results.InsertedCount, results.UpsertedCount, results.ModifiedCount, results.DeletedCount);
             return results;

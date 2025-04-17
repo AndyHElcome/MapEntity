@@ -1,6 +1,8 @@
+using Microsoft.AspNetCore.Mvc;
 using MMIv8_Ktype.Core.Services.Mapping;
 using MMIv8_Ktype.Core.Services.Match;
 using MMIv8_Ktype.Models.Collections;
+using MMIv8_Ktype.Models.Requests;
 using MongoDB.Bson;
 
 namespace MMIv8_Ktype.Core.Endpoints
@@ -9,26 +11,34 @@ namespace MMIv8_Ktype.Core.Endpoints
     {
         public void MapEndpoint(IEndpointRouteBuilder routeBuilder)
         {
-            var group = routeBuilder.MapGroup("api/MatchMakeModel");
+            var group = routeBuilder.MapGroup("MatchMakeModel").WithTags("MatchMakeModel");
 
-            group.MapPost("", CreateMakeModelMatch);
-            group.MapPost("", GetMakeModelMatch).WithName(nameof(GetMakeModelMatch));
-            group.MapGet("{MatchID}", GetMakeModelMatchById).WithName(nameof(GetMakeModelMatchById));
-            group.MapDelete("{MatchID}", DeleteMakeModelMatch).WithName(nameof(DeleteMakeModelMatch));
+            group.MapPost(nameof(CreateMakeModelMatch), CreateMakeModelMatch).WithName(nameof(CreateMakeModelMatch));
+            group.MapPost(nameof(GetMakeModelMatch), GetMakeModelMatch).WithName(nameof(GetMakeModelMatch));
+            group.MapPost(nameof(GetMakeModelMatchById) + "/{MatchID}", GetMakeModelMatchById).WithName(nameof(GetMakeModelMatchById));
+            group.MapPost(nameof(DeleteMakeModelMatch) + "/{MatchID}", DeleteMakeModelMatch).WithName(nameof(DeleteMakeModelMatch));
+            group.MapPost(nameof(GenerateModelMatch), GenerateModelMatch).WithName(nameof(GenerateModelMatch));
         }
 
-        public static async Task<IResult> CreateMakeModelMatch(ImportMatchMakeModel request, MappingService mappingService) //Can change to TypeResults for Swagger
+        public static async Task<IResult> CreateMakeModelMatch(MakeModelMatchRequest request, MappingService mappingService) //Can change to TypeResults for Swagger
         {
-            var response = await mappingService.CreateMakeModelMatch(request);
+            try
+            {
+                var response = await mappingService.CreateMakeModelMatch(request);
 
-            return Results.Created($"api/matchmakemodel/{response}", response);
+                return Results.Created($"api/matchmakemodel/{response}", response);
+            }
+            catch
+            {
+                return Results.InternalServerError();
+            }
         }
 
-        public static async Task<IResult> GetMakeModelMatch(ImportMatchMakeModel request, MatchMakeModelService matchMakeModelService)
+        public static async Task<IResult> GetMakeModelMatch(MakeModelMatchRequest request, MatchMakeModelService matchMakeModelService)
         {
             var response = await matchMakeModelService.GetByModelIds(request);
 
-            if (response is null)
+            if (response is not null)
             {
                 return Results.Ok(response);
             }
@@ -42,9 +52,9 @@ namespace MMIv8_Ktype.Core.Endpoints
         {
             var response = await matchMakeModelService.GetById(MatchID);
 
-            if (response is null)
+            if (response is not null)
             {
-                return Results.Ok(response);
+                return Results.Ok<MatchMakeModel>(response);
             }
             else
             {
@@ -58,7 +68,7 @@ namespace MMIv8_Ktype.Core.Endpoints
 
             if (response is not null)
             {
-                return Results.NoContent();
+                return Results.Ok(response);
             }
             else
             {
@@ -66,6 +76,19 @@ namespace MMIv8_Ktype.Core.Endpoints
             }
         }
 
+        public static async Task<IResult> GenerateModelMatch(BulkMappingService bulkMappingService)
+        {
+            var response = await bulkMappingService.GenerateModelMatch();
+
+            if (response is not null)
+            {
+                return Results.Ok(response);
+            }
+            else
+            {
+                return Results.NotFound();
+            }
+        }
 
     }
 }

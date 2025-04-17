@@ -4,6 +4,7 @@ using MMIv8_Ktype.Core.Services.Match;
 using MMIv8_Ktype.Core.Services.Source;
 using MMIv8_Ktype.Models;
 using MMIv8_Ktype.Models.Collections;
+using MMIv8_Ktype.Models.Requests;
 using MMIv8_Ktype.Models.Status;
 using MMIv8_Ktype.Models.Util;
 using MongoDB.Bson;
@@ -25,7 +26,7 @@ namespace MMIv8_Ktype.Core.Services.Mapping
     {
         #region Match Make Model
 
-        public async Task CreateModelMatch(List<ImportMatchMakeModel> matchMakeModels)
+        public async Task CreateModelMatch(List<MakeModelMatchRequest> matchMakeModels)
         {
             List<ObjectId> createdMakeModels = new();
             List<Task> tasks = new();
@@ -61,7 +62,7 @@ namespace MMIv8_Ktype.Core.Services.Mapping
             await Task.WhenAll(tasks);
         }
 
-        public async Task<ObjectId> CreateMakeModelMatch(ImportMatchMakeModel matchMakeModel)
+        public async Task<ObjectId> CreateMakeModelMatch(MakeModelMatchRequest matchMakeModel)
         {
             var existingModelMatch = await MatchMakeModelService.GetByModelIds(matchMakeModel);
 
@@ -90,7 +91,7 @@ namespace MMIv8_Ktype.Core.Services.Mapping
             return newMatchMakeModel.MatchID;
         }
 
-        public async Task DeleteModelMatch(List<ImportMatchMakeModel> matchMakeModels)
+        public async Task DeleteModelMatch(List<MakeModelMatchRequest> matchMakeModels)
         {
             foreach (var matchMakeModel in matchMakeModels)
             {
@@ -111,7 +112,7 @@ namespace MMIv8_Ktype.Core.Services.Mapping
             }
         }
 
-        public async Task<ObjectId?> DeleteMakeModelMatch(ImportMatchMakeModel matchMakeModel)
+        public async Task<ObjectId?> DeleteMakeModelMatch(MakeModelMatchRequest matchMakeModel)
         {
             var modelMatch = await MatchMakeModelService.GetByModelIds(matchMakeModel);
 
@@ -273,8 +274,6 @@ namespace MMIv8_Ktype.Core.Services.Mapping
 
             var sw = Stopwatch.StartNew();
 
-            List<Task<IEnumerable<CombinationPipeline<MatchEntity>>>> matchRefineTasks = new();
-
             foreach (var groupedMatchBase in matchBaseDict.Where(c => c.Value.Any()))
             {
                 Log.Debug("Starting {MatchBaseType} {time}", groupedMatchBase.Key, sw);
@@ -300,10 +299,7 @@ namespace MMIv8_Ktype.Core.Services.Mapping
 
                         CombinationPipeline<MatchEntity> matchEntityUpdate = MatchEntityService.UpdateMissingMatchBase(newMatchBase, filter);
                         var matchEntityUpdateResult = await matchEntityUpdate.UpdateDocuments();
-                        
-                        if(matchEntityUpdateResult?.ModifiedCount > 0)
-                            matchRefineTasks.Add(MatchEntityService.CombinationUpdateMatchRefinesList(matchEntityUpdate.Filter));
-                        
+                                                
                     }
                 }
 
@@ -320,21 +316,19 @@ namespace MMIv8_Ktype.Core.Services.Mapping
             sw.Restart();
 
 
-                Log.Debug("Starting Revalidation {time}", sw);
-                var validationResult = await new CombinationPipeline<MatchEntity>(MatchEntityService.Collection, filter)
-                                                               .AppendPipeline(c => c.UpdateScoreMatchResult())
-                                                               .UpdateDocuments();
-                Log.Debug("Finished Revalidation {time}", sw);
+            Log.Debug("Starting Revalidation {time}", sw);
+            var validationResult = await new CombinationPipeline<MatchEntity>(MatchEntityService.Collection, filter)
+                                                            .AppendPipeline(c => c.UpdateScoreMatchResult())
+                                                            .UpdateDocuments();
+            Log.Debug("Finished Revalidation {time}", sw);
 
 
+            Log.Debug("Starting MatchRefine Update {time}", sw);
 
-                Log.Debug("Starting MatchRefine Update {time}", sw);
-                var matchRefineCombinationUpdate = await Task.WhenAll(matchRefineTasks);
+            BulkCombinationUpdate bulkMatchRefineUpdate = await MatchEntityService.BulkCombinationUpdateMatchRefine(filter);
+            var bulkMatchRefineResult = await bulkMatchRefineUpdate.CommitBulkWrite();
 
-                BulkCombinationUpdate bulkMatchRefineUpdate = new BulkCombinationUpdate(MMIv8_Ktype).AddCombinationUpdate(matchRefineCombinationUpdate.SelectMany(c => c));
-                
-                var bulkMatchRefineResult = await bulkMatchRefineUpdate.CommitBulkWrite();
-                Log.Information("Updated Match Refine for {count} matches {time}", bulkMatchRefineResult.ModifiedCount, sw);
+            Log.Information("Updated Match Refine for {count} matches {time}", bulkMatchRefineResult.ModifiedCount, sw);
             
 
         }
@@ -428,7 +422,7 @@ namespace MMIv8_Ktype.Core.Services.Mapping
             if (tecdocEntity is null || mmiEntity is null)
                 throw new Exception($"Couldn't find Entities, found Ktype {tecdocEntity is not null} / MMI {mmiEntity is not null}");
 
-            ImportMatchMakeModel makeModel = new() { TD_SourceEntityModelHash = tecdocEntity.SourceEntityModelHash, MMI_SourceEntityModelHash = mmiEntity.SourceEntityModelHash };
+            MakeModelMatchRequest makeModel = new( tecdocEntity.SourceEntityModelHash, mmiEntity.SourceEntityModelHash );
             var makeModelMatch = await MatchMakeModelService.GetByModelIds(makeModel);
 
             ObjectId makeModelMatchID = new();

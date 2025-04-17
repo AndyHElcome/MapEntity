@@ -1,5 +1,6 @@
 ﻿using MMIv8_Ktype.Core.Contexts;
 using MMIv8_Ktype.Models.Collections;
+using MMIv8_Ktype.Models.Requests;
 using MongoDB.Driver;
 
 namespace MMIv8_Ktype.Core.Services
@@ -27,24 +28,24 @@ namespace MMIv8_Ktype.Core.Services
             return await BaseContext.GetSingleDocument(MMIv8_Ktype.Collections.Version, filter: filter);
         }
 
-        public async Task<Models.Collections.Version?> Create(CreateBaseVersion model)
+        public async Task<Models.Collections.Version?> Create(CreateVersionRequest request)
         {
             var currentVersion = await GetCurrentVersion();
             int newVersionNumber = currentVersion is null ? 0 : currentVersion.VersionNumber + 1;
 
-            var user = await UserService.GetByName(model.User);
+            var user = await UserService.GetByName(request.User);
 
             if (user is null)
             {
-                user = new User(model.User);
-                await UserService.Create(model.User);
+                user = new User(request.User);
+                await UserService.Create(request.User);
             }
 
             Models.Collections.Version newVersion = new()
             { 
                 VersionNumber = newVersionNumber,
-                TecDocEntityVersion = model.TecDocEntityVersion,
-                MMIv8EntityVersion = model.MMIv8EntityVersion,
+                TecDocEntityVersion = request.TecDocEntityVersion,
+                MMIv8EntityVersion = request.MMIv8EntityVersion,
                 User = user,
             };
 

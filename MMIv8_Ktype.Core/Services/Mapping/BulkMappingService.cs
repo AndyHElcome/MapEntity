@@ -49,33 +49,24 @@ namespace MMIv8_Ktype.Core.Services.Mapping
                                                         .GroupBy(i => new { mmiHash = i.MMIv8Model.SourceEntityModelHash, tdHash = i.TecDocModel.SourceEntityModelHash })
                                                         .Select(g => g.First())
                                                         .ToList();
-
-            // TODO Move this somewhere more appropriate
-            using (var writer = new StreamWriter("..\\MMIv8_Ktype\\Outputs\\ModelMatch.csv", false, Encoding.UTF8))
-            using (var csv = new CsvWriter(writer, CultureInfo.InvariantCulture))
-            {
-                csv.Context.RegisterClassMap<MatchMakeModelMap>();
-                csv.WriteRecords(matchMakeModels);
-            }
-
-            return new(); // No return needed ATM but could use instead of csv
+            return matchMakeModels;
         }
 
-        public async Task ImportModelMatch(string path)
-        {
-            List<ImportMatchMakeModel> matchMakeModels = new();
+        //public async Task ImportModelMatch(string path) // TODO Move this to CSV library
+        //{
+        //    List<ImportMatchMakeModel> matchMakeModels = new();
 
-            using (var reader = new StreamReader(path, Encoding.UTF8))
-            using (var csv = new CsvReader(reader, CultureInfo.InvariantCulture))
-            {
-                csv.Context.RegisterClassMap<ImportMatchMakeModelMap>();
-                matchMakeModels = csv.GetRecords<ImportMatchMakeModel>().ToList();
-            }
+        //    using (var reader = new StreamReader(path, Encoding.UTF8))
+        //    using (var csv = new CsvReader(reader, CultureInfo.InvariantCulture))
+        //    {
+        //        csv.Context.RegisterClassMap<ImportMatchMakeModelMap>();
+        //        matchMakeModels = csv.GetRecords<ImportMatchMakeModel>().ToList();
+        //    }
 
-            await MappingService.CreateModelMatch(matchMakeModels.Where(c => !c.DeleteMatch).ToList());
+        //    await MappingService.CreateModelMatch(matchMakeModels.Where(c => !c.DeleteMatch).ToList());
 
-            await MappingService.DeleteModelMatch(matchMakeModels.Where(c => c.DeleteMatch).ToList());
-        }
+        //    await MappingService.DeleteModelMatch(matchMakeModels.Where(c => c.DeleteMatch).ToList());
+        //}
 
         public async Task UpdateCheckedStatus()
         {

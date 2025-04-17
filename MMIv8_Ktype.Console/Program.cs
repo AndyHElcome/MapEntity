@@ -3,32 +3,43 @@ using Serilog.Events;
 using Serilog;
 using System.Reflection;
 using MMIv8_Ktype.Api;
+using MongoDB.Bson;
+using System.Text.Json.Nodes;
+using System.Text.Json.Serialization;
+using System.Text.Json;
 
 internal class Program
 {
     static async Task Main(string[] args)
     {
-        using var httpClient = new HttpClient();
+        Serilog.ILogger Log = new LoggerConfiguration() // TODO put into application settings
+            .MinimumLevel.Debug()
+            .WriteTo.Console(outputTemplate: "[{Level:u3}] {Message:l}{NewLine}{Exception}")
+            .WriteTo.File($"..\\..\\..\\..\\MMIv8_Ktype.Console\\Logs\\Log_Console.txt",
+                            rollOnFileSizeLimit: true,
+                            fileSizeLimitBytes: 1048576,
+                            shared: true,
+                            outputTemplate: "{Timestamp:yyyy-MM-dd HH:mm:ss.fff zzz} [{Level:u3}] {Message:l}{NewLine}{Exception}",
+                            restrictedToMinimumLevel: LogEventLevel.Information)
+            .CreateLogger();
+
+        using var httpClient = new HttpClient(); // TODO put into application settings
         //t.DefaultRequestHeaders.Add("Authorization", "");
         //t.DefaultRequestHeaders.Add("User-Agent", "");
         httpClient.DefaultRequestHeaders.Add("Accept", "application/json");
         httpClient.DefaultRequestHeaders.Add("Cache-Control", "no-cache");
         httpClient.BaseAddress = new Uri("https://localhost:44304");
 
-        var mmiv8_KtypeService = new MMIv8_KtypeService(httpClient);
+        var mmiv8_KtypeService = new MMIv8_KtypeService(httpClient, Log);
 
-        var t = mmiv8_KtypeService.GetCurrentVersion();
+        var t = await mmiv8_KtypeService.GetCurrentVersion();
+        var y = await mmiv8_KtypeService.GetMakeModelMatch(new("003DEB088C04048C9C765F40BDF4EB28050703D366606640F7368FE93F10B7EC", "639FFB977658CC53FC74E18E5C94983B9B973EBEDDAE3B545A8F453756091CCA"));
+        var z = await mmiv8_KtypeService.GetMakeModelMatchById(y.MatchID);
 
-        Serilog.ILogger Log = new LoggerConfiguration()
-        .MinimumLevel.Debug()
-        .WriteTo.Console(outputTemplate: "[{Level:u3}] {Message:l}{NewLine}{Exception}")
-        .WriteTo.File($"..\\..\\..\\..\\MMIv8_Ktype.Console\\Logs\\Log_Console.txt",
-                        rollOnFileSizeLimit: true,
-                        fileSizeLimitBytes: 1048576,
-                        shared: true,
-                        outputTemplate: "{Timestamp:yyyy-MM-dd HH:mm:ss.fff zzz} [{Level:u3}] {Message:l}{NewLine}{Exception}",
-                        restrictedToMinimumLevel: LogEventLevel.Information)
-        .CreateLogger();
+        var x = await mmiv8_KtypeService.DeleteMakeModelMatch(y.MatchID);
+        var f = await mmiv8_KtypeService.CreateMakeModelMatch(new("003DEB088C04048C9C765F40BDF4EB28050703D366606640F7368FE93F10B7EC", "639FFB977658CC53FC74E18E5C94983B9B973EBEDDAE3B545A8F453756091CCA"));
+
+
 
         args = [ "MMIv8_Ktype.AccessMdb", "StorePartialMatchBase", @"C:\Users\andy.hargreaves\OneDrive - Elcome Ltd\Desktop\NEW MMI TO KTYPE\MMIv8_Ktype2.accdb", "API_StorePartialMatchBase" ];
 

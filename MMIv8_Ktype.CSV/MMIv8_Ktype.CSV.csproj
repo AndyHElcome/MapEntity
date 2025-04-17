@@ -1,0 +1,14 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net9.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\MMIv8_Ktype.Api\MMIv8_Ktype.Api.csproj" />
+    <ProjectReference Include="..\MMIv8_Ktype.Models\MMIv8_Ktype.Models.csproj" />
+  </ItemGroup>
+
+</Project>
