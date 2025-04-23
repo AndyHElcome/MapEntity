@@ -10,7 +10,7 @@ namespace MMIv8_Ktype.CSV.Operations
     {
         public string CSVPath { get; set; } = csvPath;
 
-        public abstract Task ExecuteOperation(Serilog.ILogger Log);
+        public abstract Task ExecuteOperation();
     }
 
     public abstract class CSVWriteOperation(string csvPath) : ICSVOperation
@@ -22,12 +22,12 @@ namespace MMIv8_Ktype.CSV.Operations
             return new CsvWriter(writer, CultureInfo.InvariantCulture);
         }
 
-        public abstract Task ExecuteOperation(Serilog.ILogger Log);
+        public abstract Task ExecuteOperation();
     }
 
     public class GenerateModelMatchCSV(string csvPath, MMIv8_KtypeService mmiv8_KtypeService) : CSVWriteOperation(csvPath)
     {
-        public async override Task ExecuteOperation(Serilog.ILogger Log)
+        public async override Task ExecuteOperation()
         {
 
             List<MatchMakeModel>? matchMakeModels = await mmiv8_KtypeService.GenerateModelMatch();

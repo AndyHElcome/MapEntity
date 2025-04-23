@@ -2,6 +2,6 @@
 {
     public interface IOperation
     {
-        public Task ExecuteOperation(Serilog.ILogger Log);
+        public Task ExecuteOperation();
     }
 }
