@@ -7,6 +7,9 @@ using MongoDB.Bson;
 using System.Text.Json.Nodes;
 using System.Text.Json.Serialization;
 using System.Text.Json;
+using Refit;
+using MMIv8_Ktype.Models.ApiServices;
+using MMIv8_Ktype.Models.Endpoints;
 
 internal class Program
 {
@@ -22,6 +25,14 @@ internal class Program
                             outputTemplate: "{Timestamp:yyyy-MM-dd HH:mm:ss.fff zzz} [{Level:u3}] {Message:l}{NewLine}{Exception}",
                             restrictedToMinimumLevel: LogEventLevel.Information)
             .CreateLogger();
+
+        var usersClient = RestService.For<IMatchMakeModelApiService>("https://localhost:44304");
+
+        var test = EndpointExtensions.Refit<IMatchMakeModelApiService>();
+
+        //var x2 = await usersClient.GetMakeModelMatch(new("003DEB088C04048C9C765F40BDF4EB28050703D366606640F7368FE93F10B7EC", "639FFB977658CC53FC74E18E5C94983B9B973EBEDDAE3B545A8F453756091CCA"));
+        var x3 = await test.GetMakeModelMatch(new("003DEB088C04048C9C765F40BDF4EB28050703D366606640F7368FE93F10B7EC", "639FFB977658CC53FC74E18E5C94983B9B973EBEDDAE3B545A8F453756091CCA"));
+        var x4 = await test.GetMakeModelMatchById(x3.MatchID);
 
         using var httpClient = new HttpClient(); // TODO put into application settings
         //t.DefaultRequestHeaders.Add("Authorization", "");

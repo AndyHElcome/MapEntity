@@ -4,6 +4,8 @@
     <ManagePackageVersionsCentrally>true</ManagePackageVersionsCentrally>
   </PropertyGroup>
   <ItemGroup>
+    <PackageVersion Include="Refit" Version="8.0.0" />
+    <PackageVersion Include="Refit.HttpClientFactory" Version="8.0.0" />
     <PackageVersion Include="System.Data.OleDb" Version="9.0.4" />
     <PackageVersion Include="System.Text.Json" Version="9.0.4" />
     <PackageVersion Include="CsvHelper" Version="33.0.1" />

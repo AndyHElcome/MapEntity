@@ -18,6 +18,9 @@ using MMIv8_Ktype.Models.Util;
 using System.Text.Json;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.AspNetCore.Mvc;
+using MMIv8_Ktype.Models.Abstractions;
+using MMIv8_Ktype.Models.Endpoints;
+using MMIv8_Ktype.Models.ApiServices;
 
 internal class Program
 {
@@ -79,7 +82,6 @@ internal class Program
         builder.Services.AddScoped<BulkMappingService>();
         builder.Services.AddScoped<MappingService>();
 
-
         // Learn more about configuring Swagger/OpenAPI at https://aka.ms/aspnetcore/swashbuckle
         builder.Services.AddEndpointsApiExplorer();
         builder.Services.AddSwaggerGen();
@@ -97,6 +99,8 @@ internal class Program
 
         builder.Services.AddSingleton(Log.Logger);
 
+        //builder.AddApiEndpoints();
+        //builder.Services.AddEndpoints(Assembly.GetAssembly(typeof(IMatchMakeModelApiService)));
         builder.Services.AddEndpoints(Assembly.GetExecutingAssembly());
 
         var app = builder.Build();
@@ -120,8 +124,9 @@ internal class Program
 
         app.UseAuthorization();
 
+
         app.MapControllers();
-        app.MapEndpoints();
+        app.MapEndpoints(Assembly.GetExecutingAssembly());
 
         app.Run();
     }

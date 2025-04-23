@@ -3,6 +3,7 @@ using MMIv8_Ktype.Core.Services;
 using MMIv8_Ktype.Core.Services.Match;
 using MMIv8_Ktype.Core.Services.Source;
 using MMIv8_Ktype.Models;
+using MMIv8_Ktype.Models.Abstractions;
 using MMIv8_Ktype.Models.Collections;
 using MMIv8_Ktype.Models.Requests;
 using MMIv8_Ktype.Models.Status;
@@ -22,7 +23,7 @@ namespace MMIv8_Ktype.Core.Services.Mapping
                                 MatchBaseService MatchBaseService,
                                 ISourceEntityService<MongoSourceMMIv8> SourceMMIv8Service,
                                 ISourceEntityService<MongoSourceTecDocPC> SourceTecDocPCService,
-                                IVersionProvider versionProvider)
+                                IVersionProvider versionProvider) : IMappingService
     {
         #region Match Make Model
 
