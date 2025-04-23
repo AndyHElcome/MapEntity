@@ -1,4 +1,5 @@
 ﻿using CsvHelper;
+using MMIv8_Ktype.Api.Requests;
 using MMIv8_Ktype.Core.Contexts;
 using MMIv8_Ktype.Core.Services.Match;
 using MMIv8_Ktype.Core.Services.Source;
@@ -84,13 +85,10 @@ namespace MMIv8_Ktype.Core.Services.Mapping
         {
             path ??= $"..\\MMIv8_Ktype\\Outputs\\{matchBaseType}Match.csv";
 
-            var builder = Builders<MatchBase>.Filter;
-            var filter = builder.Eq(e => e.MatchBaseType, matchBaseType);
-
             // TODO Move this somewhere more appropriate
             using (var writer = new StreamWriter(path, false, Encoding.UTF8))
             using (var csv = new CsvWriter(writer, CultureInfo.InvariantCulture))
-            using (var cursor = await MatchBaseService.GetAll(filter, 10000))
+            using (var cursor = await MatchBaseService.GetAll(matchBaseType, batchSize: 10000))
             {
                 while (await cursor.MoveNextAsync())
                 {
@@ -101,7 +99,7 @@ namespace MMIv8_Ktype.Core.Services.Mapping
             return new(); // No return needed ATM but could use instead of csv
         }
 
-        public async Task ImportMatchBase(string path)
+        public async Task ImportMatchBase(string path) // TODO Move to CSV project
         {
             List<UpdateMatchBase> updatedMatches = new();
             using (var reader = new StreamReader(path))
@@ -213,11 +211,11 @@ namespace MMIv8_Ktype.Core.Services.Mapping
 
         public async Task BulkUpdatePreviousMatchedFlag(string path)
         {
-            List<UpdateEntityMatchFlag> updateMatches = new();
+            List<UpdateFlagRequest> updateMatches = new();
             using (var reader = new StreamReader(path, Encoding.UTF8))
             using (var csv = new CsvReader(reader, CultureInfo.InvariantCulture))
             {
-                updateMatches = csv.GetRecords<UpdateEntityMatchFlag>().ToList();
+                updateMatches = csv.GetRecords<UpdateFlagRequest>().ToList();
             }
 
             Log.Information("Previous Match import processing {Count} records", updateMatches.Count);
@@ -229,11 +227,11 @@ namespace MMIv8_Ktype.Core.Services.Mapping
 
         public async Task BulkUpdateMatchedFlag(string path)
         {
-            List<UpdateEntityMatchFlag> updateMatches = new();
+            List<UpdateFlagRequest> updateMatches = new();
             using (var reader = new StreamReader(path, Encoding.UTF8))
             using (var csv = new CsvReader(reader, CultureInfo.InvariantCulture))
             {
-                updateMatches = csv.GetRecords<UpdateEntityMatchFlag>().ToList();
+                updateMatches = csv.GetRecords<UpdateFlagRequest>().ToList();
             }
 
             Log.Information("Match Flag import processing {Count} records", updateMatches.Count());
@@ -245,11 +243,11 @@ namespace MMIv8_Ktype.Core.Services.Mapping
 
         public async Task BulkUpdateFailedFlag(string path)
         {
-            List<UpdateEntityMatchFlag> updateMatches = new();
+            List<UpdateFlagRequest> updateMatches = new();
             using (var reader = new StreamReader(path, Encoding.UTF8))
             using (var csv = new CsvReader(reader, CultureInfo.InvariantCulture))
             {
-                updateMatches = csv.GetRecords<UpdateEntityMatchFlag>().ToList();
+                updateMatches = csv.GetRecords<UpdateFlagRequest>().ToList();
             }
 
             Log.Information("Failed Flag import processing {Count} records", updateMatches.Count);

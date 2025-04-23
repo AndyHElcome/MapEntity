@@ -1,8 +1,8 @@
-﻿using MMIv8_Ktype.Core.Contexts;
+﻿using MMIv8_Ktype.Api.Requests;
+using MMIv8_Ktype.Core.Contexts;
 using MMIv8_Ktype.Models;
 using MMIv8_Ktype.Models.Collections;
 using MMIv8_Ktype.Models.Indexes;
-using MMIv8_Ktype.Models.Requests;
 using MMIv8_Ktype.Models.Status;
 using MongoDB.Bson;
 using MongoDB.Driver;
@@ -52,7 +52,7 @@ namespace MMIv8_Ktype.Core.Services.Match
             return await BaseContext.GetCursor(Collection, filter);
         }
 
-        public async Task<MatchMakeModel?> GetByModelIds(MakeModelMatchRequest request)
+        public async Task<MatchMakeModel?> GetByModelIds(MatchMakeModelRequest request)
         {
             var builder = Builders<MatchMakeModel>.Filter;
             var filter = builder.Eq(e => e.TecDocModel.SourceEntityModelHash, request.TD_SourceEntityModelHash)

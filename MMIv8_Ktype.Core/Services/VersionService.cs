@@ -1,6 +1,6 @@
-﻿using MMIv8_Ktype.Core.Contexts;
+﻿using MMIv8_Ktype.Api.Requests;
+using MMIv8_Ktype.Core.Contexts;
 using MMIv8_Ktype.Models.Collections;
-using MMIv8_Ktype.Models.Requests;
 using MongoDB.Driver;
 
 namespace MMIv8_Ktype.Core.Services

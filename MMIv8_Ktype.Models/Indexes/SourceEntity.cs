@@ -1,4 +1,5 @@
-﻿using MMIv8_Ktype.Models.Status;
+﻿using MMIv8_Ktype.Models.Attributes;
+using MMIv8_Ktype.Models.Status;
 using MongoDB.Bson;
 
 namespace MMIv8_Ktype.Models.Indexes

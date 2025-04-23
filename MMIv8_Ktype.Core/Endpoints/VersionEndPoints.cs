@@ -1,83 +1,32 @@
-﻿using Microsoft.AspNetCore.Builder;
-using MMIv8_Ktype.Api;
-using MMIv8_Ktype.Core.Services;
-using MMIv8_Ktype.Core.Services.Mapping;
-using MMIv8_Ktype.Core.Services.Match;
-using MMIv8_Ktype.Models.Collections;
-using MMIv8_Ktype.Models.Endpoints;
-using MMIv8_Ktype.Models.Requests;
-using MongoDB.Bson;
+﻿using MMIv8_Ktype.Core.Services;
+using MMIv8_Ktype.Api.Endpoints;
+using MongoDB.Driver;
+using MMIv8_Ktype.Api.Requests;
 
 namespace MMIv8_Ktype.Core.Endpoints
 {
-    public class VersionEndPoints
+    public class VersionEndPoints(VersionService versionService) : IVersionEndpoints
     {
-        public void MapEndpoint(IEndpointRouteBuilder routeBuilder)
-        {
-            var group = routeBuilder.MapGroup("Version").WithTags("Version");
-
-            group.MapPost(nameof(GetAll), GetAll);
-            group.MapPost(nameof(GetCurrentVersion), GetCurrentVersion);
-            group.MapPost(nameof(GetByVersion) + "/{VersionNumber}", GetByVersion);
-            group.MapPost(nameof(CreateVersion), CreateVersion);
-        }
-
-        public static async Task<IResult> GetAll(VersionService versionService) //TODO change results to stream
+        public async Task<List<Models.Collections.Version>> GetAll() //TODO change results to stream
         {
             var response = await versionService.GetAll();
 
-            if (response is not null)
-            {
-                return Results.Ok(response);
-            }
-            else
-            {
-                return Results.InternalServerError();
-            }
+            return await response.ToListAsync();
         }
 
-        public static async Task<IResult> GetCurrentVersion(VersionService versionService)
+        public async Task<Models.Collections.Version?> GetCurrentVersion()
         {
-            var response = await versionService.GetCurrentVersion();
-
-            if (response is not null)
-            {
-                return Results.Ok(response);
-            }
-            else
-            {
-                return Results.InternalServerError();
-            }
+            return await versionService.GetCurrentVersion();
         }
 
-        public static async Task<IResult> GetByVersion(int VersionNumber, VersionService versionService)
+        public async Task<Models.Collections.Version?> GetByVersion(int VersionNumber)
         {
-            var response = await versionService.GetByVersion(VersionNumber);
-
-            if (response is not null)
-            {
-                return Results.Ok(response);
-            }
-            else
-            {
-                return Results.NotFound();
-            }
+            return await versionService.GetByVersion(VersionNumber);
         }
 
-        public static async Task<IResult> CreateVersion(CreateVersionRequest request, VersionService versionService)
+        public async Task<Models.Collections.Version?> CreateVersion(CreateVersionRequest request)
         {
-            var response = await versionService.Create(request);
-
-            if (response is not null)
-            {
-                return Results.Ok(response);
-            }
-            else
-            {
-                return Results.NotFound();
-            }
+            return await versionService.Create(request);
         }
-
-
     }
 }

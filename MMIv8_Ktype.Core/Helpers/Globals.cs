@@ -1,6 +1,5 @@
 ﻿using System.Reflection;
 using MongoDB.Bson.Serialization;
-using MMIv8_Ktype.Models.Status;
 
 namespace MMIv8_Ktype.Core.Helpers
 {

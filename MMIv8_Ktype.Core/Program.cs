@@ -1,26 +1,17 @@
-using System.Text.Json.Serialization;
 using MongoDB.Bson.Serialization.Conventions;
 using MongoDB.Bson;
 using Serilog;
 using Serilog.Events;
 using MMIv8_Ktype.Models.Collections;
 using MMIv8_Ktype.Models;
-using MMIv8_Ktype.Models.Status;
 using MMIv8_Ktype.Core.Services;
 using MMIv8_Ktype.Core.Contexts;
 using MMIv8_Ktype.Core.Services.Match;
 using MMIv8_Ktype.Core.Services.Mapping;
 using MMIv8_Ktype.Core.Services.Source;
-using MMIv8_Ktype.Core.Endpoints;
 using System.Reflection;
-using System.Text.Json.Serialization.Metadata;
 using MMIv8_Ktype.Models.Util;
-using System.Text.Json;
-using Microsoft.Extensions.DependencyInjection;
-using Microsoft.AspNetCore.Mvc;
-using MMIv8_Ktype.Models.Abstractions;
-using MMIv8_Ktype.Models.Endpoints;
-using MMIv8_Ktype.Models.ApiServices;
+using MMIv8_Ktype.Api.Endpoints;
 
 internal class Program
 {
@@ -33,33 +24,10 @@ internal class Program
         ConventionRegistry.Register("EnumStringConvention", new ConventionPack { new EnumRepresentationConvention(BsonType.String) }, t => true);
         ConventionRegistry.Register("IgnoreIfNullConvention", new ConventionPack { new IgnoreIfNullConvention(true) }, t => true);
 
-        JsonOptions jsonOptions = new();
-        jsonOptions.JsonSerializerOptions.Converters.Add(new JsonStringEnumConverter());
-        jsonOptions.JsonSerializerOptions.Converters.Add(new JsonObjectIdConverter());
-        jsonOptions.JsonSerializerOptions.DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull;
-        jsonOptions.JsonSerializerOptions.NumberHandling = JsonNumberHandling.AllowReadingFromString;
-        jsonOptions.JsonSerializerOptions.PropertyNameCaseInsensitive = true;
-        jsonOptions.JsonSerializerOptions.PropertyNamingPolicy = JsonNamingPolicy.CamelCase;
-        jsonOptions.JsonSerializerOptions.TypeInfoResolver = new DefaultJsonTypeInfoResolver();
-        jsonOptions.JsonSerializerOptions.WriteIndented = true;
-
-
 
         builder.Services.AddControllers().AddJsonOptions(opts => JsonSerializationOptions.ApplyJsonSettings(opts.JsonSerializerOptions));
 
         builder.Services.Configure<Microsoft.AspNetCore.Http.Json.JsonOptions>(opts => JsonSerializationOptions.ApplyJsonSettings(opts.SerializerOptions));
-
-        //builder.Services.AddControllers().AddJsonOptions(x =>
-        //{
-        //    // serialize enums as strings in api responses 
-        //    x.JsonSerializerOptions.Converters.Add(new JsonStringEnumConverter());
-        //    x.JsonSerializerOptions.Converters.Add(new JsonObjectIdConverter());
-
-        //    // ignore omitted parameters on models to enable optional params 
-        //    x.JsonSerializerOptions.DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull;
-
-        //    x.JsonSerializerOptions.WriteIndented = true;
-        //});
 
         builder.Services.AddSingleton<MongoDBContext>();
         builder.Services.AddScoped<MongoBaseContext>();

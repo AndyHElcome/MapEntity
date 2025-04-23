@@ -1,5 +1,6 @@
-﻿using MMIv8_Ktype.Core.Contexts;
-using MMIv8_Ktype.Core.Services;
+﻿using MMIv8_Ktype.Api.Requests;
+using MMIv8_Ktype.Api.Responses;
+using MMIv8_Ktype.Core.Contexts;
 using MMIv8_Ktype.Models.Collections;
 using MMIv8_Ktype.Models.Util;
 using MongoDB.Bson;
@@ -30,6 +31,17 @@ namespace MMIv8_Ktype.Core.Services.Match
         public async Task<IAsyncCursor<MatchEntity>> GetAll(FilterDefinition<MatchEntity>? filter = null, int? batchSize = 10000)
         {
             return await MatchEntityContext.GetCursor(Collection, filter: filter, batchSize: batchSize);
+        }
+
+        public async Task<PagedResponse<MatchEntity>> PageAll(PagedSortFilter<MatchEntity> request)
+        {
+            SortDefinition<MatchEntity> newSort;
+            if (request.Sort is null)
+                newSort = Builders<MatchEntity>.Sort.Ascending(c => c.MatchEntityID);
+            else
+                newSort = request.Sort.Ascending(c => c.MatchEntityID);
+
+            return await MatchEntityContext.PaginateDocuments(Collection, newSort, request.Filter, request.PagedRequest.Page, request.PagedRequest.PageSize ?? 100);
         }
 
         public async Task<IAsyncCursor<ObjectId>> GetAllMakeModelMatchID(FilterDefinition<MatchEntity>? filter = null)

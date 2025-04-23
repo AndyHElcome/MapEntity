@@ -1,6 +1,4 @@
-﻿using DnsClient.Internal;
-
-namespace MMIv8_Ktype.Models
+﻿namespace MMIv8_Ktype.Models
 {
     public interface IOperation
     {

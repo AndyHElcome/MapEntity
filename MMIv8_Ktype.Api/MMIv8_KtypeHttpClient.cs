@@ -1,21 +1,17 @@
 ﻿using MMIv8_Ktype.Models.Util;
 using MMIv8_Ktype.Models.Collections;
 using System.Net.Http.Json;
-using System.Web;
 using Serilog;
 using MongoDB.Bson;
-using System.Net.Http;
 using System.Text.Json;
-using System.Text.Json.Serialization;
-using MMIv8_Ktype.Models;
-using System.Text.Json.Serialization.Metadata;
 using MongoDB.Driver;
-using MMIv8_Ktype.Models.Requests;
+using MMIv8_Ktype.Api.Requests;
 
 // minimal endpoint https://youtu.be/gsAuFIhXz3g?si=MfaGxzKFgLlgWIbR
 // reflection endpoint mapping https://youtu.be/CkGFV5bekbY?si=GkVIYuPIObrZDMu1
 namespace MMIv8_Ktype.Api
 {
+    [Obsolete]
     public sealed class MMIv8_KtypeService
     {
         private readonly HttpClient _httpClient;
@@ -30,12 +26,12 @@ namespace MMIv8_Ktype.Api
         }
 
         #region MakeModelMatch
-        public async Task<ObjectId?> CreateMakeModelMatch(MakeModelMatchRequest request)
+        public async Task<ObjectId?> CreateMakeModelMatch(MatchMakeModelRequest request)
         {
             return await PostRequestHandler<ObjectId>("MatchMakeModel/CreateMakeModelMatch", request);
         }
 
-        public async Task<MMIv8_Ktype.Models.Collections.MatchMakeModel?> GetMakeModelMatch(MakeModelMatchRequest request)
+        public async Task<MMIv8_Ktype.Models.Collections.MatchMakeModel?> GetMakeModelMatch(MatchMakeModelRequest request)
         {
             return await PostRequestHandler<MMIv8_Ktype.Models.Collections.MatchMakeModel>("MatchMakeModel/GetMakeModelMatch", request);
         }

@@ -1,11 +1,6 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Text.Json;
+﻿using System.Text.Json;
 using System.Text.Json.Serialization.Metadata;
 using System.Text.Json.Serialization;
-using System.Threading.Tasks;
 
 namespace MMIv8_Ktype.Models.Util
 {
@@ -29,6 +24,7 @@ namespace MMIv8_Ktype.Models.Util
             target.WriteIndented = true;
         }
 
+        [Obsolete()]
         public static void ApplyJsonOptions(JsonSerializerOptions target, JsonSerializerOptions source)
         {
             foreach (var converter in source.Converters)

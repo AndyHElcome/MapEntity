@@ -1,11 +1,9 @@
-﻿using MMIv8_Ktype.Core.Contexts;
-using MMIv8_Ktype.Core.Services;
+﻿using MMIv8_Ktype.Api.Requests;
+using MMIv8_Ktype.Core.Contexts;
 using MMIv8_Ktype.Core.Services.Match;
 using MMIv8_Ktype.Core.Services.Source;
 using MMIv8_Ktype.Models;
-using MMIv8_Ktype.Models.Abstractions;
 using MMIv8_Ktype.Models.Collections;
-using MMIv8_Ktype.Models.Requests;
 using MMIv8_Ktype.Models.Status;
 using MMIv8_Ktype.Models.Util;
 using MongoDB.Bson;
@@ -23,11 +21,11 @@ namespace MMIv8_Ktype.Core.Services.Mapping
                                 MatchBaseService MatchBaseService,
                                 ISourceEntityService<MongoSourceMMIv8> SourceMMIv8Service,
                                 ISourceEntityService<MongoSourceTecDocPC> SourceTecDocPCService,
-                                IVersionProvider versionProvider) : IMappingService
+                                IVersionProvider versionProvider)
     {
         #region Match Make Model
 
-        public async Task CreateModelMatch(List<MakeModelMatchRequest> matchMakeModels)
+        public async Task CreateModelMatch(List<MatchMakeModelRequest> matchMakeModels)
         {
             List<ObjectId> createdMakeModels = new();
             List<Task> tasks = new();
@@ -63,7 +61,7 @@ namespace MMIv8_Ktype.Core.Services.Mapping
             await Task.WhenAll(tasks);
         }
 
-        public async Task<ObjectId> CreateMakeModelMatch(MakeModelMatchRequest matchMakeModel)
+        public async Task<ObjectId> CreateMakeModelMatch(MatchMakeModelRequest matchMakeModel)
         {
             var existingModelMatch = await MatchMakeModelService.GetByModelIds(matchMakeModel);
 
@@ -92,7 +90,7 @@ namespace MMIv8_Ktype.Core.Services.Mapping
             return newMatchMakeModel.MatchID;
         }
 
-        public async Task DeleteModelMatch(List<MakeModelMatchRequest> matchMakeModels)
+        public async Task DeleteModelMatch(List<MatchMakeModelRequest> matchMakeModels)
         {
             foreach (var matchMakeModel in matchMakeModels)
             {
@@ -113,7 +111,7 @@ namespace MMIv8_Ktype.Core.Services.Mapping
             }
         }
 
-        public async Task<ObjectId?> DeleteMakeModelMatch(MakeModelMatchRequest matchMakeModel)
+        public async Task<ObjectId?> DeleteMakeModelMatch(MatchMakeModelRequest matchMakeModel)
         {
             var modelMatch = await MatchMakeModelService.GetByModelIds(matchMakeModel);
 
@@ -423,7 +421,7 @@ namespace MMIv8_Ktype.Core.Services.Mapping
             if (tecdocEntity is null || mmiEntity is null)
                 throw new Exception($"Couldn't find Entities, found Ktype {tecdocEntity is not null} / MMI {mmiEntity is not null}");
 
-            MakeModelMatchRequest makeModel = new( tecdocEntity.SourceEntityModelHash, mmiEntity.SourceEntityModelHash );
+            MatchMakeModelRequest makeModel = new( tecdocEntity.SourceEntityModelHash, mmiEntity.SourceEntityModelHash );
             var makeModelMatch = await MatchMakeModelService.GetByModelIds(makeModel);
 
             ObjectId makeModelMatchID = new();
@@ -482,7 +480,7 @@ namespace MMIv8_Ktype.Core.Services.Mapping
             }
         }
 
-        public async Task UpdatePreviousMatchedFlag(IEnumerable<UpdateEntityMatchFlag> input)
+        public async Task UpdatePreviousMatchedFlag(IEnumerable<UpdateFlagRequest> input) // TODO Change to single MMI_V8_Key
         {
             var filterBuilder = Builders<MatchEntity>.Filter;
             var filter = filterBuilder.Empty;
@@ -523,7 +521,7 @@ namespace MMIv8_Ktype.Core.Services.Mapping
             Log.Information("Updated Previous Matched Flags");
         }
 
-        public async Task UpdateMatchedFlag(IEnumerable<UpdateEntityMatchFlag> input) // TODO Update to reflect UpdatePreviousMatchedFlag
+        public async Task UpdateMatchedFlag(IEnumerable<UpdateFlagRequest> input) // TODO Update to reflect UpdatePreviousMatchedFlag
         {
             var filterBuilder = Builders<MatchEntity>.Filter;
             var filter = filterBuilder.Empty;
@@ -561,7 +559,7 @@ namespace MMIv8_Ktype.Core.Services.Mapping
             Log.Information("Updated Match Refine for {count} matches", bulkMatchRefineResult.ModifiedCount);
         }
 
-        public async Task UpdateFailedFlag(IEnumerable<UpdateEntityMatchFlag> input) // TODO Update to reflect UpdatePreviousMatchedFlag
+        public async Task UpdateFailedFlag(IEnumerable<UpdateFlagRequest> input) // TODO Update to reflect UpdatePreviousMatchedFlag
         {
             var filterBuilder = Builders<MatchEntity>.Filter;
             var filter = filterBuilder.Empty;

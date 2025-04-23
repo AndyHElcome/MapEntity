@@ -89,14 +89,6 @@ namespace MMIv8_Ktype.Models.Collections
 
     }
 
-    public class UpdateEntityMatchFlag(int KTypNr, int MMI_V8_Key, bool Flag, string? Detail)
-    {
-        public int KTypNr { get; set; } = KTypNr;
-        public int MMI_V8_Key { get; set; } = MMI_V8_Key;
-        public bool Flag { get; set; } = Flag;
-        public string? Detail { get; set; } = Detail;
-    }
-
     public sealed class TecDocAutoMap : ClassMap<MongoSourceTecDocPC>
     {
         public TecDocAutoMap()

@@ -1,5 +1,4 @@
-﻿using DnsClient.Internal;
-using MMIv8_Ktype.Models.Util;
+﻿using MMIv8_Ktype.Models.Util;
 using System.Data.OleDb;
 
 namespace MMIv8_Ktype.AccessMdb.Operations

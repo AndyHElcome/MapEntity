@@ -1,5 +1,4 @@
-﻿using MMIv8_Ktype.Models;
-using MMIv8_Ktype.Models.Status;
+﻿using MMIv8_Ktype.Models.Status;
 using MongoDB.Bson;
 using MongoDB.Driver;
 

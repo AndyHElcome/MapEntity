@@ -3,33 +3,15 @@ using System.Reflection;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Routing;
-using Microsoft.AspNetCore.Routing.Patterns;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
-using MMIv8_Ktype.Models.ApiServices;
-using MMIv8_Ktype.Models.Collections;
-using MMIv8_Ktype.Models.Util;
+using MMIv8_Ktype.Models.Attributes;
 using Refit;
-using Swashbuckle.AspNetCore.SwaggerGen;
 
-namespace MMIv8_Ktype.Models.Endpoints
+namespace MMIv8_Ktype.Api.Endpoints
 {
     public static class EndpointExtensions
     {
-        public static T Refit<T>()
-            where T : IEndpoint
-        {
-            var groupName = GetGroupName<T>();
-            var test = RestService.For<T>("https://localhost:44304/" + groupName, new RefitSettings
-            {
-                ContentSerializer = new SystemTextJsonContentSerializer(new System.Text.Json.JsonSerializerOptions().GetJsonSerializerOptions())
-            });
-            return RestService.For<T>("https://localhost:44304/"+ groupName, new RefitSettings
-            {
-                ContentSerializer = new SystemTextJsonContentSerializer( new System.Text.Json.JsonSerializerOptions().GetJsonSerializerOptions())
-            });
-        }
-
         public static string GetGroupName<T>()
             where T : IEndpoint
         {
@@ -58,10 +40,9 @@ namespace MMIv8_Ktype.Models.Endpoints
                         continue;
 
                     var path = httpMethodAttribute.Path;
-                    var methodName = method.Name;
 
                     // Get actual MethodInfo from the implementation
-                    var implMethod = implementation.GetType().GetMethod(methodName);
+                    var implMethod = implementation.GetType().GetMethod(method.Name);
 
                     var returnType = method.ReturnType;
                     var parameters = method.GetParameters();
@@ -69,17 +50,22 @@ namespace MMIv8_Ktype.Models.Endpoints
                     Delegate handler = parameters.Length switch
                     {
                         0 => Delegate.CreateDelegate(
-                            Expression.GetDelegateType(returnType),
-                            implementation,
-                            implMethod),
+                                Expression.GetDelegateType(returnType),
+                                implementation,
+                                implMethod),
 
                         1 => Delegate.CreateDelegate(
-                            Expression.GetDelegateType(new[] { parameters[ 0 ].ParameterType, returnType }),
-                            implementation,
-                            implMethod),
+                                Expression.GetDelegateType([parameters[ 0 ].ParameterType, returnType]),
+                                implementation,
+                                implMethod),
 
-                        _ => throw new NotSupportedException("Only methods with 0 or 1 parameter are supported")
+                        _ => Delegate.CreateDelegate(
+                                Expression.GetDelegateType([.. parameters.Select(c => c.ParameterType), returnType]),
+                                implementation,
+                                implMethod)
                     };
+
+                    var methodName = $"{groupName}_{method.Name}";
 
                     _ = httpMethodAttribute.Method.Method switch
                     {

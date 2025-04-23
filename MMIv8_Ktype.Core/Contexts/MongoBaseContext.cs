@@ -1,4 +1,5 @@
-﻿using MongoDB.Driver;
+﻿using MMIv8_Ktype.Api.Responses;
+using MongoDB.Driver;
 using Serilog;
 using System.Diagnostics;
 
@@ -35,6 +36,26 @@ namespace MMIv8_Ktype.Core.Contexts
             var result = await GetCursor(collection, filter, sort);
 
             return await result.ToListAsync();
+        }
+
+        public async Task<PagedResponse<T>> PaginateDocuments<T>(IMongoCollection<T> collection, SortDefinition<T> sort, FilterDefinition<T>? filter = null, int page = 1, int pageSize = 100)
+        {
+            var sw = Stopwatch.StartNew();
+
+            var count = await CountByFilter(collection, filter);
+
+            Log.Debug("Starting Enumerate {Type} count took {Time}", typeof(T).Name, sw);
+
+            Log.Information("Paging {Type} page: {page}", typeof(T).Name, page - 1);
+
+            var result = await GetCursor(collection, filter, sort, (page - 1) * pageSize, pageSize);
+
+            var items = await result.ToListAsync();
+
+            sw.Stop();
+            Log.Debug("Completed Enumerate of {count} {Type} in {Time}", items.Count, typeof(T).Name, sw);
+
+            return new PagedResponse<T>(items, Convert.ToInt32(count), page, pageSize);
         }
 
         public async IAsyncEnumerable<IEnumerable<T>> EnumerateDocuments<T>(IMongoCollection<T> collection, FilterDefinition<T> filter, int batchSize = 10000)
