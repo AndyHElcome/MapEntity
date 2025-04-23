@@ -1,8 +1,5 @@
-﻿using CsvHelper.Configuration;
-using MMIv8_Ktype.Models.Collections;
-using MMIv8_Ktype.Models.DateIntersection;
+﻿using MMIv8_Ktype.Models.DateIntersection;
 using MongoDB.Bson;
-using System.Globalization;
 
 namespace MMIv8_Ktype.Models.Indexes
 {
@@ -47,22 +44,5 @@ namespace MMIv8_Ktype.Models.Indexes
             this.MCode,
         });
 
-    }
-
-    public sealed class MongoSourceTecDocEngineMap : ClassMap<MongoSourceTecDocEngine>
-    {
-        public MongoSourceTecDocEngineMap()
-        {
-            AutoMap(CultureInfo.InvariantCulture);
-            Map(m => m.DFrom).Name("dFrom").TypeConverter<NAtoIntConverter>();
-            Map(m => m.DTo).Name("dTo").TypeConverter<NAtoIntConverter>();
-            Map(m => m.Valves).TypeConverter<NAtoIntConverter>();
-            Map(m => m.Cylinders).TypeConverter<NAtoIntConverter>();
-            Map(m => m.NoOfCrankShaftBearings).TypeConverter<NAtoIntConverter>();
-            Map(m => m.Bore).TypeConverter<NAtoDecimalConverter>();
-            Map(m => m.Stroke).TypeConverter<NAtoDecimalConverter>();
-
-            Map(m => m.EntityHash).Ignore();
-        }
     }
 }

@@ -1,9 +1,9 @@
-﻿using MMIv8_Ktype.Models;
+﻿using MMIv8_Ktype.Api;
 
 namespace MMIv8_Ktype.CSV.Operations
 {
     internal interface ICSVOperation : IOperation
     {
-        public string CSVPath { get; set; }
+        string CSVPath { get; set; }
     }
 }

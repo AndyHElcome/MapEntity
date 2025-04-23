@@ -1,17 +1,17 @@
 ﻿using MMIv8_Ktype.Api;
+using MMIv8_Ktype.Api.Endpoints;
 using MMIv8_Ktype.Models.Util;
 using Serilog;
 using System.Data.OleDb;
 
 namespace MMIv8_Ktype.AccessMdb.Operations
 {
-    public abstract class AccessDBOperation(string dbPath, string tableName, Serilog.ILogger Log) : IAccessDBOperation
+    public abstract class AccessDBOperation(string dbPath, string tableName) : IAccessDBOperation
     {
         public string DBPath { get; set; } = dbPath;
         public string TableName { get; set; } = tableName;
-        
-        private ILogger log = Log;
-        private RefitClient refitClient = new RefitClient(Log);
+
+        public abstract Task ExecuteOperation(ILogger log);
 
         public OleDbConnection DBConnection()
         {
@@ -22,17 +22,27 @@ namespace MMIv8_Ktype.AccessMdb.Operations
 
             return new OleDbConnection(builder.ToString());
         }
-
-        public abstract Task ExecuteOperation();
-
     }
 
-    public class StorePartialMatchBase(string dbPath, string tableName, Serilog.ILogger Log) : AccessDBOperation(dbPath, tableName, Log)
+    public class TestAccessDBOperation(string dbPath, string tableName) : AccessDBOperation(dbPath, tableName)
     {
-
-        public async override Task ExecuteOperation()
+        public async override Task ExecuteOperation(ILogger log)
         {
+            var refitClient = new RefitClient(log);
+            // Version Provider
+            var versionProvider = refitClient.VersionProvider;
+
+            var versionEndpoints = refitClient.CreateService<IVersionEndpoints>();
+
+            var currentVersion = await versionEndpoints.GetCurrentVersion();
+
+            var matchMakeModelEndpoints = refitClient.CreateService<IMatchMakeModelEndpoints>();
+
+            var matchMakeModel = matchMakeModelEndpoints.GenerateModelMatch();
+
             using var conn = DBConnection();
+
+            var matchBaseEndpoints = refitClient.CreateService<IMatchBaseEndpoints>();
 
             conn.Open();
             string query = $"SELECT * FROM [{TableName}]";
@@ -46,20 +56,9 @@ namespace MMIv8_Ktype.AccessMdb.Operations
             {
                 var matchBaseType = (MatchBaseType)Enum.Parse(typeof(MatchBaseType), reader[ "MatchBaseType" ]?.ToString() ?? throw new NullReferenceException("Unexpected null"), true);
                 var matchHash = reader[ "MatchHash" ]?.ToString() ?? throw new NullReferenceException("Unexpected null");
-                var newScore = reader[ "NewScore" ]?.ToString() ?? throw new NullReferenceException("Unexpected null");
+                var newScore = Convert.ToDecimal( reader[ "NewScore" ] ?? throw new NullReferenceException("Unexpected null") ) ;
 
-
-
-                //var matchMakeModelApi = refitClient.CreateService<IMatchMakeModelEndpoints>();
-
-                ////var x2 = await usersClient.GetMakeModelMatch(new("003DEB088C04048C9C765F40BDF4EB28050703D366606640F7368FE93F10B7EC", "639FFB977658CC53FC74E18E5C94983B9B973EBEDDAE3B545A8F453756091CCA"));
-                //var x3 = await matchMakeModelApi.GetMakeModelMatch(new("003DEB088C04048C9C765F40BDF4EB28050703D366606640F7368FE93F10B7EC", "639FFB977658CC53FC74E18E5C94983B9B973EBEDDAE3B545A8F453756091CCA"));
-                //var x4 = await matchMakeModelApi.GetMakeModelMatchById(x3.MatchID);
-
-                //await matchMakeModelApi.DeleteMakeModelMatch(x3.MatchID);
-                //var x6 = await matchMakeModelApi.GetMakeModelMatch(new(x4.TecDocModel.SourceEntityModelHash, x4.MMIv8Model.SourceEntityModelHash));
-                //await matchMakeModelApi.CreateMakeModelMatch(new(x4.TecDocModel.SourceEntityModelHash, x4.MMIv8Model.SourceEntityModelHash));
-
+                await matchBaseEndpoints.StorePartialMatchBase(new Api.Requests.PutMatchBaseRequest(matchBaseType, matchHash, newScore));
             }
 
             conn.Close();   
@@ -67,4 +66,36 @@ namespace MMIv8_Ktype.AccessMdb.Operations
             conn.Dispose();
         }
     }
+
+    public class StorePartialMatchBase(string dbPath, string tableName) : AccessDBOperation(dbPath, tableName)
+    {
+        public async override Task ExecuteOperation(ILogger log)
+        {
+            using var conn = DBConnection();
+
+            var matchBaseEndpoints = new RefitClient(log).CreateService<IMatchBaseEndpoints>();
+
+            conn.Open();
+            string query = $"SELECT * FROM [{TableName}]";
+
+            Log.Information("SQL Query {query}", query);
+
+            using var cmd = new OleDbCommand(query, conn);
+            using var reader = cmd.ExecuteReader();
+
+            while (reader.Read())
+            {
+                var matchBaseType = (MatchBaseType)Enum.Parse(typeof(MatchBaseType), reader[ "MatchBaseType" ]?.ToString() ?? throw new NullReferenceException("Unexpected null"), true);
+                var matchHash = reader[ "MatchHash" ]?.ToString() ?? throw new NullReferenceException("Unexpected null");
+                var newScore = Convert.ToDecimal( reader[ "NewScore" ] ?? throw new NullReferenceException("Unexpected null") ) ;
+
+                await matchBaseEndpoints.StorePartialMatchBase(new Api.Requests.PutMatchBaseRequest(matchBaseType, matchHash, newScore));
+            }
+
+            conn.Close();   
+
+            conn.Dispose();
+        }
+    }
+
 }

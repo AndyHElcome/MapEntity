@@ -1,11 +1,8 @@
-﻿using CsvHelper;
-using Microsoft.AspNetCore.Mvc;
+﻿using Microsoft.AspNetCore.Mvc;
 using MMIv8_Ktype.Core.Services.Mapping;
 using MMIv8_Ktype.Core.Services.Source;
 using MMIv8_Ktype.Models.Collections;
 using MongoDB.Bson;
-using System.Globalization;
-using System.Text;
 
 namespace MMIv8_Ktype.Core.Controllers
 {
@@ -42,18 +39,18 @@ namespace MMIv8_Ktype.Core.Controllers
             return Ok(new { message = "Index Loaded" });
         }
 
-        [HttpPost("GenerateCSV")]
-        public async Task<IActionResult> GenerateCSV()
-        {
-            using var writer = new StreamWriter("..\\MMIv8_Ktype\\Outputs\\MMIv8.csv", false, Encoding.UTF8);
-            using var csv = new CsvWriter(writer, CultureInfo.InvariantCulture);
-            using var entities = await SourceMMIv8Service.GetAll(batchSize: 1000);
-            while (await entities.MoveNextAsync())
-            {
-                csv.Context.RegisterClassMap<MongoSourceMMIv8Map>();
-                csv.WriteRecords(entities.Current);
-            }
-            return Ok(new { message = "Created" });
-        }
+        // [HttpPost("GenerateCSV")]
+        // public async Task<IActionResult> GenerateCSV()
+        // {
+        //     using var writer = new StreamWriter("..\\MMIv8_Ktype\\Outputs\\MMIv8.csv", false, Encoding.UTF8);
+        //     using var csv = new CsvWriter(writer, CultureInfo.InvariantCulture);
+        //     using var entities = await SourceMMIv8Service.GetAll(batchSize: 1000);
+        //     while (await entities.MoveNextAsync())
+        //     {
+        //         csv.Context.RegisterClassMap<MongoSourceMMIv8Map>();
+        //         csv.WriteRecords(entities.Current);
+        //     }
+        //     return Ok(new { message = "Created" });
+        // }
     }
 }

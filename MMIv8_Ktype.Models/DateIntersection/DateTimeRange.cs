@@ -61,7 +61,6 @@ namespace MMIv8_Ktype.Models.DateIntersection
         #region Properties
         private DateTime start;
 
-        [CsvHelper.Configuration.Attributes.Format("yyyy/MM/dd")]
         [MongoDB.Bson.Serialization.Attributes.BsonDateTimeOptions(DateOnly = true)]
         public DateTime Start
         {
@@ -70,7 +69,6 @@ namespace MMIv8_Ktype.Models.DateIntersection
         }
         private DateTime end;
 
-        [CsvHelper.Configuration.Attributes.Format("yyyy/MM/dd")]
         [MongoDB.Bson.Serialization.Attributes.BsonDateTimeOptions(DateOnly = true)]
         public DateTime End
         {

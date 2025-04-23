@@ -1,7 +1,5 @@
-﻿using CsvHelper.Configuration;
-using MMIv8_Ktype.Models.Collections;
+﻿using MMIv8_Ktype.Models.Collections;
 using MongoDB.Bson;
-using System.Globalization;
 
 namespace MMIv8_Ktype.Models.Outputs
 {
@@ -32,14 +30,6 @@ namespace MMIv8_Ktype.Models.Outputs
             ChosenMatches = matchEntities.Where(c => c.Matched).Select(c => c.MatchEntityID).ToArray();
 
             Difference = !BestMatches.SequenceEqual(LastMatches);
-        }
-    }
-
-    public sealed class MatchRefineMap : ClassMap<MatchRefine>
-    {
-        public MatchRefineMap()
-        {
-            AutoMap(CultureInfo.InvariantCulture);
         }
     }
 }

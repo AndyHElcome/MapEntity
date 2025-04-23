@@ -1,10 +1,10 @@
-﻿using MMIv8_Ktype.Models;
+﻿using MMIv8_Ktype.Api;
 
 namespace MMIv8_Ktype.AccessMdb.Operations
 {
     internal interface IAccessDBOperation : IOperation
     {
-        public string DBPath { get; set; }
-        public string TableName { get; set; }
+        string DBPath { get; set; }
+        string TableName { get; set; }
     }
 }

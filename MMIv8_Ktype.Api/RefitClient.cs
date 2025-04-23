@@ -1,16 +1,17 @@
 ﻿using MMIv8_Ktype.Api.Endpoints;
+using MMIv8_Ktype.Models;
 using MMIv8_Ktype.Models.Util;
 using Refit;
 using Serilog;
-using System.Net.Http;
 
 namespace MMIv8_Ktype.Api
 {
-    public class RefitClient
+    public class RefitClient //Maybe move to Models with IOperation
     {
         private readonly ILogger _log;
         private readonly HttpClient _httpClient;
         private readonly RefitSettings _refitSettings = new();
+        public readonly IVersionProvider VersionProvider;
 
         public RefitClient(ILogger log)
         {
@@ -25,6 +26,7 @@ namespace MMIv8_Ktype.Api
             _httpClient.DefaultRequestHeaders.Add("Cache-Control", "no-cache");
 
             _refitSettings = _refitSettings.GetApplyRefitSettings();
+            VersionProvider = new VersionProviderApi(log);
         }
 
         public T CreateService<T>()

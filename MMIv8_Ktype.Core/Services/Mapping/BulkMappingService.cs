@@ -1,5 +1,4 @@
-﻿using CsvHelper;
-using MMIv8_Ktype.Api.Requests;
+﻿using MMIv8_Ktype.Api.Requests;
 using MMIv8_Ktype.Core.Contexts;
 using MMIv8_Ktype.Core.Services.Match;
 using MMIv8_Ktype.Core.Services.Source;
@@ -86,15 +85,15 @@ namespace MMIv8_Ktype.Core.Services.Mapping
             path ??= $"..\\MMIv8_Ktype\\Outputs\\{matchBaseType}Match.csv";
 
             // TODO Move this somewhere more appropriate
-            using (var writer = new StreamWriter(path, false, Encoding.UTF8))
-            using (var csv = new CsvWriter(writer, CultureInfo.InvariantCulture))
-            using (var cursor = await MatchBaseService.GetAll(matchBaseType, batchSize: 10000))
-            {
-                while (await cursor.MoveNextAsync())
-                {
-                    csv.WriteRecords(cursor.Current.Select(m => m.BuildCsvObject()));
-                }
-            }
+            // using (var writer = new StreamWriter(path, false, Encoding.UTF8))
+            // using (var csv = new CsvWriter(writer, CultureInfo.InvariantCulture))
+            // using (var cursor = await MatchBaseService.GetAll(matchBaseType, batchSize: 10000))
+            // {
+            //     while (await cursor.MoveNextAsync())
+            //     {
+            //         csv.WriteRecords(cursor.Current.Select(m => m.BuildCsvObject()));
+            //     }
+            // }
 
             return new(); // No return needed ATM but could use instead of csv
         }
@@ -102,11 +101,11 @@ namespace MMIv8_Ktype.Core.Services.Mapping
         public async Task ImportMatchBase(string path) // TODO Move to CSV project
         {
             List<UpdateMatchBase> updatedMatches = new();
-            using (var reader = new StreamReader(path))
-            using (var csv = new CsvReader(reader, CultureInfo.InvariantCulture))
-            {
-                updatedMatches = csv.GetRecords<UpdateMatchBase>().ToList();
-            }
+            // using (var reader = new StreamReader(path))
+            // using (var csv = new CsvReader(reader, CultureInfo.InvariantCulture))
+            // {
+            //     updatedMatches = csv.GetRecords<UpdateMatchBase>().ToList();
+            // }
 
             Log.Information("MatchBase import processing {Count} records", updatedMatches.Count);
 
@@ -168,16 +167,16 @@ namespace MMIv8_Ktype.Core.Services.Mapping
             var filter = Builders<MatchEntity>.Filter.Eq(x => x.MatchResult.Failed, false);
 
             //// TODO Move this somewhere more appropriate
-            using (var writer = new StreamWriter("..\\MMIv8_Ktype\\Outputs\\EntityMatch.csv", false, Encoding.UTF8))
-            using (var csv = new CsvWriter(writer, CultureInfo.InvariantCulture))
-            using (var cursor = await MatchEntityService.GetAll(filter, 1000))
-            {
-                csv.Context.RegisterClassMap<MatchEntityMap>();
-                while (await cursor.MoveNextAsync())
-                {
-                    csv.WriteRecords(cursor.Current);
-                }
-            }
+            // using (var writer = new StreamWriter("..\\MMIv8_Ktype\\Outputs\\EntityMatch.csv", false, Encoding.UTF8))
+            // using (var csv = new CsvWriter(writer, CultureInfo.InvariantCulture))
+            // using (var cursor = await MatchEntityService.GetAll(filter, 1000))
+            // {
+            //     csv.Context.RegisterClassMap<MatchEntityMap>();
+            //     while (await cursor.MoveNextAsync())
+            //     {
+            //         csv.WriteRecords(cursor.Current);
+            //     }
+            // }
 
             sw.Stop();
             Log.Debug("Time: {0}", sw.Elapsed);
@@ -193,16 +192,16 @@ namespace MMIv8_Ktype.Core.Services.Mapping
                        & (filterBuilder.Eq(c => c.MatchRefine.IsCheck, true) | filterBuilder.Size(c => c.MatchRefine.ChosenMatches, 0));
 
             //// TODO Move this somewhere more appropriate
-            using (var writer = new StreamWriter("..\\MMIv8_Ktype\\Outputs\\EntityMatchRefine.csv", false, Encoding.UTF8))                
-            using (var csv = new CsvWriter(writer, CultureInfo.InvariantCulture))
-            using (var cursor = await MatchEntityService.GetAll(filter, 1000))
-            {
-                csv.Context.RegisterClassMap<MatchEntityMap>();
-                while (await cursor.MoveNextAsync())
-                {
-                    csv.WriteRecords(cursor.Current);
-                }
-            }
+            // using (var writer = new StreamWriter("..\\MMIv8_Ktype\\Outputs\\EntityMatchRefine.csv", false, Encoding.UTF8))                
+            // using (var csv = new CsvWriter(writer, CultureInfo.InvariantCulture))
+            // using (var cursor = await MatchEntityService.GetAll(filter, 1000))
+            // {
+            //     csv.Context.RegisterClassMap<MatchEntityMap>();
+            //     while (await cursor.MoveNextAsync())
+            //     {
+            //         csv.WriteRecords(cursor.Current);
+            //     }
+            // }
 
             sw.Stop();
             Log.Debug("Time: {0}", sw.Elapsed);
@@ -212,11 +211,11 @@ namespace MMIv8_Ktype.Core.Services.Mapping
         public async Task BulkUpdatePreviousMatchedFlag(string path)
         {
             List<UpdateFlagRequest> updateMatches = new();
-            using (var reader = new StreamReader(path, Encoding.UTF8))
-            using (var csv = new CsvReader(reader, CultureInfo.InvariantCulture))
-            {
-                updateMatches = csv.GetRecords<UpdateFlagRequest>().ToList();
-            }
+            // using (var reader = new StreamReader(path, Encoding.UTF8))
+            // using (var csv = new CsvReader(reader, CultureInfo.InvariantCulture))
+            // {
+            //     updateMatches = csv.GetRecords<UpdateFlagRequest>().ToList();
+            // }
 
             Log.Information("Previous Match import processing {Count} records", updateMatches.Count);
 
@@ -228,11 +227,11 @@ namespace MMIv8_Ktype.Core.Services.Mapping
         public async Task BulkUpdateMatchedFlag(string path)
         {
             List<UpdateFlagRequest> updateMatches = new();
-            using (var reader = new StreamReader(path, Encoding.UTF8))
-            using (var csv = new CsvReader(reader, CultureInfo.InvariantCulture))
-            {
-                updateMatches = csv.GetRecords<UpdateFlagRequest>().ToList();
-            }
+            // using (var reader = new StreamReader(path, Encoding.UTF8))
+            // using (var csv = new CsvReader(reader, CultureInfo.InvariantCulture))
+            // {
+            //     updateMatches = csv.GetRecords<UpdateFlagRequest>().ToList();
+            // }
 
             Log.Information("Match Flag import processing {Count} records", updateMatches.Count());
 
@@ -244,11 +243,11 @@ namespace MMIv8_Ktype.Core.Services.Mapping
         public async Task BulkUpdateFailedFlag(string path)
         {
             List<UpdateFlagRequest> updateMatches = new();
-            using (var reader = new StreamReader(path, Encoding.UTF8))
-            using (var csv = new CsvReader(reader, CultureInfo.InvariantCulture))
-            {
-                updateMatches = csv.GetRecords<UpdateFlagRequest>().ToList();
-            }
+            // using (var reader = new StreamReader(path, Encoding.UTF8))
+            // using (var csv = new CsvReader(reader, CultureInfo.InvariantCulture))
+            // {
+            //     updateMatches = csv.GetRecords<UpdateFlagRequest>().ToList();
+            // }
 
             Log.Information("Failed Flag import processing {Count} records", updateMatches.Count);
 
@@ -266,12 +265,12 @@ namespace MMIv8_Ktype.Core.Services.Mapping
             await SourceTecDocPCService.DeleteAll();
 
             List<MongoSourceTecDocPC> entities = [];
-            using (var reader = new StreamReader(path, Encoding.UTF8))
-            using (var csv = new CsvReader(reader, CultureInfo.InvariantCulture))
-            {
-                csv.Context.RegisterClassMap<MongoSourceTecDocPCMap>();
-                entities = csv.GetRecords<MongoSourceTecDocPC>().ToList();
-            }
+            // using (var reader = new StreamReader(path, Encoding.UTF8))
+            // using (var csv = new CsvReader(reader, CultureInfo.InvariantCulture))
+            // {
+            //     csv.Context.RegisterClassMap<MongoSourceTecDocPCMap>();
+            //     entities = csv.GetRecords<MongoSourceTecDocPC>().ToList();
+            // }
 
             await SourceTecDocPCService.CreateBulk(entities);
         }
@@ -279,12 +278,12 @@ namespace MMIv8_Ktype.Core.Services.Mapping
         public async Task UpdateTecDocPCEntities(string path)
         {
             List<MongoSourceTecDocPC> entities = [];
-            using (var reader = new StreamReader(path, Encoding.UTF8))
-            using (var csv = new CsvReader(reader, CultureInfo.InvariantCulture))
-            {
-                csv.Context.RegisterClassMap<MongoSourceTecDocPCMap>();
-                entities = csv.GetRecords<MongoSourceTecDocPC>().ToList();
-            }
+            // using (var reader = new StreamReader(path, Encoding.UTF8))
+            // using (var csv = new CsvReader(reader, CultureInfo.InvariantCulture))
+            // {
+            //     csv.Context.RegisterClassMap<MongoSourceTecDocPCMap>();
+            //     entities = csv.GetRecords<MongoSourceTecDocPC>().ToList();
+            // }
 
             var filterBuilder = Builders<MongoSourceTecDocPC>.Filter;
             var filter = filterBuilder.Empty;
@@ -306,12 +305,12 @@ namespace MMIv8_Ktype.Core.Services.Mapping
             await SourceMMIv8Service.DeleteAll();
 
             List<MongoSourceMMIv8> entities = [];
-            using (var reader = new StreamReader(path, Encoding.UTF8))
-            using (var csv = new CsvReader(reader, CultureInfo.InvariantCulture))
-            {
-                csv.Context.RegisterClassMap<MongoSourceMMIv8Map>();
-                entities = csv.GetRecords<MongoSourceMMIv8>().ToList();
-            }
+            // using (var reader = new StreamReader(path, Encoding.UTF8))
+            // using (var csv = new CsvReader(reader, CultureInfo.InvariantCulture))
+            // {
+            //     csv.Context.RegisterClassMap<MongoSourceMMIv8Map>();
+            //     entities = csv.GetRecords<MongoSourceMMIv8>().ToList();
+            // }
 
             await SourceMMIv8Service.CreateBulk(entities);
         }
@@ -319,12 +318,12 @@ namespace MMIv8_Ktype.Core.Services.Mapping
         public async Task UpdateMMIv8Entities(string path)
         {
             List<MongoSourceMMIv8> entities = [];
-            using (var reader = new StreamReader(path, Encoding.UTF8))
-            using (var csv = new CsvReader(reader, CultureInfo.InvariantCulture))
-            {
-                csv.Context.RegisterClassMap<MongoSourceMMIv8Map>();
-                entities = csv.GetRecords<MongoSourceMMIv8>().ToList();
-            }
+            // using (var reader = new StreamReader(path, Encoding.UTF8))
+            // using (var csv = new CsvReader(reader, CultureInfo.InvariantCulture))
+            // {
+            //     csv.Context.RegisterClassMap<MongoSourceMMIv8Map>();
+            //     entities = csv.GetRecords<MongoSourceMMIv8>().ToList();
+            // }
 
             var filterBuilder = Builders<MongoSourceMMIv8>.Filter;
             var filter = filterBuilder.Empty;

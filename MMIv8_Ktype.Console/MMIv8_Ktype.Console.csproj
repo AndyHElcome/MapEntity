@@ -13,7 +13,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\MMIv8_Ktype.AccessMdb\MMIv8_Ktype.AccessMdb.csproj" />
-    <ProjectReference Include="..\MMIv8_Ktype.Api\MMIv8_Ktype.Api.csproj" />
+    <ProjectReference Include="..\MMIv8_Ktype.CSV\MMIv8_Ktype.CSV.csproj" />
     <ProjectReference Include="..\MMIv8_Ktype.Models\MMIv8_Ktype.Models.csproj" />
   </ItemGroup>
 

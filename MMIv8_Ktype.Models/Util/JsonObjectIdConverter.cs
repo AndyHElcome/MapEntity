@@ -1,25 +1,9 @@
-﻿using CsvHelper;
-using CsvHelper.Configuration;
-using CsvHelper.TypeConversion;
 using MongoDB.Bson;
 using System.Text.Json.Serialization;
 using System.Text.Json;
 
-namespace MMIv8_Ktype.Models
+namespace MMIv8_Ktype.Models.Util
 {
-    public class ObjectIdConverter : DefaultTypeConverter
-    {
-        public override string ConvertToString(object? value, IWriterRow row, MemberMapData memberMapData)
-        {
-            if (value == null || value.GetType() != typeof(ObjectId))
-                return string.Empty;
-
-            var objectId = (ObjectId)value;
-
-            return objectId.ToString() ?? string.Empty;
-        }
-    }
-
     public class JsonObjectIdConverter : JsonConverter<ObjectId>
     {
         public override ObjectId Read(

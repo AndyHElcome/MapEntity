@@ -9,7 +9,6 @@ namespace MMIv8_Ktype.Models
 {
     public static class GlobalHelpers
     {
-
         public static void AddProperty(ExpandoObject expando, string propertyName, object propertyValue)
         {
             var expandoDict = expando as IDictionary<string, object>;

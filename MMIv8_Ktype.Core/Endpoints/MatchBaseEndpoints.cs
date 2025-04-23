@@ -1,5 +1,4 @@
-﻿using Microsoft.AspNetCore.Mvc;
-using MMIv8_Ktype.Api.Endpoints;
+﻿using MMIv8_Ktype.Api.Endpoints;
 using MMIv8_Ktype.Api.Requests;
 using MMIv8_Ktype.Core.Services.Mapping;
 using MMIv8_Ktype.Core.Services.Match;

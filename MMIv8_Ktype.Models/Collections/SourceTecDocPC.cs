@@ -1,8 +1,6 @@
-﻿using CsvHelper.Configuration;
-using MMIv8_Ktype.Models.DateIntersection;
+﻿using MMIv8_Ktype.Models.DateIntersection;
 using MMIv8_Ktype.Models.Indexes;
 using MongoDB.Bson;
-using System.Globalization;
 
 namespace MMIv8_Ktype.Models.Collections
 {
@@ -114,31 +112,5 @@ namespace MMIv8_Ktype.Models.Collections
             LinkedEngineCodes,
         });
 
-    }
-
-
-
-
-    public sealed class MongoSourceTecDocPCMap : ClassMap<MongoSourceTecDocPC>
-    {
-        public MongoSourceTecDocPCMap()
-        {
-            AutoMap(CultureInfo.InvariantCulture);
-            Map(m => m.DFrom).Name("dFrom").TypeConverter<NAtoIntConverter>();
-            Map(m => m.DTo).Name("dTo").TypeConverter<NAtoIntConverter>();
-            Map(m => m.KW).TypeConverter<NAtoIntConverter>();
-            Map(m => m.PS).TypeConverter<NAtoIntConverter>();
-            Map(m => m.Litre).TypeConverter<NAtoDecimalConverter>();
-            Map(m => m.Cyl).TypeConverter<NAtoIntConverter>();
-            Map(m => m.Drive).Name("4WD");
-            Map(m => m.FuelType).Name("Fuel Type");
-            Map(m => m.BodyType).Name("Body Type");
-            Map(m => m.CCTech).Name("ccTech").TypeConverter<NAtoIntConverter>();
-            Map(m => m.Valves).TypeConverter<NAtoIntConverter>();
-            Map(m => m.Door).TypeConverter<NAtoIntConverter>();
-
-            Map(m => m.EntityHash).Ignore();
-            //Map(m => m.LinkedEngines).Ignore();
-        }
     }
 }
