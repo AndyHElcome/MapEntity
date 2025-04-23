@@ -126,7 +126,7 @@ internal class Program
 
 
         app.MapControllers();
-        app.MapEndpoints(Assembly.GetExecutingAssembly());
+        app.MapEndpoints();
 
         app.Run();
     }

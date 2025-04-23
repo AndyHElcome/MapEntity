@@ -3,6 +3,7 @@ using System.Reflection;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Routing;
+using Microsoft.AspNetCore.Routing.Patterns;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using MMIv8_Ktype.Models.ApiServices;
@@ -49,28 +50,21 @@ namespace MMIv8_Ktype.Models.Endpoints
 
             foreach (var method in methods)
             {
-                var postAttr = method.GetCustomAttribute<PostAttribute>();
-                if (postAttr != null)
+                var test = method.GetCustomAttributes<HttpMethodAttribute>();
+
+                foreach(var httpMethodAttribute in method.GetCustomAttributes<HttpMethodAttribute>())
                 {
-                    var path = postAttr.Path;
+                    if (httpMethodAttribute is null)
+                        continue;
+
+                    var path = httpMethodAttribute.Path;
                     var methodName = method.Name;
 
                     // Get actual MethodInfo from the implementation
                     var implMethod = implementation.GetType().GetMethod(methodName);
 
-                    var x = method.GetParameters();
-                    var y = method.GetParameters().Length;
-
                     var returnType = method.ReturnType;
                     var parameters = method.GetParameters();
-
-                    // This assumes method returns Task<IResult> and takes a single parameter or none
-                    //Delegate handler = method.GetParameters().Length switch
-                    //{
-                    //    0 => Delegate.CreateDelegate(typeof(Func<Task<IResult>>), implementation, implMethod),
-                    //    1 => Delegate.CreateDelegate(typeof(Func<,>).MakeGenericType(method.GetParameters()[ 0 ].ParameterType, typeof(Task<MatchMakeModel?>)), implementation, implMethod),
-                    //    _ => throw new NotSupportedException("Only methods with 0 or 1 parameter are supported")
-                    //};
 
                     Delegate handler = parameters.Length switch
                     {
@@ -87,84 +81,56 @@ namespace MMIv8_Ktype.Models.Endpoints
                         _ => throw new NotSupportedException("Only methods with 0 or 1 parameter are supported")
                     };
 
-                    group.MapPost(path, handler).WithName(methodName);
+                    _ = httpMethodAttribute.Method.Method switch
+                    {
+                        "GET" => group.MapGet(path, handler).WithName(methodName),
+                        "PUT" => group.MapPut(path, handler).WithName(methodName),
+                        "POST" => group.MapPost(path, handler).WithName(methodName),
+                        "DELETE" => group.MapDelete(path, handler).WithName(methodName),
+                        //"HEAD" => _,
+                        //"OPTIONS" => _,
+                        //"TRACE" => _,
+                        "PATCH" => group.MapPatch(path, handler).WithName(methodName),
+                        //"CONNECT" => _,
+                        _ => throw new NotSupportedException($"Do not recognise HttpMethod {httpMethodAttribute.Method}")
+                    };
                 }
-
-                // Handle other verbs (Get, Put, etc.) similarly
             }
         }
 
-        public static List<(Type IType, Type CType)> GetEndpointServiceInterface(Assembly assembly) //FOR INTERFACE
+        public static TypeInfo[] GetEnpointInterfaces()
         {
-            List<(Type IType, Type CType)> result = new();
-
-            var endpointTypes = assembly.DefinedTypes
-                             .Where(type => type is { IsAbstract: false, IsInterface: false } && type.IsAssignableTo(typeof(IEndpoint)))
-                             .Select(type => (Type)type)
-                             .ToArray();
-
-            foreach (var endpointType in endpointTypes)
-            {
-                var serviceDescriptor = endpointType.GetInterfaces()
-                    .Where(interfaceType => interfaceType != typeof(IEndpoint) && interfaceType.IsAssignableTo(typeof(IEndpoint)))
-                    .Select(interfaceType => (interfaceType, endpointType))
-                    .ToArray();
-
-                result.AddRange(serviceDescriptor);
-            }
-
-            return result;
-        }
-
-        //public static List<(Type IType, Type CType)> GetEndpointServiceInterface(Assembly assembly)
-        //{
-        //    List<(Type IType, Type CType)> result = new();
-
-        //    var endpointTypes = assembly.DefinedTypes
-        //                     .Where(type => type is { IsAbstract: false, IsInterface: false } && type.IsAssignableTo(typeof(IEndpoint)))
-        //                     .Select(type => (Type)type)
-        //                     .ToArray();
-
-        //    foreach (var endpointType in endpointTypes)
-        //    {
-        //        var serviceDescriptor = Assembly.GetExecutingAssembly().DefinedTypes
-        //                         .Where(type => type is { IsAbstract: true, IsInterface: false } && type.IsAssignableTo(typeof(IEndpoint)))
-        //                         .Select(interfaceType => ((Type)interfaceType, endpointType))
-        //                         .ToArray();
-
-        //        result.AddRange(serviceDescriptor);
-        //    }
-
-        //    return result;
-        //}
-
-        public static TypeInfo[] GetEnpointInterfaces(Assembly assembly)
-        {
-            return assembly.DefinedTypes
-                            .Where(type => type is { IsAbstract: false, IsInterface: false } && type.IsAssignableTo(typeof(IEndpoint)))
+            return Assembly.GetExecutingAssembly().DefinedTypes
+                            .Where(type => type.IsInterface && 
+                                   type != typeof(IEndpoint) &&
+                                   type.IsAssignableTo(typeof(IEndpoint)))
                             .ToArray();
         }
 
         public static IServiceCollection AddEndpoints(this IServiceCollection services, Assembly assembly)
         {
-            var serviceDescriptor = GetEndpointServiceInterface(assembly)
-                .Select(interfaceType => ServiceDescriptor.Transient(interfaceType.IType, interfaceType.CType));
+            foreach(var interfaceType in GetEnpointInterfaces())
+            {
+                var serviceDescriptors = assembly.DefinedTypes
+                 .Where(type => type is { IsAbstract: false, IsInterface: false } && type.IsAssignableTo(interfaceType))
+                 .Select(type => ServiceDescriptor.Transient(interfaceType, type));
 
-            services.TryAddEnumerable(serviceDescriptor);
+                services.TryAddEnumerable(serviceDescriptors);
+            }
 
             return services;
         }
 
-        public static IApplicationBuilder MapEndpoints(this WebApplication app, Assembly assembly, RouteGroupBuilder? routeGroupBuilder = null)
+        public static IApplicationBuilder MapEndpoints(this WebApplication app, RouteGroupBuilder? routeGroupBuilder = null)
         {
             IEndpointRouteBuilder builder = routeGroupBuilder is null ? app : routeGroupBuilder;
 
             using var scope = app.Services.CreateScope();
-            foreach(var service in GetEndpointServiceInterface(assembly))
+            foreach(var service in GetEnpointInterfaces())
             {
-                var impl = scope.ServiceProvider.GetRequiredService(service.IType);
+                var impl = scope.ServiceProvider.GetRequiredService(service);
 
-                MapEndpointsFromInterface(builder, (IEndpoint)impl, service.IType);
+                MapEndpointsFromInterface(builder, (IEndpoint)impl, service);
             }
             
             return app;
