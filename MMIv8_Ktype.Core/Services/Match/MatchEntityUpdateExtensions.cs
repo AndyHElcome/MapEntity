@@ -1,4 +1,5 @@
 ﻿using MMIv8_Ktype.Models.Collections;
+using MMIv8_Ktype.Models.Indexes;
 using MMIv8_Ktype.Models.Outputs;
 using MongoDB.Bson;
 using MongoDB.Driver;
@@ -36,6 +37,12 @@ namespace MMIv8_Ktype.Core.Services.Match
         public static UpdateDefinition<MatchEntity> SetPreviousMatchedFlag(this UpdateDefinition<MatchEntity> update, bool matched)
         {
             update = update.Set(c => c.MatchResult.PreviousMatch, matched);
+            return update;
+        }
+
+        public static UpdateDefinition<MatchEntity> UpdateEntity(this UpdateDefinition<MatchEntity> update, SourceEntity sourceEntity)
+        {
+            update = update.Set(c => c.TecDocEntity, sourceEntity);
             return update;
         }
 

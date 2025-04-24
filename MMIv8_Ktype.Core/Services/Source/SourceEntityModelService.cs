@@ -4,6 +4,18 @@ using MongoDB.Driver;
 
 namespace MMIv8_Ktype.Core.Services.Source
 {
+    public class SourceTecDocEntityModelService(MongoDBContext MMIv8_Ktype,
+                                                MongoBaseContext BaseContext) : SourceEntityModelService(BaseContext)
+    {
+        public override IMongoCollection<MongoSourceEntityModel> Collection => MMIv8_Ktype.Collections.SourceTecDocPCModel;
+    }
+
+    public class SourceMMIv8EntityModelService(MongoDBContext MMIv8_Ktype,
+                                               MongoBaseContext BaseContext) : SourceEntityModelService(BaseContext)
+    {
+        public override IMongoCollection<MongoSourceEntityModel> Collection => MMIv8_Ktype.Collections.SourceMMIv8Model;
+    }
+
     public abstract class SourceEntityModelService(MongoBaseContext BaseContext) : IMongoCollectionService<MongoSourceEntityModel>
     {
         public abstract IMongoCollection<MongoSourceEntityModel> Collection { get; }
@@ -36,17 +48,5 @@ namespace MMIv8_Ktype.Core.Services.Source
 
             return await BaseContext.GetSingleDocument(Collection, filter: filter);
         }
-    }
-
-    public class SourceTecDocEntityModelService(MongoDBContext MMIv8_Ktype,
-                                                MongoBaseContext BaseContext) : SourceEntityModelService(BaseContext)
-    {
-        public override IMongoCollection<MongoSourceEntityModel> Collection => MMIv8_Ktype.Collections.SourceTecDocPCModel;
-    }
-
-    public class SourceMMIv8EntityModelService(MongoDBContext MMIv8_Ktype,
-                                               MongoBaseContext BaseContext) : SourceEntityModelService(BaseContext)
-    {
-        public override IMongoCollection<MongoSourceEntityModel> Collection => MMIv8_Ktype.Collections.SourceMMIv8Model;
     }
 }

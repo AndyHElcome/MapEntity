@@ -18,7 +18,7 @@ namespace MMIv8_Ktype.Models.Collections
         public string Model { get; set; }
 
         [MongoDB.Bson.Serialization.Attributes.BsonElement]
-        public string SourceEntityModelHash => GlobalHelpers.GenerateKey(new { Manufacturer, Model });
+        public override string SourceEntityModelHash => GlobalHelpers.GenerateKey(new { Manufacturer, Model });
         public string SubModel { get; set; }
         public string Mark_or_Series { get; set; }
         public string Identifier { get; set; }
@@ -46,7 +46,7 @@ namespace MMIv8_Ktype.Models.Collections
         public int End_Year { get; set; }
 
         [MongoDB.Bson.Serialization.Attributes.BsonElement]
-        public DateTimeRange DateRange => new(Start_Month, Start_Year, End_Month, End_Year);
+        public override DateTimeRange DateRange => new(Start_Month, Start_Year, End_Month, End_Year);
 
         public string Body { get; set; }
         public int Doors { get; set; }
@@ -58,7 +58,10 @@ namespace MMIv8_Ktype.Models.Collections
         public int BHP { get; set; }
         public int KW { get; set; }
         public string Engine_Code { get; set; }
-        public string EntityHash => GlobalHelpers.GenerateKey(new
+        public override int ExternalId => MMI_V8_Key;
+
+        [MongoDB.Bson.Serialization.Attributes.BsonElement]
+        public override string EntityHash => GlobalHelpers.GenerateKey(new
         {
             MMI_V8_Key,
             Manufacturer,

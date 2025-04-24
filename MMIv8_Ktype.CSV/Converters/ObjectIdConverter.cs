@@ -16,5 +16,13 @@ namespace MMIv8_Ktype.CSV.Converters
 
             return objectId.ToString() ?? string.Empty;
         }
+
+        public override object ConvertFromString(string? text, IReaderRow row, MemberMapData memberMapData)
+        {
+            if (text == null || !ObjectId.TryParse(text, out ObjectId convertedText))
+                return ObjectId.Empty;
+
+            return convertedText;
+        }
     }
 }

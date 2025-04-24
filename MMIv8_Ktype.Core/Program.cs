@@ -38,10 +38,11 @@ internal class Program
 
         builder.Services.AddScoped<IVersionProvider, VersionProviderMongo>();
 
-        builder.Services.AddScoped<ISourceEntityService<MongoSourceTecDocPC>, SourceTecDocPCService>();
-        builder.Services.AddScoped<ISourceEntityService<MongoSourceMMIv8>, SourceMMIv8Service>();
+        builder.Services.AddScoped<SourceTecDocPCService>();
+        builder.Services.AddScoped<SourceMMIv8Service>();
         builder.Services.AddScoped<SourceTecDocEntityModelService>();
         builder.Services.AddScoped<SourceMMIv8EntityModelService>();
+
 
         builder.Services.AddScoped<MatchEntityService>();
         builder.Services.AddScoped<MatchBaseService>();
@@ -49,6 +50,9 @@ internal class Program
 
         builder.Services.AddScoped<BulkMappingService>();
         builder.Services.AddScoped<MappingService>();
+
+        builder.Services.AddScoped<SourceMMIv8UpdateService>();
+        builder.Services.AddScoped<SourceTecDocPCUpdateService>();
 
         // Learn more about configuring Swagger/OpenAPI at https://aka.ms/aspnetcore/swashbuckle
         builder.Services.AddEndpointsApiExplorer();

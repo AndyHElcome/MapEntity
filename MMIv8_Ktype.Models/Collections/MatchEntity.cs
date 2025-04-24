@@ -4,6 +4,7 @@ using MongoDB.Bson.Serialization;
 using MongoDB.Bson.Serialization.Attributes;
 using MMIv8_Ktype.Models.Outputs;
 using MMIv8_Ktype.Models.Status;
+using MMIv8_Ktype.Models.Indexes;
 
 namespace MMIv8_Ktype.Models.Collections
 {
@@ -46,6 +47,15 @@ namespace MMIv8_Ktype.Models.Collections
 
             CalculateMatchBases(versionProvider);
         }
+        //public MatchEntity(IVersionProvider versionProvider, SourceEntity tecdoc, SourceEntity mmiv8, ObjectId matchMakeModelMatchID)
+        //{
+        //    Status = new(versionProvider);
+        //    TecDocEntity = tecdoc;
+        //    MMIv8Entity = mmiv8;
+        //    MatchMakeModelMatchID = matchMakeModelMatchID;
+
+        //    CalculateMatchBases(versionProvider);
+        //}
 
         [Obsolete("Version Required")]
         public MatchEntity(MongoSourceTecDocPC tecdoc, MongoSourceMMIv8 mmiv8, ObjectId matchMakeModelMatchID)

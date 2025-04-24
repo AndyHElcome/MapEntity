@@ -27,18 +27,19 @@ internal class Program
 
     static async Task Main(string[] args)
     {
-        var Log = Logger.Log; 
+        var Log = Logger.Log;
 
         //args = [ "MMIv8_Ktype.AccessMdb", "TestAccessDBOperation", @"C:\Users\andy.hargreaves\OneDrive - Elcome Ltd\Desktop\NEW MMI TO KTYPE\MMIv8_Ktype2.accdb", "API_StorePartialMatchBase" ];
 
-        //args = [ "MMIv8_Ktype.CSV", "TestCsvReadOperation", @"C:\Users\andy.hargreaves\OneDrive - Elcome Ltd\Desktop\NEW MMI TO KTYPE\!!!!!!" ];
+        //args = [ "MMIv8_Ktype.CSV", "TestCsvReadOperation", @"C:\Users\andy.hargreaves\OneDrive - Elcome Ltd\Desktop\NEW MMI TO KTYPE\Output\MakeModelMatch.csv" ];
 
-        //args = [ "MMIv8_Ktype.CSV", "TestCsvWriteOperation", @"C:\Users\andy.hargreaves\OneDrive - Elcome Ltd\Desktop\NEW MMI TO KTYPE\!!!!!!" ];
+        //args = [ "MMIv8_Ktype.CSV", "TestCsvWriteOperation", @"C:\Users\andy.hargreaves\OneDrive - Elcome Ltd\Desktop\NEW MMI TO KTYPE\Output\MakeModelMatch.csv" ];
 
-        if (args.Length == 0)
+        args = [ "MMIv8_Ktype.CSV", "GenerateModelMatchCSV", @"C:\Users\andy.hargreaves\OneDrive - Elcome Ltd\Desktop\NEW MMI TO KTYPE\Output\MakeModelMatch.csv" ];
+
+        if (args.Length < 2)
         {
-            Console.WriteLine("Usage: <Library> <ClassName> <ConstructorArgs...>");
-                Log.Error("No args parsed. Usage: <Library> <ClassName> <ConstructorArgs...>");
+            Log.Error("No args parsed. Usage: <Library> <ClassName> <ConstructorArgs...>");
             return;
         }
 
@@ -46,29 +47,26 @@ internal class Program
         string className = args[ 1 ];
         string[] constructorArgs = args.Skip(2).ToArray();
 
+
+
         try
         {
+            //Get Operation Type
             Type? type = Assembly.Load(new AssemblyName(library))
-                                 .GetTypes()
-                                 .FirstOrDefault(t => t.Name.Equals(className, StringComparison.OrdinalIgnoreCase) && t.Namespace.StartsWith($"{library}.Operations"));
+                .GetTypes()
+                .FirstOrDefault(
+                    t => t.Name.Equals(className, StringComparison.OrdinalIgnoreCase) 
+                      && t.IsAssignableTo(typeof(IOperation)));
 
             if (type == null)
-            {
-                Log.Error("Class '{className}' not found.", className);
-                return;
-            }
+                throw new Exception($"Class '{className}' of '{nameof(IOperation)}' not found in '{library}'.");
+
 
             // Find a constructor that matches the number of parameters
-            var constructor = type.GetConstructors()
-                                  .FirstOrDefault(c => c.GetParameters().Length == constructorArgs.Length);
-
+            var constructor = type.GetConstructors().FirstOrDefault(c => c.GetParameters().Length == constructorArgs.Length);
             if (constructor == null)
-            {
-
-                Log.Error("No matching constructor found for class '{className}' with {constructorArgs.Length} parameters.", className, constructorArgs.Length);
-                //Console.WriteLine($"No matching constructor found for class '{className}' with {constructorArgs.Length} parameters.");
-                return;
-            }
+                throw new Exception($"No matching constructor found for class '{className}' with {constructorArgs.Length} parameters.");
+            
 
             // Convert parameters to the constructor parameter types
             var parameters = constructor.GetParameters();
@@ -87,7 +85,7 @@ internal class Program
         }
         catch (Exception ex)
         {
-            Log.Error("Error: {ex}", ex.Message);
+            Log.Error(ex, "Error running command: {@args}", args);
         }
     }
 }

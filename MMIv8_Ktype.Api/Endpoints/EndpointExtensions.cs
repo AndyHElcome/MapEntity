@@ -1,4 +1,5 @@
-﻿using System.Linq.Expressions;
+﻿using System.Collections.Generic;
+using System.Linq.Expressions;
 using System.Reflection;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
@@ -23,9 +24,20 @@ namespace MMIv8_Ktype.Api.Endpoints
             return type.GetCustomAttribute<GroupName>()?.Name ?? type.Name;
         }
 
+        public static List<MethodInfo> GetInterfaceMethods(this Type type)
+        {
+            List<MethodInfo> methods = [.. type.GetMethods()];
+            foreach (var interfaceType in type.GetInterfaces())
+            {
+                methods.AddRange(interfaceType.GetMethods());
+            }
+
+            return methods;
+        }
+
         public static void MapEndpointsFromInterface(IEndpointRouteBuilder routeBuilder, IEndpoint implementation, Type abstraction)
         {
-            var methods = abstraction.GetMethods();
+            var methods = abstraction.GetInterfaceMethods();
 
             var groupName = abstraction.GetGroupName() ?? abstraction.Name;
             var group = routeBuilder.MapGroup(groupName).WithTags(groupName);

@@ -5,6 +5,8 @@ using MMIv8_Ktype.Api.Requests;
 using MMIv8_Ktype.CSV.Maps;
 using MMIv8_Ktype.Models.Collections;
 using Serilog;
+using SharpCompress.Writers;
+using System.Formats.Asn1;
 using System.Globalization;
 using System.Text;
 
@@ -14,76 +16,104 @@ namespace MMIv8_Ktype.CSV.Operations
     {
         public string CSVPath { get; set; } = csvPath;
 
+        public CsvReadingStream CsvStream => new(CSVPath);
+
         public abstract Task ExecuteOperation(ILogger log);
-        internal CsvReader GetCsvReader()
-        {
-            using var reader = new StreamReader(CSVPath, Encoding.UTF8);
-            return new CsvReader(reader, CultureInfo.InvariantCulture);
-        }
     }
 
-    public abstract class CSVWriteOperation(string csvPath) : ICSVOperation
+    public abstract class CSVWriteOperation(string csvPath, bool append = false) : ICSVOperation
     {
         public string CSVPath { get; set; } = csvPath;
+        public bool Append { get; set; } = append;
+
+        public CsvWritingStream CsvStream => new(CSVPath, Append);
 
         public abstract Task ExecuteOperation(ILogger log);
-        internal CsvWriter GetCsvWriter(bool Append = false)
-        {
-            using var writer = new StreamWriter(CSVPath, Append, Encoding.UTF8);
-            return new CsvWriter(writer, CultureInfo.InvariantCulture);
-        }
-
     }
 
-    public class TestCsvReadOperation(string csvPath) : CSVReadOperation(csvPath)
+    public class CsvWritingStream(string csvPath, bool append = false) : IDisposable
     {
+        public StreamWriter Writer => new StreamWriter(csvPath, append, Encoding.UTF8);
+        public CsvWriter CsvWriter => new CsvWriter(Writer, CultureInfo.InvariantCulture);
+
+        public void Dispose()
+        {
+            Writer.Close();
+            Writer.Dispose();
+            CsvWriter.Dispose();
+        }
+    }
+
+    public class CsvReadingStream(string csvPath) : IDisposable
+    {
+        public StreamReader Reader => new StreamReader(csvPath, Encoding.UTF8);
+        public CsvReader CsvReader => new CsvReader(Reader, CultureInfo.InvariantCulture);
+
+        public void Dispose()
+        {
+            Reader.Close();
+            Reader.Dispose();
+            CsvReader.Dispose();
+        }
+    }
+
+    public class TestCsvReadOperation : CSVReadOperation
+    {
+        public TestCsvReadOperation(string csvPath) : base(csvPath) { }
+
         public async override Task ExecuteOperation(ILogger log)
         {
-            var matchBaseEndpoints = new RefitClient(log).CreateService<IMatchBaseEndpoints>();
-
             List<PutMatchBaseRequest> updatedMatches = new();
-
-            using (CsvReader csvReader = this.GetCsvReader())
+            using (var csvReader = CsvStream.CsvReader)
             {
                 updatedMatches = csvReader.GetRecords<PutMatchBaseRequest>().ToList();
             }
 
+            log.Information("Read file: {CSVPath} ({count} records)", CSVPath, updatedMatches.Count);
+
+            var matchBaseEndpoints = new RefitClient(log).CreateService<IMatchBaseEndpoints>();
             foreach (var match in updatedMatches)
             {
                 await matchBaseEndpoints.UpdateMatchBaseScore(match);
             }
-
         }
     }
 
-
-    public class TestCsvWriteOperation(string csvPath) : CSVWriteOperation(csvPath)
+    public class TestCsvWriteOperation : CSVWriteOperation
     {
+        public TestCsvWriteOperation(string csvPath, bool append) : base(csvPath, append) { }
+        public TestCsvWriteOperation(string csvPath) : base(csvPath) { }
+
         public async override Task ExecuteOperation(ILogger log)
         {
             var matchMakeModels = await new RefitClient(log).CreateService<IMatchMakeModelEndpoints>().GenerateModelMatch();
 
-            using (CsvWriter csvWriter = this.GetCsvWriter())
+            using (var csvWriter = CsvStream.CsvWriter)
             {
                 csvWriter.Context.RegisterClassMap<MatchMakeModelMap>();
                 csvWriter.WriteRecords(matchMakeModels);
             }
+
+            log.Information("Created file: {CSVPath} ({count} records)", CSVPath, matchMakeModels.Count);
         }
     }
 
-    public class GenerateModelMatchCSV(string csvPath) : CSVWriteOperation(csvPath)
+    public class GenerateModelMatchCSV : CSVWriteOperation
     {
+        public GenerateModelMatchCSV(string csvPath, bool append) : base(csvPath, append) { }
+        public GenerateModelMatchCSV(string csvPath) : base(csvPath) { }
+
         public async override Task ExecuteOperation(ILogger log)
         {
-            var matchMakeModelEndpoints = new RefitClient(log).CreateService<IMatchMakeModelEndpoints>();
+            var matchMakeModels = await new RefitClient(log).CreateService<IMatchMakeModelEndpoints>().GenerateModelMatch();
 
-            List<MatchMakeModel>? matchMakeModels = await matchMakeModelEndpoints.GenerateModelMatch();
-
-            using (CsvWriter csvWriter = this.GetCsvWriter())
+            using (var csvWriter = CsvStream.CsvWriter)
             {
                 csvWriter.Context.RegisterClassMap<MatchMakeModelMap>();
                 csvWriter.WriteRecords(matchMakeModels);
             }
+
+            log.Information("Created file: {CSVPath} ({count} records)", CSVPath, matchMakeModels.Count);
         }
     }
 }

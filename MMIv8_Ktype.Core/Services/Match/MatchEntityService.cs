@@ -2,6 +2,7 @@
 using MMIv8_Ktype.Api.Responses;
 using MMIv8_Ktype.Core.Contexts;
 using MMIv8_Ktype.Models.Collections;
+using MMIv8_Ktype.Models.Indexes;
 using MMIv8_Ktype.Models.Util;
 using MongoDB.Bson;
 using MongoDB.Driver;
@@ -18,7 +19,7 @@ namespace MMIv8_Ktype.Core.Services.Match
         public async Task<MatchEntity?> GetMatchEntity(int KtypNr, int MMI_V8_Key)
         {
             var builder = Builders<MatchEntity>.Filter;
-            var filter = builder.Eq(c => c.TecDocEntity.KTypNr, KtypNr) & builder.Eq(c => c.MMIv8Entity.MMI_V8_Key, MMI_V8_Key);
+            var filter = builder.Eq(c => c.TecDocEntity.ExternalId, KtypNr) & builder.Eq(c => c.MMIv8Entity.ExternalId, MMI_V8_Key);
 
             return await MatchEntityContext.GetSingleDocument(Collection, filter: filter);
         }
@@ -115,6 +116,13 @@ namespace MMIv8_Ktype.Core.Services.Match
                                                                                                  .UpdateScoreMatchResult());
         }
 
+        public CombinationPipeline<MatchEntity> UpdateEntity(SourceEntity sourceEntity) //TODO check this is still updating properly
+        {
+            var filter = Builders<MatchEntity>.Filter.Eq(c => c.TecDocEntity.SourceEntityID, sourceEntity.SourceEntityID);
+
+            return new CombinationPipeline<MatchEntity>(Collection, filter).AppendUpdate(c => c.UpdateEntity(sourceEntity));
+        }
+
         public CombinationPipeline<MatchEntity> UpdateEntity(MongoSourceTecDocPC sourceEntity)
         {
             var filter = Builders<MatchEntity>.Filter.Eq(c => c.TecDocEntity.SourceEntityID, sourceEntity.SourceEntityID);
@@ -165,7 +173,7 @@ namespace MMIv8_Ktype.Core.Services.Match
 
         public async Task<BulkCombinationUpdate> BulkCombinationUpdateMatchRefine(IEnumerable<int> mmi_V8_Keys) //TODO Move into unique MatchRefine Class
         {
-            var filter = Builders<MatchEntity>.Filter.In(c => c.MMIv8Entity.MMI_V8_Key, mmi_V8_Keys);
+            var filter = Builders<MatchEntity>.Filter.In(c => c.MMIv8Entity.ExternalId, mmi_V8_Keys);
             return await BulkCombinationUpdateMatchRefine(filter);
         }
 

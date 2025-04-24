@@ -5,9 +5,8 @@ using MMIv8_Ktype.Api.Endpoints;
 
 namespace MMIv8_Ktype.Api;
 
-    public class VersionProviderApi(ILogger log) : IVersionProvider
+    public class VersionProviderApi(RefitClient RefitClient) : IVersionProvider
     {
-        public RefitClient RefitClient { get; } = new RefitClient(log);
         public Models.Collections.Version Version => RefitClient.CreateService<IVersionEndpoints>().GetCurrentVersion().Result ?? new();
 
         public StatusChange NewStatus(Status status, string? detail = null) => new()

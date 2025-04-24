@@ -22,11 +22,13 @@ namespace MMIv8_Ktype.Api
                 {
                     BaseAddress = new Uri("https://localhost:44304/"),
                 };
+
             _httpClient.DefaultRequestHeaders.Add("Accept", "application/json");
             _httpClient.DefaultRequestHeaders.Add("Cache-Control", "no-cache");
 
             _refitSettings = _refitSettings.GetApplyRefitSettings();
-            VersionProvider = new VersionProviderApi(log);
+
+            VersionProvider = new VersionProviderApi(this);
         }
 
         public T CreateService<T>()

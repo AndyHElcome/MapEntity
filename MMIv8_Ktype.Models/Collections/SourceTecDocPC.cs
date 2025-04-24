@@ -50,12 +50,12 @@ namespace MMIv8_Ktype.Models.Collections
         }
 
         [MongoDB.Bson.Serialization.Attributes.BsonElement]
-        public string SourceEntityModelHash => GlobalHelpers.GenerateKey(new { Make, SalesDesc });
+        public override string SourceEntityModelHash => GlobalHelpers.GenerateKey(new { Make, SalesDesc });
         public int DFrom { get; set; }
         public int DTo { get; set; }
 
         [MongoDB.Bson.Serialization.Attributes.BsonElement]
-        public DateTimeRange DateRange => new(DFrom, DTo);
+        public override DateTimeRange DateRange => new(DFrom, DTo);
 
         public int KW { get; set; }
         public int PS { get; set; }
@@ -83,9 +83,10 @@ namespace MMIv8_Ktype.Models.Collections
         //[MongoDB.Bson.Serialization.Attributes.BsonElement]
         //public string LinkedEngineCodes => string.Join('|', LinkedEngines.Select(c => c.MCode).Distinct().Order());
         public string LinkedEngineCodes { get; set; }
+        public override int ExternalId => KTypNr;
 
         [MongoDB.Bson.Serialization.Attributes.BsonElement]
-        public string EntityHash => GlobalHelpers.GenerateKey(new
+        public override string EntityHash => GlobalHelpers.GenerateKey(new
         {
             KTypNr,
             Make,

@@ -1,9 +1,10 @@
-﻿using MongoDB.Bson;
+﻿using MMIv8_Ktype.Models.Indexes;
+using MongoDB.Bson;
 using MongoDB.Driver;
 
 namespace MMIv8_Ktype.Core.Services.Source
 {
-    public interface ISourceEntityService<T> : IMongoCollectionService<T>
+    public interface ISourceEntityService<T>
     {
         Task<IAsyncCursor<T>> GetAll(int? batchSize = null);
         Task<T?> GetById(ObjectId SourceEntityID);

@@ -1,5 +1,7 @@
-﻿using MMIv8_Ktype.Api.Requests;
+﻿using MMIv8_Ktype.Api.Endpoints;
+using MMIv8_Ktype.Api.Requests;
 using MMIv8_Ktype.Core.Contexts;
+using MMIv8_Ktype.Core.Endpoints;
 using MMIv8_Ktype.Core.Services.Match;
 using MMIv8_Ktype.Core.Services.Source;
 using MMIv8_Ktype.Models;
@@ -19,8 +21,8 @@ namespace MMIv8_Ktype.Core.Services.Mapping
                                 SourceTecDocEntityModelService SourceTecDocEntityModelService,
                                 MatchEntityService MatchEntityService,
                                 MatchBaseService MatchBaseService,
-                                ISourceEntityService<MongoSourceMMIv8> SourceMMIv8Service,
-                                ISourceEntityService<MongoSourceTecDocPC> SourceTecDocPCService,
+                                SourceMMIv8Service SourceMMIv8Service,
+                                SourceTecDocPCService SourceTecDocPCService,
                                 IVersionProvider versionProvider)
     {
         #region Match Make Model
@@ -470,12 +472,12 @@ namespace MMIv8_Ktype.Core.Services.Mapping
             Task.WaitAll(createTasks.ToArray());
         }
 
-        private async IAsyncEnumerable<IEnumerable<MatchEntity>> GenerateEntityMatch(IEnumerable<MongoSourceTecDocPC> tecdocEntities, IEnumerable<MongoSourceMMIv8> mmiEntities, ObjectId MakeModelMatchID)
+        public async IAsyncEnumerable<IEnumerable<MatchEntity>> GenerateEntityMatch(IEnumerable<MongoSourceTecDocPC> tecdocEntities, IEnumerable<MongoSourceMMIv8> mmiEntities, ObjectId MakeModelMatchID)
         {
             foreach (var tecdocEntity in tecdocEntities) //TODO Create previous match collection and then keep these updated
             {
                 var query = mmiEntities.AsParallel().Select(m => new MatchEntity(versionProvider, tecdocEntity, m, MakeModelMatchID)).Where(m => m.DateIntersection.date_Intersection != 0);
-                    
+
                 yield return query.ToList();
             }
         }
@@ -497,8 +499,8 @@ namespace MMIv8_Ktype.Core.Services.Mapping
                 {
                     foreach (var match in mmi_Entity.Value)
                     {
-                        filter = filterBuilder.Eq(c => c.TecDocEntity.KTypNr, match.KTypNr)
-                               & filterBuilder.Eq(c => c.MMIv8Entity.MMI_V8_Key, match.MMI_V8_Key);
+                        filter = filterBuilder.Eq(c => c.TecDocEntity.ExternalId, match.KTypNr)
+                               & filterBuilder.Eq(c => c.MMIv8Entity.ExternalId, match.MMI_V8_Key);
 
                         CombinationPipeline<MatchEntity> combinationUpdate = new(MatchEntityService.Collection, filter);
                         combinationUpdate.AppendUpdate(c => c.SetPreviousMatchedFlag(match.Flag))
@@ -534,8 +536,8 @@ namespace MMIv8_Ktype.Core.Services.Mapping
 
                 foreach (var matches in inputBatch.Select(c => c.Value))
                 {
-                    filter = filterBuilder.Eq(c => c.TecDocEntity.KTypNr, matches.KTypNr)
-                                    & filterBuilder.Eq(c => c.MMIv8Entity.MMI_V8_Key, matches.MMI_V8_Key);
+                    filter = filterBuilder.Eq(c => c.TecDocEntity.ExternalId, matches.KTypNr)
+                                    & filterBuilder.Eq(c => c.MMIv8Entity.ExternalId, matches.MMI_V8_Key);
 
                     CombinationPipeline<MatchEntity> combinationPipeline = new(MatchEntityService.Collection, filter);
                     combinationPipeline.AppendUpdate(c => c.SetMatchedFlag(matches.Flag))
@@ -547,7 +549,7 @@ namespace MMIv8_Ktype.Core.Services.Mapping
                 var bulkResult = await bulkCombinationUpdate.CommitBulkWrite();
                 Log.Information("Updated Matched Flag for {count} matches", bulkResult.ModifiedCount);
 
-                var updateMatchRefineFilter = filterBuilder.In(c => c.MMIv8Entity.MMI_V8_Key, inputBatch.Select(c => c.Key).Distinct());
+                var updateMatchRefineFilter = filterBuilder.In(c => c.MMIv8Entity.ExternalId, inputBatch.Select(c => c.Key).Distinct());
 
                 tasks.Add(MatchEntityService.CombinationUpdateMatchRefinesList(filter));
             }
@@ -572,8 +574,8 @@ namespace MMIv8_Ktype.Core.Services.Mapping
 
                 foreach (var matches in inputBatch.Select(c => c.Value))
                 {
-                    filter = filterBuilder.Eq(c => c.TecDocEntity.KTypNr, matches.KTypNr)
-                                    & filterBuilder.Eq(c => c.MMIv8Entity.MMI_V8_Key, matches.MMI_V8_Key);
+                    filter = filterBuilder.Eq(c => c.TecDocEntity.ExternalId, matches.KTypNr)
+                                    & filterBuilder.Eq(c => c.MMIv8Entity.ExternalId, matches.MMI_V8_Key);
 
                     CombinationPipeline<MatchEntity> combinationUpdate = new(MatchEntityService.Collection, filter);
                     combinationUpdate.AppendUpdate(c => c.SetFailedFlag(matches.Flag))
@@ -585,7 +587,7 @@ namespace MMIv8_Ktype.Core.Services.Mapping
                 var bulkResult = await bulkCombinationUpdate.CommitBulkWrite();
                 Log.Information("Updated Failed Flag for {count} matches", bulkResult.ModifiedCount);
 
-                var updateMatchRefineFilter = filterBuilder.In(c => c.MMIv8Entity.MMI_V8_Key, inputBatch.Select(c => c.Key).Distinct());
+                var updateMatchRefineFilter = filterBuilder.In(c => c.MMIv8Entity.ExternalId, inputBatch.Select(c => c.Key).Distinct());
 
                 tasks.Add(MatchEntityService.CombinationUpdateMatchRefinesList(filter));
             }
@@ -602,7 +604,7 @@ namespace MMIv8_Ktype.Core.Services.Mapping
             List<Task<ClientBulkWriteResult>> tasks = new();
             foreach (var mmiEntityID in mmi_V8_Keys.Chunk(1000))
             { 
-                var filter = Builders<MatchEntity>.Filter.In(c => c.MMIv8Entity.MMI_V8_Key, mmiEntityID);
+                var filter = Builders<MatchEntity>.Filter.In(c => c.MMIv8Entity.ExternalId, mmiEntityID);
                 var matchEntityUpdate = new CombinationPipeline<MatchEntity>(MatchEntityService.Collection, filter).AppendPipeline(c => c.AppendStatus(versionProvider.NewStatus(Status.Checked, $"Checked Match Refine")));
                 var matchEntityResult = await matchEntityUpdate.UpdateDocuments();
                 Log.Information("Updated Status for {count} matches", matchEntityResult?.ModifiedCount);
@@ -617,114 +619,5 @@ namespace MMIv8_Ktype.Core.Services.Mapping
 
         #endregion
 
-        #region Entity Loading
-
-        public async Task UpdateEntity(MongoSourceTecDocPC sourceEntity, string? detail = null) // TODO get all entities and filter where Hash is different to rule out nonchanges
-        {
-            var currentEntity = await SourceTecDocPCService.GetByExternalId(sourceEntity.KTypNr);
-
-            if (currentEntity is not null && currentEntity.EntityHash == sourceEntity.EntityHash)
-                return;
-
-            if (currentEntity is null)
-            {
-                await SourceTecDocPCService.Create(sourceEntity);
-            }
-            else
-            {
-                string? differences = null;
-                var sourceEntityUpdate = SourceTecDocPCService.UpdateSourceEntity(currentEntity)
-                                                              .AppendUpdate(c => c.UpdateDifferences(currentEntity, sourceEntity, out differences))
-                                                              .AppendPipeline(c => c.AppendStatus(versionProvider.NewStatus(Status.Updated, $"Entity Updated: '{differences}'")));
-                sourceEntity = await sourceEntityUpdate.FindAndUpdateDocument();
-            }
-
-            var filterBuilder = Builders<MatchEntity>.Filter;
-            var filter = filterBuilder.Eq(e => e.TecDocEntity.SourceEntityID, sourceEntity.SourceEntityID);
-
-            if (currentEntity is null || currentEntity.SourceEntityModelHash != sourceEntity.SourceEntityModelHash)
-            {
-                await MatchEntityService.Delete(filter); //TODO Create previous match collection and then keep these updated
-
-                using var makeModelMatches = await MatchMakeModelService.GetByModelId(sourceEntity.SourceIndex, sourceEntity.SourceEntityModelHash);
-                while (await makeModelMatches.MoveNextAsync())
-                {
-                    foreach (var makeModelMatch in makeModelMatches.Current)
-                    {
-                        var mmiv8Entities = await SourceMMIv8Service.GetByModelId(makeModelMatch.TecDocModel.SourceEntityModelHash);
-
-                        await foreach (var newMatch in GenerateEntityMatch([ sourceEntity ], await mmiv8Entities.ToListAsync(), makeModelMatch.MatchID))
-                        {
-                            await MatchEntityService.BulkCreateEntityMatch(newMatch.ToList());
-                        }
-                    }
-                }
-
-                var matchEntityUpdate = new CombinationPipeline<MatchEntity>(MatchEntityService.Collection, filter).AppendPipeline(c => c.AppendStatus(versionProvider.NewStatus(Status.Check, "Updated TecDoc Entity")));
-                var matchEntityResult = await matchEntityUpdate.UpdateDocuments();
-                await RecalculateMatchBase(matchEntityUpdate.Filter);
-            }
-            else
-            {
-                var matchEntityUpdate = MatchEntityService.UpdateEntity(sourceEntity).AppendPipeline(c => c.AppendStatus(versionProvider.NewStatus(Status.Check, "Updated TecDoc Entity")));
-                var matchEntityResult = await matchEntityUpdate.UpdateDocuments();
-                await RecalculateMatchBase(matchEntityUpdate.Filter);
-            }
-        }
-
-        public async Task UpdateEntity(MongoSourceMMIv8 sourceEntity, string? detail = null) // TODO get all entities and filter where Hash is different to rule out nonchanges
-        {
-            var currentEntity = await SourceMMIv8Service.GetByExternalId(sourceEntity.MMI_V8_Key);
-
-            if (currentEntity is not null && currentEntity.EntityHash == sourceEntity.EntityHash)
-                return;
-
-            if (currentEntity is null)
-            {
-                await SourceMMIv8Service.Create(sourceEntity);
-            }
-            else
-            {
-                string? differences = null;
-                var sourceEntityUpdate = SourceMMIv8Service.UpdateSourceEntity(currentEntity)
-                                                           .AppendUpdate(c => c.UpdateDifferences(currentEntity, sourceEntity, out differences))
-                                                           .AppendPipeline(c => c.AppendStatus(versionProvider.NewStatus(Status.Updated, $"Entity Updated: '{differences}'")));
-                sourceEntity = await sourceEntityUpdate.FindAndUpdateDocument();
-            }
-
-            var filterBuilder = Builders<MatchEntity>.Filter;
-            var filter = filterBuilder.Eq(e => e.MMIv8Entity.SourceEntityID, sourceEntity.SourceEntityID);
-
-            if (currentEntity is null || currentEntity.SourceEntityModelHash != sourceEntity.SourceEntityModelHash)
-            {
-                await MatchEntityService.Delete(filter); //TODO Create previous match collection and then keep these updated
-
-                using var makeModelMatches = await MatchMakeModelService.GetByModelId(sourceEntity.SourceIndex, sourceEntity.SourceEntityModelHash);
-                while (await makeModelMatches.MoveNextAsync())
-                { 
-                    foreach (var makeModelMatch in makeModelMatches.Current)
-                    {
-                        var tecdocEntities = await SourceTecDocPCService.GetByModelId(makeModelMatch.TecDocModel.SourceEntityModelHash);
-
-                        await foreach (var newMatch in GenerateEntityMatch(await tecdocEntities.ToListAsync(), [ sourceEntity ], makeModelMatch.MatchID))
-                        {
-                            await MatchEntityService.BulkCreateEntityMatch(newMatch.ToList());
-                        }
-                    }
-                }
-
-                var matchEntityUpdate = new CombinationPipeline<MatchEntity>(MatchEntityService.Collection, filter).AppendPipeline(c => c.AppendStatus(versionProvider.NewStatus(Status.Check, "Updated MMIv8 Entity")));
-                var matchEntityResult = await matchEntityUpdate.UpdateDocuments();
-                await RecalculateMatchBase(matchEntityUpdate.Filter);
-            }
-            else
-            {
-                var matchEntityUpdate = MatchEntityService.UpdateEntity(sourceEntity).AppendPipeline(c => c.AppendStatus(versionProvider.NewStatus(Status.Check, "Updated MMIv8 Entity")));
-                var matchEntityResult = await matchEntityUpdate.UpdateDocuments();
-                await RecalculateMatchBase(matchEntityUpdate.Filter);
-            }
-        }
-
-        #endregion
     }
 }

@@ -79,11 +79,11 @@ namespace MMIv8_Ktype.Core.Controllers
             return Ok("updated");
         }
 
-        [HttpPost("Indexes/UpdatePreviousMatch")]
-        public async Task<IActionResult> UpdatePreviousMatch(string Path)
-        {
-            await BulkMappingService.BulkUpdatePreviousMatchedFlag(Path);
-            return Ok("updated");
-        }
+        //[HttpPost("Indexes/UpdatePreviousMatch")]
+        //public async Task<IActionResult> UpdatePreviousMatch(string Path)
+        //{
+        //    await BulkMappingService.BulkUpdatePreviousMatchedFlag(Path);
+        //    return Ok("updated");
+        //}
     }
 }
