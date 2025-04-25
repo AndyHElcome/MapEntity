@@ -19,9 +19,9 @@ namespace MMIv8_Ktype.Core.Endpoints
             return await response.ToListAsync();
         }
 
-        public async Task<List<MatchMakeModel>> GenerateModelMatch()
+        public async Task<List<MatchMakeModel>> GenerateMakeModelMatch()
         {
-            return await bulkMappingService.GenerateModelMatch();
+            return await bulkMappingService.GenerateMakeModelMatch();
         }
 
         public async Task<MatchMakeModel?> GetMakeModelMatch(MatchMakeModelRequest request)

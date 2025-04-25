@@ -19,7 +19,7 @@ namespace MMIv8_Ktype.Api.Endpoints
         Task<MatchMakeModel?> GetMakeModelMatch(MatchMakeModelRequest request);
 
         [Post("/GenerateModelMatch")]
-        Task<List<MatchMakeModel>> GenerateModelMatch();
+        Task<List<MatchMakeModel>> GenerateMakeModelMatch();
 
         [Put("/Create")]
         Task CreateMakeModelMatch(MatchMakeModelRequest request);

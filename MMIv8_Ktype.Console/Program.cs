@@ -2,6 +2,7 @@
 using Serilog;
 using System.Reflection;
 using MMIv8_Ktype.Api;
+using MMIv8_Ktype.Models;
 
 internal class Program
 {    
@@ -29,13 +30,17 @@ internal class Program
     {
         var Log = Logger.Log;
 
-        //args = [ "MMIv8_Ktype.AccessMdb", "TestAccessDBOperation", @"C:\Users\andy.hargreaves\OneDrive - Elcome Ltd\Desktop\NEW MMI TO KTYPE\MMIv8_Ktype2.accdb", "API_StorePartialMatchBase" ];
+        args = [ "MMIv8_Ktype.AccessMdb", "TestAccessDBOperation", @"C:\Users\andy.hargreaves\OneDrive - Elcome Ltd\Desktop\NEW MMI TO KTYPE\MMIv8_Ktype2.accdb", "API_StorePartialMatchBase", "ApiResponse" ];
+
+        args = [ "MMIv8_Ktype.AccessMdb", "StorePartialMatchBase", @"C:\Users\andy.hargreaves\OneDrive - Elcome Ltd\Desktop\NEW MMI TO KTYPE\MMIv8_Ktype2.accdb", "API_StorePartialMatchBase", "ApiResponse" ];
+
+        args = [ "MMIv8_Ktype.AccessMdb", "GenerateMakeModelMatch", @"C:\Users\andy.hargreaves\OneDrive - Elcome Ltd\Desktop\NEW MMI TO KTYPE\MMIv8_Ktype2.accdb", "MatchMakeModel" ];
 
         //args = [ "MMIv8_Ktype.CSV", "TestCsvReadOperation", @"C:\Users\andy.hargreaves\OneDrive - Elcome Ltd\Desktop\NEW MMI TO KTYPE\Output\MakeModelMatch.csv" ];
 
         //args = [ "MMIv8_Ktype.CSV", "TestCsvWriteOperation", @"C:\Users\andy.hargreaves\OneDrive - Elcome Ltd\Desktop\NEW MMI TO KTYPE\Output\MakeModelMatch.csv" ];
 
-        args = [ "MMIv8_Ktype.CSV", "GenerateModelMatchCSV", @"C:\Users\andy.hargreaves\OneDrive - Elcome Ltd\Desktop\NEW MMI TO KTYPE\Output\MakeModelMatch.csv" ];
+        //args = [ "MMIv8_Ktype.CSV", "GenerateModelMatchCSV", @"C:\Users\andy.hargreaves\OneDrive - Elcome Ltd\Desktop\NEW MMI TO KTYPE\Output\MakeModelMatch.csv" ];
 
         if (args.Length < 2)
         {
@@ -62,26 +67,30 @@ internal class Program
                 throw new Exception($"Class '{className}' of '{nameof(IOperation)}' not found in '{library}'.");
 
 
-            // Find a constructor that matches the number of parameters
-            var constructor = type.GetConstructors().FirstOrDefault(c => c.GetParameters().Length == constructorArgs.Length);
-            if (constructor == null)
-                throw new Exception($"No matching constructor found for class '{className}' with {constructorArgs.Length} parameters.");
-            
+            //// Find a constructor that matches the number of parameters
+            //var constructor = type.GetConstructors().FirstOrDefault(c => c.GetParameters().Length == constructorArgs.Length);
+            //if (constructor == null)
+            //    throw new Exception($"No matching constructor found for class '{className}' with {constructorArgs.Length} parameters.");
 
-            // Convert parameters to the constructor parameter types
-            var parameters = constructor.GetParameters();
-            object[] parsedArgs = new object[ constructorArgs.Length ];
-            for (int i = 0; i < constructorArgs.Length; i++)
-            {
-                parsedArgs[ i ] = Convert.ChangeType(constructorArgs[ i ], parameters[ i ].ParameterType);
-            }
 
-            // Instantiate the class
-            IOperation instance = (IOperation)constructor.Invoke(parsedArgs);
+            //// Convert parameters to the constructor parameter types
+            //var parameters = constructor.GetParameters();
+            //object[] parsedArgs = new object[ constructorArgs.Length ];
+            //for (int i = 0; i < constructorArgs.Length; i++)
+            //{
+            //    parsedArgs[ i ] = Convert.ChangeType(constructorArgs[ i ], parameters[ i ].ParameterType);
+            //}
+
+            //// Instantiate the class
+            //IOperation instance = (IOperation)constructor.Invoke(parsedArgs);
+
+            IOperation instance = type.StringToObject<IOperation>(constructorArgs);
 
             Log.Information("Instance of {className} created successfully.", className);
 
             await instance.ExecuteOperation(Log);
+
+            Log.Information("Instance of {className} completed.", className);
         }
         catch (Exception ex)
         {

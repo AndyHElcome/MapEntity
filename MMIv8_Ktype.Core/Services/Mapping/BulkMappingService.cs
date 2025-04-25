@@ -25,7 +25,7 @@ namespace MMIv8_Ktype.Core.Services.Mapping
     {
         #region Match Make Model
 
-        public async Task<List<MatchMakeModel>> GenerateModelMatch()
+        public async Task<List<MatchMakeModel>> GenerateMakeModelMatch()
         {
             List<MatchMakeModel> currentMatch = (await MatchMakeModelService.GetAll()).ToList();
 

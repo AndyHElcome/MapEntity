@@ -12,10 +12,10 @@ namespace MMIv8_Ktype.Api.Endpoints
         [Get("")]
         Task<List<MatchBase>> GetAll();
 
-        [Get("GetByType/{MatchBaseType}")]
+        [Get("/GetByType/{MatchBaseType}")]
         Task<List<MatchBase>> GetByMatchBaseType(MatchBaseType MatchBaseType);
 
-        [Get("GetById/{MatchHash}")]
+        [Get("/GetById/{MatchHash}")]
         Task<MatchBase?> GetById(string MatchHash);
 
         [Put("")]

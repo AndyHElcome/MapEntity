@@ -86,7 +86,7 @@ namespace MMIv8_Ktype.CSV.Operations
 
         public async override Task ExecuteOperation(ILogger log)
         {
-            var matchMakeModels = await new RefitClient(log).CreateService<IMatchMakeModelEndpoints>().GenerateModelMatch();
+            var matchMakeModels = await new RefitClient(log).CreateService<IMatchMakeModelEndpoints>().GenerateMakeModelMatch();
 
             using (var csvWriter = CsvStream.CsvWriter)
             {
@@ -98,14 +98,14 @@ namespace MMIv8_Ktype.CSV.Operations
         }
     }
 
-    public class GenerateModelMatchCSV : CSVWriteOperation
+    public class GenerateMakeModelMatch : CSVWriteOperation
     {
-        public GenerateModelMatchCSV(string csvPath, bool append) : base(csvPath, append) { }
-        public GenerateModelMatchCSV(string csvPath) : base(csvPath) { }
+        public GenerateMakeModelMatch(string csvPath, bool append) : base(csvPath, append) { }
+        public GenerateMakeModelMatch(string csvPath) : base(csvPath) { }
 
         public async override Task ExecuteOperation(ILogger log)
         {
-            var matchMakeModels = await new RefitClient(log).CreateService<IMatchMakeModelEndpoints>().GenerateModelMatch();
+            var matchMakeModels = await new RefitClient(log).CreateService<IMatchMakeModelEndpoints>().GenerateMakeModelMatch();
 
             using (var csvWriter = CsvStream.CsvWriter)
             {

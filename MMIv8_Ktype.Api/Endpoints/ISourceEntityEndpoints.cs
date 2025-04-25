@@ -16,10 +16,10 @@ namespace MMIv8_Ktype.Api.Endpoints
         [Get("")]
         Task<List<T>> GetAll();
 
-        [Get("GetByExternalId/{ExternalId}")]
+        [Get("/GetByExternalId/{ExternalId}")]
         Task<T?> GetByExternalId(int ExternalId);
 
-        [Get("GetEntityId/{EntityId}")]
+        [Get("/GetEntityId/{EntityId}")]
         Task<T?> GetById(ObjectId EntityId);
 
         [Put("")]

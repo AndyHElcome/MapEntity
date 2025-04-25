@@ -1,5 +1,9 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
-
+	
+	<PropertyGroup>
+		<OutputType>Exe</OutputType>
+	</PropertyGroup>
+	
   <ItemGroup>
     <ProjectReference Include="..\MMIv8_Ktype.AccessMdb\MMIv8_Ktype.AccessMdb.csproj" />
     <ProjectReference Include="..\MMIv8_Ktype.CSV\MMIv8_Ktype.CSV.csproj" />
