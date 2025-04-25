@@ -1,24 +1,19 @@
 ﻿using MMIv8_Ktype.Models.DateIntersection;
 using MMIv8_Ktype.Models.Indexes;
 using MongoDB.Bson;
+using MongoDB.Bson.Serialization.Attributes;
 
 namespace MMIv8_Ktype.Models.Collections
 {
     [Serializable]
-    public class MongoSourceTecDocPC : SourceEntity
+    public class MongoSourceTecDocPC(int kTypNr, IVersionProvider versionProvider) : SourceEntity(SourceIndex.TecDocPC, kTypNr, versionProvider)
     {
-        public MongoSourceTecDocPC(IVersionProvider versionProvider) : base(versionProvider)
-        {
-            SourceEntityID = ObjectId.GenerateNewId();
-            SourceIndex = SourceIndex.TecDocPC;
-        }
-
-        public int KTypNr { get; set; }
+        public int KTypNr { get; set; } = kTypNr;
         public string Make { get; set; }
         public int KModNr { get; set; }
         public string Model { get; set; }
 
-        [MongoDB.Bson.Serialization.Attributes.BsonElement]
+        [BsonElement]
         public string Token_Model
         {
             get
@@ -30,7 +25,7 @@ namespace MMIv8_Ktype.Models.Collections
 
         public string Type { get; set; }
 
-        [MongoDB.Bson.Serialization.Attributes.BsonElement]
+        [BsonElement]
         public string Token_Type
         {
             get
@@ -49,19 +44,19 @@ namespace MMIv8_Ktype.Models.Collections
             }
         }
 
-        [MongoDB.Bson.Serialization.Attributes.BsonElement]
+        [BsonElement]
         public override string SourceEntityModelHash => GlobalHelpers.GenerateKey(new { Make, SalesDesc });
         public int DFrom { get; set; }
         public int DTo { get; set; }
 
-        [MongoDB.Bson.Serialization.Attributes.BsonElement]
+        [BsonElement]
         public override DateTimeRange DateRange => new(DFrom, DTo);
 
         public int KW { get; set; }
         public int PS { get; set; }
         public int Calc_BHP => (int)(PS / 1.014 + .5);
 
-        [MongoDB.Bson.Serialization.Attributes.BsonRepresentation(BsonType.Decimal128)]
+        [BsonRepresentation(BsonType.Decimal128)]
         public decimal Litre { get; set; }
         public int Valves { get; set; }
         public int Cyl { get; set; }
@@ -76,16 +71,9 @@ namespace MMIv8_Ktype.Models.Collections
         public bool Exclude { get; set; }
         public int Door { get; set; }
         public string Region { get; set; }
-
-        //[MongoDB.Bson.Serialization.Attributes.BsonElement]
-        //public List<MongoSourceTecDocEngine> LinkedEngines { get; set; }
-
-        //[MongoDB.Bson.Serialization.Attributes.BsonElement]
-        //public string LinkedEngineCodes => string.Join('|', LinkedEngines.Select(c => c.MCode).Distinct().Order());
         public string LinkedEngineCodes { get; set; }
-        public override int ExternalId => KTypNr;
 
-        [MongoDB.Bson.Serialization.Attributes.BsonElement]
+        [BsonElement]
         public override string EntityHash => GlobalHelpers.GenerateKey(new
         {
             KTypNr,

@@ -1,29 +1,24 @@
 ﻿using MongoDB.Bson;
 using MMIv8_Ktype.Models.Indexes;
 using MMIv8_Ktype.Models.DateIntersection;
+using MongoDB.Bson.Serialization.Attributes;
 
 namespace MMIv8_Ktype.Models.Collections
 {
     [Serializable]
-    public class MongoSourceMMIv8 : SourceEntity
+    public class MongoSourceMMIv8(int mmi_V8_Key, IVersionProvider versionProvider) : SourceEntity(SourceIndex.MMIv8, mmi_V8_Key, versionProvider)
     {
-        public MongoSourceMMIv8(IVersionProvider versionProvider) : base(versionProvider)
-        {
-            SourceEntityID = ObjectId.GenerateNewId();
-            SourceIndex = SourceIndex.MMIv8;
-        }
-
-        public int MMI_V8_Key { get; set; }
+        public int MMI_V8_Key { get; set; } = mmi_V8_Key;
         public string Manufacturer { get; set; }
         public string Model { get; set; }
 
-        [MongoDB.Bson.Serialization.Attributes.BsonElement]
+        [BsonElement]
         public override string SourceEntityModelHash => GlobalHelpers.GenerateKey(new { Manufacturer, Model });
         public string SubModel { get; set; }
         public string Mark_or_Series { get; set; }
         public string Identifier { get; set; }
 
-        [MongoDB.Bson.Serialization.Attributes.BsonElement]
+        [BsonElement]
         public string Token_Identifier
         {
             get
@@ -34,7 +29,7 @@ namespace MMIv8_Ktype.Models.Collections
             }
         }
 
-        [MongoDB.Bson.Serialization.Attributes.BsonRepresentation(BsonType.Decimal128)]
+        [BsonRepresentation(BsonType.Decimal128)]
         public decimal Engine_Size { get; set; }
         public int Cylinders { get; set; }
         public string Cylinder_Layout { get; set; }
@@ -45,7 +40,7 @@ namespace MMIv8_Ktype.Models.Collections
         public int End_Month { get; set; }
         public int End_Year { get; set; }
 
-        [MongoDB.Bson.Serialization.Attributes.BsonElement]
+        [BsonElement]
         public override DateTimeRange DateRange => new(Start_Month, Start_Year, End_Month, End_Year);
 
         public string Body { get; set; }
@@ -58,9 +53,8 @@ namespace MMIv8_Ktype.Models.Collections
         public int BHP { get; set; }
         public int KW { get; set; }
         public string Engine_Code { get; set; }
-        public override int ExternalId => MMI_V8_Key;
 
-        [MongoDB.Bson.Serialization.Attributes.BsonElement]
+        [BsonElement]
         public override string EntityHash => GlobalHelpers.GenerateKey(new
         {
             MMI_V8_Key,

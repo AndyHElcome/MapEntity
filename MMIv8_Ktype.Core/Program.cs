@@ -58,7 +58,7 @@ internal class Program
         builder.Services.AddEndpointsApiExplorer();
         builder.Services.AddSwaggerGen();
 
-        Log.Logger = new LoggerConfiguration()
+        Log.Logger = new LoggerConfiguration() // Move to App settings
             .MinimumLevel.Debug()
             .WriteTo.Console(outputTemplate: "[{Level:u3}] {Message:l}{NewLine}{Exception}")
             .WriteTo.File($"..\\MMIv8_Ktype.Core\\Logs\\Log.txt",
@@ -71,8 +71,6 @@ internal class Program
 
         builder.Services.AddSingleton(Log.Logger);
 
-        //builder.AddApiEndpoints();
-        //builder.Services.AddEndpoints(Assembly.GetAssembly(typeof(IMatchMakeModelApiService)));
         builder.Services.AddEndpoints(Assembly.GetExecutingAssembly());
 
         var app = builder.Build();

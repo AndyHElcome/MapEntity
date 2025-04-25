@@ -4,14 +4,8 @@ using MongoDB.Bson;
 namespace MMIv8_Ktype.Models.Indexes
 {
     [Serializable]
-    public class MongoSourceTecDocEngine : SourceEntity
+    public class MongoSourceTecDocEngine(int kTypNr, IVersionProvider versionProvider) : SourceEntity(SourceIndex.TecDocEngine, kTypNr, versionProvider)
     {
-        public MongoSourceTecDocEngine(IVersionProvider versionProvider) : base(versionProvider)
-        {
-            SourceEntityID = ObjectId.GenerateNewId();
-            SourceIndex = SourceIndex.TecDocEngine;
-        }
-
         public int MotNr { get; set; }
         public string Make { get; set; }
         public string MCode { get; set; }
@@ -35,7 +29,6 @@ namespace MMIv8_Ktype.Models.Indexes
         public string Type { get; set; }
         public string CylinderDesign { get; set; }
         public string SalesDescription { get; set; }
-        public override int ExternalId => MotNr;
 
         [MongoDB.Bson.Serialization.Attributes.BsonElement]
         public override string EntityHash => GlobalHelpers.GenerateKey(new

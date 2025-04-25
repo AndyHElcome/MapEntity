@@ -11,15 +11,10 @@ namespace MMIv8_Ktype.Models.Collections
     public class MatchEntity : IStatusHistory
     {
         [BsonId]
-        //[CsvHelper.Configuration.Attributes.Ignore]
         public ObjectId MatchEntityID { get; set; }
-
         public MongoSourceTecDocPC TecDocEntity { get; set; }
         public MongoSourceMMIv8 MMIv8Entity { get; set; }
-
-        //[CsvHelper.Configuration.Attributes.Ignore]
         public ObjectId MatchMakeModelMatchID { get; set; }
-
         public StatusHistory Status { get; set; }
 
         [BsonElement]
@@ -47,15 +42,6 @@ namespace MMIv8_Ktype.Models.Collections
 
             CalculateMatchBases(versionProvider);
         }
-        //public MatchEntity(IVersionProvider versionProvider, SourceEntity tecdoc, SourceEntity mmiv8, ObjectId matchMakeModelMatchID)
-        //{
-        //    Status = new(versionProvider);
-        //    TecDocEntity = tecdoc;
-        //    MMIv8Entity = mmiv8;
-        //    MatchMakeModelMatchID = matchMakeModelMatchID;
-
-        //    CalculateMatchBases(versionProvider);
-        //}
 
         [Obsolete("Version Required")]
         public MatchEntity(MongoSourceTecDocPC tecdoc, MongoSourceMMIv8 mmiv8, ObjectId matchMakeModelMatchID)
