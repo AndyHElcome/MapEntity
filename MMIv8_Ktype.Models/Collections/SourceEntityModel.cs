@@ -1,6 +1,4 @@
-﻿using CsvHelper.Configuration;
-using MongoDB.Bson.Serialization.Attributes;
-using System.Globalization;
+﻿using MongoDB.Bson.Serialization.Attributes;
 
 namespace MMIv8_Ktype.Models.Collections
 {
@@ -15,13 +13,5 @@ namespace MMIv8_Ktype.Models.Collections
         [BsonIgnoreIfNull]
         public List<string>? DetailedModels { get; set; }
         public int? Popularity { get; set; }
-    }
-
-    public sealed class MongoSourceEntityModelMap : ClassMap<MongoSourceEntityModel>
-    {
-        public MongoSourceEntityModelMap()
-        {
-            AutoMap(CultureInfo.InvariantCulture);
-        }
     }
 }

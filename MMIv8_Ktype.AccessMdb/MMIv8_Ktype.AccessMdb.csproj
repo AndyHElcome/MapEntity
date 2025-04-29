@@ -2,7 +2,6 @@
 
   <ItemGroup>
     <PackageReference Include="System.Data.OleDb" />
-    <PackageReference Include="System.Text.Json" />
   </ItemGroup>
 
   <ItemGroup>

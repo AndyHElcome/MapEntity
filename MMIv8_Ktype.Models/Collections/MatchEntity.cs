@@ -1,27 +1,20 @@
-﻿using CsvHelper.Configuration;
-using MMIv8_Ktype.Models.Util;
+﻿using MMIv8_Ktype.Models.Util;
 using MongoDB.Bson;
 using MongoDB.Bson.Serialization;
 using MongoDB.Bson.Serialization.Attributes;
-using System.Globalization;
 using MMIv8_Ktype.Models.Outputs;
 using MMIv8_Ktype.Models.Status;
-using MMIv8_Ktype.Models.DateIntersection;
+using MMIv8_Ktype.Models.Indexes;
 
 namespace MMIv8_Ktype.Models.Collections
 {
     public class MatchEntity : IStatusHistory
     {
         [BsonId]
-        [CsvHelper.Configuration.Attributes.Ignore]
         public ObjectId MatchEntityID { get; set; }
-
         public MongoSourceTecDocPC TecDocEntity { get; set; }
         public MongoSourceMMIv8 MMIv8Entity { get; set; }
-
-        [CsvHelper.Configuration.Attributes.Ignore]
         public ObjectId MatchMakeModelMatchID { get; set; }
-
         public StatusHistory Status { get; set; }
 
         [BsonElement]
@@ -87,93 +80,5 @@ namespace MMIv8_Ktype.Models.Collections
             ScoreAverage = ScoreSum / EntityComparison.Count;
         }
 
-    }
-
-    public class UpdateEntityMatchFlag(int KTypNr, int MMI_V8_Key, bool Flag, string? Detail)
-    {
-        public int KTypNr { get; set; } = KTypNr;
-        public int MMI_V8_Key { get; set; } = MMI_V8_Key;
-        public bool Flag { get; set; } = Flag;
-        public string? Detail { get; set; } = Detail;
-    }
-
-    public sealed class TecDocAutoMap : ClassMap<MongoSourceTecDocPC>
-    {
-        public TecDocAutoMap()
-        {
-            AutoMap(CultureInfo.InvariantCulture);
-            Map(m => m.SourceEntityID).TypeConverter<ObjectIdConverter>();
-
-            Map(m => m.DateRange.Start).Name("TD_Start");
-            Map(m => m.DateRange.End).Name("TD_End");
-
-            Map(m => m.KModNr).Ignore();
-            Map(m => m.Model).Ignore();
-            Map(m => m.Type).Ignore();
-            Map(m => m.DFrom).Ignore();
-            Map(m => m.DTo).Ignore();
-            Map(m => m.Exclude).Ignore();
-            Map(m => m.SourceEntityModelHash).Ignore();
-            Map(m => m.EntityHash).Ignore();
-        }
-    }
-
-    public sealed class MMIv8AutoMap : ClassMap<MongoSourceMMIv8>
-    {
-        public MMIv8AutoMap()
-        {
-            AutoMap(CultureInfo.InvariantCulture);
-            Map(m => m.SourceEntityID).TypeConverter<ObjectIdConverter>();
-
-            Map(m => m.DateRange.Start).Name("MMI_Start");
-            Map(m => m.DateRange.End).Name("MMI_End");
-
-
-            Map(m => m.Start_Month).Ignore();
-            Map(m => m.Start_Year).Ignore();
-            Map(m => m.End_Month).Ignore();
-            Map(m => m.End_Year).Ignore();
-            Map(m => m.SourceEntityModelHash).Ignore();
-            Map(m => m.EntityHash).Ignore();
-        }
-    }
-
-    public sealed class MatchEntityMap : ClassMap<MatchEntity>
-    {
-        public MatchEntityMap()
-        {
-            //AutoMap(CultureInfo.InvariantCulture);
-            Map(m => m.MatchEntityID).TypeConverter<ObjectIdConverter>();
-            Map(m => m.MatchMakeModelMatchID).TypeConverter<ObjectIdConverter>();
-
-            References<TecDocAutoMap>(m => m.TecDocEntity).Prefix("TD_");
-            References<MMIv8AutoMap>(m => m.MMIv8Entity).Prefix("MMI_");
-
-            foreach (var key in (MatchBaseType[])Enum.GetValues(typeof(MatchBaseType)))
-            {
-                Map(m => m.EntityComparison, false).Name($"{key.ToString()}_MatchHash").Convert(args =>
-                {
-                    var dict = args.Value.EntityComparison;
-                    return dict != null && dict.ContainsKey(key) ? dict[key].MatchHash : string.Empty;
-                });
-
-                Map(m => m.EntityComparison, false).Name($"{key.ToString()}_Score").Convert(args =>
-                {
-                    var dict = args.Value.EntityComparison;
-                    return dict != null && dict.ContainsKey(key) ? dict[key].Score.ToString() : string.Empty;
-                });
-            }
-
-            References<DateIntersectionMap>(m => m.DateIntersection);
-            References<StatusHistoryMap>(m => m.Status);
-            References<MatchResultMap>(m => m.MatchResult);
-            References<MatchRefineMap>(m => m.MatchRefine);
-            Map(m => m.IsBest);
-
-            Map(m => m.ScoreSum);
-            Map(m => m.ScoreAverage);
-            Map(m => m.Matched);
-            Map(m => m.MatchDetail);
-        }
     }
 }

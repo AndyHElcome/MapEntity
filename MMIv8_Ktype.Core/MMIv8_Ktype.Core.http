@@ -1,0 +1,15 @@
+﻿@MMIv8_Ktype.Core_HostAddress = https://localhost:44304
+
+
+POST {{MMIv8_Ktype.Core_HostAddress}}/MatchMakeModel/GetByModels
+Content-Type: application/json
+{
+  "tD_SourceEntityModelHash": "003DEB088C04048C9C765F40BDF4EB28050703D366606640F7368FE93F10B7EC", 
+  "mmI_SourceEntityModelHash": "639FFB977658CC53FC74E18E5C94983B9B973EBEDDAE3B545A8F453756091CCA"
+}
+
+###
+
+GET {{MMIv8_Ktype.Core_HostAddress}}/Version
+
+###

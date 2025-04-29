@@ -1,5 +1,9 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
   <ItemGroup>
+    <PackageReference Include="Refit" />
+    <PackageReference Include="Refit.HttpClientFactory" />
+  </ItemGroup>
+  <ItemGroup>
     <ProjectReference Include="..\MMIv8_Ktype.Models\MMIv8_Ktype.Models.csproj" />
   </ItemGroup>
 </Project>

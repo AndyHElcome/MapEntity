@@ -1,80 +1,100 @@
-﻿using MMIv8_Ktype.Models;
-using Serilog.Events;
+﻿using Serilog.Events;
 using Serilog;
 using System.Reflection;
+using MMIv8_Ktype.Api;
+using MMIv8_Ktype.Models;
 
 internal class Program
-{
+{    
+
+
+    public static class Logger
+    {
+        public static ILogger Log = SetupLogger();
+        public static ILogger SetupLogger()
+        {
+            return new LoggerConfiguration() // TODO put into application settings
+                .MinimumLevel.Debug()
+                .WriteTo.Console(outputTemplate: "[{Level:u3}] {Message:l}{NewLine}{Exception}")
+                .WriteTo.File($"..\\..\\..\\..\\MMIv8_Ktype.Console\\Logs\\Log_Console.txt",
+                                rollOnFileSizeLimit: true,
+                                fileSizeLimitBytes: 1048576,
+                                shared: true,
+                                outputTemplate: "{Timestamp:yyyy-MM-dd HH:mm:ss.fff zzz} [{Level:u3}] {Message:l}{NewLine}{Exception}",
+                                restrictedToMinimumLevel: LogEventLevel.Information)
+                .CreateLogger();
+        }
+    }
+
     static async Task Main(string[] args)
     {
-        Serilog.ILogger Log = new LoggerConfiguration()
-        .MinimumLevel.Debug()
-        .WriteTo.Console(outputTemplate: "[{Level:u3}] {Message:l}{NewLine}{Exception}")
-        .WriteTo.File($"..\\..\\..\\..\\MMIv8_Ktype.Console\\Logs\\Log_Console.txt",
-                        rollOnFileSizeLimit: true,
-                        fileSizeLimitBytes: 1048576,
-                        shared: true,
-                        outputTemplate: "{Timestamp:yyyy-MM-dd HH:mm:ss.fff zzz} [{Level:u3}] {Message:l}{NewLine}{Exception}",
-                        restrictedToMinimumLevel: LogEventLevel.Information)
-        .CreateLogger();
+        var Log = Logger.Log;
 
-        args = [ "MMIv8_Ktype.AccessMdb", "StorePartialMatchBase", @"C:\Users\andy.hargreaves\OneDrive - Elcome Ltd\Desktop\NEW MMI TO KTYPE\MMIv8_Ktype2.accdb", "API_StorePartialMatchBase" ];
+        args = [ "MMIv8_Ktype.AccessMdb", "TestAccessDBOperation", @"C:\Users\andy.hargreaves\OneDrive - Elcome Ltd\Desktop\NEW MMI TO KTYPE\MMIv8_Ktype2.accdb", "API_StorePartialMatchBase", "ApiResponse" ];
 
-        if (args.Length == 0)
+        args = [ "MMIv8_Ktype.AccessMdb", "StorePartialMatchBase", @"C:\Users\andy.hargreaves\OneDrive - Elcome Ltd\Desktop\NEW MMI TO KTYPE\MMIv8_Ktype2.accdb", "API_StorePartialMatchBase", "ApiResponse" ];
+
+        args = [ "MMIv8_Ktype.AccessMdb", "GenerateMakeModelMatch", @"C:\Users\andy.hargreaves\OneDrive - Elcome Ltd\Desktop\NEW MMI TO KTYPE\MMIv8_Ktype2.accdb", "MatchMakeModel" ];
+
+        //args = [ "MMIv8_Ktype.CSV", "TestCsvReadOperation", @"C:\Users\andy.hargreaves\OneDrive - Elcome Ltd\Desktop\NEW MMI TO KTYPE\Output\MakeModelMatch.csv" ];
+
+        //args = [ "MMIv8_Ktype.CSV", "TestCsvWriteOperation", @"C:\Users\andy.hargreaves\OneDrive - Elcome Ltd\Desktop\NEW MMI TO KTYPE\Output\MakeModelMatch.csv" ];
+
+        //args = [ "MMIv8_Ktype.CSV", "GenerateModelMatchCSV", @"C:\Users\andy.hargreaves\OneDrive - Elcome Ltd\Desktop\NEW MMI TO KTYPE\Output\MakeModelMatch.csv" ];
+
+        if (args.Length < 2)
         {
-            Console.WriteLine("Usage: <ClassName> <ConstructorArgs...>");
+            Log.Error("No args parsed. Usage: <Library> <ClassName> <ConstructorArgs...>");
             return;
         }
-
-        var t = new MMIv8_Ktype.AccessMdb.Operations.StorePartialMatchBase("","");
 
         string library = args[ 0 ];
         string className = args[ 1 ];
         string[] constructorArgs = args.Skip(2).ToArray();
 
+
+
         try
         {
+            //Get Operation Type
             Type? type = Assembly.Load(new AssemblyName(library))
-                                 .GetTypes()
-                                 .FirstOrDefault(t => t.Name.Equals(className, StringComparison.OrdinalIgnoreCase) && t.Namespace.StartsWith($"{library}.Operations"));
+                .GetTypes()
+                .FirstOrDefault(
+                    t => t.Name.Equals(className, StringComparison.OrdinalIgnoreCase) 
+                      && t.IsAssignableTo(typeof(IOperation)));
 
             if (type == null)
-            {
-                Log.Error("Class '{className}' not found.", className);
-                return;
-            }
+                throw new Exception($"Class '{className}' of '{nameof(IOperation)}' not found in '{library}'.");
 
-            // Find a constructor that matches the number of parameters
-            var constructor = type.GetConstructors()
-                                  .FirstOrDefault(c => c.GetParameters().Length == constructorArgs.Length);
 
-            if (constructor == null)
-            {
+            //// Find a constructor that matches the number of parameters
+            //var constructor = type.GetConstructors().FirstOrDefault(c => c.GetParameters().Length == constructorArgs.Length);
+            //if (constructor == null)
+            //    throw new Exception($"No matching constructor found for class '{className}' with {constructorArgs.Length} parameters.");
 
-                Log.Error("No matching constructor found for class '{className}' with {constructorArgs.Length} parameters.", className, constructorArgs.Length);
-                //Console.WriteLine($"No matching constructor found for class '{className}' with {constructorArgs.Length} parameters.");
-                return;
-            }
 
-            // Convert parameters to the constructor parameter types
-            var parameters = constructor.GetParameters();
-            object[] parsedArgs = new object[ constructorArgs.Length ];
-            for (int i = 0; i < constructorArgs.Length; i++)
-            {
-                parsedArgs[ i ] = Convert.ChangeType(constructorArgs[ i ], parameters[ i ].ParameterType);
-            }
+            //// Convert parameters to the constructor parameter types
+            //var parameters = constructor.GetParameters();
+            //object[] parsedArgs = new object[ constructorArgs.Length ];
+            //for (int i = 0; i < constructorArgs.Length; i++)
+            //{
+            //    parsedArgs[ i ] = Convert.ChangeType(constructorArgs[ i ], parameters[ i ].ParameterType);
+            //}
 
-            // Instantiate the class
-            IOperation instance = (IOperation)constructor.Invoke(parsedArgs);
+            //// Instantiate the class
+            //IOperation instance = (IOperation)constructor.Invoke(parsedArgs);
+
+            IOperation instance = type.StringToObject<IOperation>(constructorArgs);
 
             Log.Information("Instance of {className} created successfully.", className);
 
             await instance.ExecuteOperation(Log);
+
+            Log.Information("Instance of {className} completed.", className);
         }
         catch (Exception ex)
         {
-            Log.Error("Error: {ex}", ex.Message);
-            //Console.WriteLine($"Error: {ex.Message}");
+            Log.Error(ex, "Error running command: {@args}", args);
         }
     }
 }

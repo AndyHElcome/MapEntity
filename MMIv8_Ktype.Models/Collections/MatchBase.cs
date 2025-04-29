@@ -1,11 +1,9 @@
-﻿using CsvHelper.Configuration;
-using MMIv8_Ktype.Models.Status;
+﻿using MMIv8_Ktype.Models.Status;
 using MMIv8_Ktype.Models.Util;
 using MongoDB.Bson;
 using MongoDB.Bson.Serialization.Attributes;
 using MongoDB.Driver;
 using System.Dynamic;
-using System.Globalization;
 
 namespace MMIv8_Ktype.Models.Collections
 {
@@ -412,27 +410,10 @@ namespace MMIv8_Ktype.Models.Collections
 
         public override decimal CalculateScore() => TecDocEntity[nameof(MatchEntity.TecDocEntity.Region)] == "GB" ? (decimal)1.1 : (decimal)0.8;
     }
+
     #endregion
 
-    public sealed class MatchBaseMap : ClassMap<MatchBase>
-    {
-        public MatchBaseMap()
-        {
-            AutoMap(CultureInfo.InvariantCulture);
-
-            References<StatusHistoryMap>(m => m.Status);
-            Map(m => m.MatchContexts).Ignore();
-        }
-    }
-
-    public sealed class MatchBaseScoreMap : ClassMap<MatchBase>
-    {
-        public MatchBaseScoreMap()
-        {
-            Map(m => m.Score);
-        }
-    }
-
+    [Obsolete("Use Record")]
     public class UpdateMatchBase
     {
         public string MatchHash { get; set; }

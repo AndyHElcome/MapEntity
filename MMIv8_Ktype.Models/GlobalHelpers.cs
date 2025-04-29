@@ -1,6 +1,10 @@
-﻿using Serilog;
+﻿using MMIv8_Ktype.Models.Collections;
+using MMIv8_Ktype.Models.Util;
+using Serilog;
+using System;
 using System.Dynamic;
 using System.Reflection;
+using System.Runtime.CompilerServices;
 using System.Security.Cryptography;
 using System.Text;
 using System.Text.RegularExpressions;
@@ -9,7 +13,6 @@ namespace MMIv8_Ktype.Models
 {
     public static class GlobalHelpers
     {
-
         public static void AddProperty(ExpandoObject expando, string propertyName, object propertyValue)
         {
             var expandoDict = expando as IDictionary<string, object>;
@@ -89,7 +92,7 @@ namespace MMIv8_Ktype.Models
         public static Dictionary<string, object> ObjToDictionary(object obj)
         {
             if (obj is null)
-            { throw new NullReferenceException("Object is empty or missing"); }
+                throw new NullReferenceException("Object is empty or missing");
 
             try
             {
@@ -109,6 +112,45 @@ namespace MMIv8_Ktype.Models
                 //Serilog.Log.Error(ex, "Exception using ObjToDictionary: {obj}", obj);
                 return new();
             }
+        }
+
+        public static T StringToObject<T>(this Type type, string[] constructorArgs)
+        {
+            if (type != typeof(T) && !type.IsAssignableTo(typeof(T)))
+                throw new Exception("Type and T are not related");
+
+
+            if (constructorArgs is null)
+                throw new NullReferenceException("constructorArgs is empty or missing");
+
+            // Find a constructor that matches the number of parameters
+            var constructor = type.GetConstructors().FirstOrDefault(c => c.GetParameters().Length == constructorArgs.Length);
+            if (constructor == null)
+                throw new Exception($"No matching constructor found for class '{typeof(T)}' with {constructorArgs.Length} parameters.");
+
+            // Convert parameters to the constructor parameter types
+            var parameters = constructor.GetParameters();
+            object[] parsedArgs = new object[ constructorArgs.Length ];
+            for (int i = 0; i < constructorArgs.Length; i++)
+            {
+                //parsedArgs[ i ] = Convert.ChangeType(constructorArgs[ i ], parameters[ i ].ParameterType);
+
+                Type paramType = parameters[ i ].ParameterType;
+                string arg = constructorArgs[ i ];
+                
+                if (paramType.IsEnum)
+                    parsedArgs[ i ] = Enum.Parse( paramType, arg );
+                else
+                    parsedArgs[ i ] = Convert.ChangeType(arg, paramType);
+            }
+
+            // Instantiate the class
+            return (T)constructor.Invoke(parsedArgs);
+        }
+
+        public static T StringToObject<T>(string[] constructorArgs)
+        {
+            return StringToObject<T>(typeof(T), constructorArgs);
         }
 
         public static string RemoveDuplicatedStrings(string str, string[] stringsToRemove)

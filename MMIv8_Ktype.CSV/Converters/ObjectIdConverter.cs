@@ -1,0 +1,28 @@
+﻿using CsvHelper;
+using CsvHelper.Configuration;
+using CsvHelper.TypeConversion;
+using MongoDB.Bson;
+
+namespace MMIv8_Ktype.CSV.Converters
+{
+    public class ObjectIdConverter : DefaultTypeConverter
+    {
+        public override string ConvertToString(object? value, IWriterRow row, MemberMapData memberMapData)
+        {
+            if (value == null || value.GetType() != typeof(ObjectId))
+                return string.Empty;
+
+            var objectId = (ObjectId)value;
+
+            return objectId.ToString() ?? string.Empty;
+        }
+
+        public override object ConvertFromString(string? text, IReaderRow row, MemberMapData memberMapData)
+        {
+            if (text == null || !ObjectId.TryParse(text, out ObjectId convertedText))
+                return ObjectId.Empty;
+
+            return convertedText;
+        }
+    }
+}

@@ -1,6 +1,4 @@
-﻿using CsvHelper.Configuration;
-using System.Globalization;
-
+﻿
 namespace MMIv8_Ktype.Models.DateIntersection
 {
     public class DateIntersection
@@ -38,13 +36,5 @@ namespace MMIv8_Ktype.Models.DateIntersection
 
         [MongoDB.Bson.Serialization.Attributes.BsonElement]
         public double date_MMI_Coverage => Math.Round(date_Intersection * 100.0 / date_MMI_Span, 2);
-    }
-
-    public sealed class DateIntersectionMap : ClassMap<DateIntersection>
-    {
-        public DateIntersectionMap()
-        {
-            AutoMap(CultureInfo.InvariantCulture);
-        }
     }
 }

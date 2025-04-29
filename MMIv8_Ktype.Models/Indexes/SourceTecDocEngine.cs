@@ -1,31 +1,22 @@
-﻿using CsvHelper.Configuration;
-using MMIv8_Ktype.Models.Collections;
-using MMIv8_Ktype.Models.DateIntersection;
+﻿using MMIv8_Ktype.Models.DateIntersection;
 using MongoDB.Bson;
-using System.Globalization;
 
 namespace MMIv8_Ktype.Models.Indexes
 {
     [Serializable]
-    public class MongoSourceTecDocEngine : SourceEntity
+    public class MongoSourceTecDocEngine(int kTypNr, IVersionProvider versionProvider) : SourceEntity(SourceIndex.TecDocEngine, kTypNr, versionProvider)
     {
-        public MongoSourceTecDocEngine(IVersionProvider versionProvider) : base(versionProvider)
-        {
-            SourceEntityID = ObjectId.GenerateNewId();
-            SourceIndex = SourceIndex.TecDocEngine;
-        }
-
         public int MotNr { get; set; }
         public string Make { get; set; }
         public string MCode { get; set; }
 
         [MongoDB.Bson.Serialization.Attributes.BsonElement]
-        public string SourceEntityModelHash => GlobalHelpers.GenerateKey(new { this.Make, this.MCode });
+        public override string SourceEntityModelHash => GlobalHelpers.GenerateKey(new { this.Make, this.MCode });
         public int DFrom { get; set; }
         public int DTo { get; set; }
 
         [MongoDB.Bson.Serialization.Attributes.BsonElement]
-        public DateTimeRange DateRange => new(DFrom, DTo);
+        public override DateTimeRange DateRange => new(DFrom, DTo);
 
         [MongoDB.Bson.Serialization.Attributes.BsonRepresentation(BsonType.Decimal128)]
         public int Valves { get; set; }
@@ -40,29 +31,12 @@ namespace MMIv8_Ktype.Models.Indexes
         public string SalesDescription { get; set; }
 
         [MongoDB.Bson.Serialization.Attributes.BsonElement]
-        public string EntityHash => GlobalHelpers.GenerateKey(new
+        public override string EntityHash => GlobalHelpers.GenerateKey(new
         {
             this.MotNr,
             this.Make,
             this.MCode,
         });
 
-    }
-
-    public sealed class MongoSourceTecDocEngineMap : ClassMap<MongoSourceTecDocEngine>
-    {
-        public MongoSourceTecDocEngineMap()
-        {
-            AutoMap(CultureInfo.InvariantCulture);
-            Map(m => m.DFrom).Name("dFrom").TypeConverter<NAtoIntConverter>();
-            Map(m => m.DTo).Name("dTo").TypeConverter<NAtoIntConverter>();
-            Map(m => m.Valves).TypeConverter<NAtoIntConverter>();
-            Map(m => m.Cylinders).TypeConverter<NAtoIntConverter>();
-            Map(m => m.NoOfCrankShaftBearings).TypeConverter<NAtoIntConverter>();
-            Map(m => m.Bore).TypeConverter<NAtoDecimalConverter>();
-            Map(m => m.Stroke).TypeConverter<NAtoDecimalConverter>();
-
-            Map(m => m.EntityHash).Ignore();
-        }
     }
 }

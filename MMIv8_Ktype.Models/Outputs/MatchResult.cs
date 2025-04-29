@@ -1,6 +1,4 @@
-﻿using CsvHelper.Configuration;
-using System.Globalization;
-
+﻿
 namespace MMIv8_Ktype.Models.Outputs
 {
     public class MatchResult
@@ -15,13 +13,5 @@ namespace MMIv8_Ktype.Models.Outputs
 
         public bool IsPerfect => ComparisonCount == PerfectCount;
 
-    }
-
-    public sealed class MatchResultMap : ClassMap<MatchResult>
-    {
-        public MatchResultMap()
-        {
-            AutoMap(CultureInfo.InvariantCulture);
-        }
     }
 }

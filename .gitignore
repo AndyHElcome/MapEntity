@@ -363,15 +363,4 @@ MigrationBackup/
 FodyWeavers.xsd
 
 /MMIv8_Ktype/Outputs/
-/MMIv8_Ktype/Outputs/BodyMatch.csv
-/MMIv8_Ktype/Outputs/DriveMatch.csv
-/MMIv8_Ktype/Outputs/EntityMatch.csv
-/MMIv8_Ktype/Outputs/EntityMatchRefine.csv
-/MMIv8_Ktype/Outputs/FuelMatch.csv
-/MMIv8_Ktype/Outputs/IdentifierMatch.csv
-/MMIv8_Ktype/Outputs/MarkMatch.csv
-/MMIv8_Ktype/Outputs/MMIv8.csv
-/MMIv8_Ktype/Outputs/ModelMatch.csv
-/MMIv8_Ktype/Outputs/modelMatchLoad.csv
-/MMIv8_Ktype/Outputs/TecDocPC.csv
-/MMIv8_Ktype/Outputs/zz Export makemodelmatch.csv
+/MMIv8_Ktype.Core/Outputs/
