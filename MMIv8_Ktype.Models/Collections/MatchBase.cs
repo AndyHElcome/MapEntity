@@ -11,7 +11,7 @@ namespace MMIv8_Ktype.Models.Collections
     [BsonKnownTypes(typeof(MatchModel), typeof(MatchMark), typeof(MatchIdentifier), typeof(MatchEngineCode),
                     typeof(MatchBody), typeof(MatchDrive), typeof(MatchFuel),
                     typeof(MatchCC), typeof(MatchCylinders), typeof(MatchValves), typeof(MatchBHP), typeof(MatchKW), typeof(MatchRegion), typeof(MatchDate))]
-    public abstract class MatchBase : IStatusHistory
+    public abstract class MatchBase : ICollectionEntity<string>, IStatusHistory
     {
         [BsonId]
         public string MatchHash { get; set; }
@@ -29,6 +29,9 @@ namespace MMIv8_Ktype.Models.Collections
         public List<MatchContext>? MatchContexts { get; set; }
 
         public StatusHistory Status { get; set; }
+
+        [BsonIgnore]
+        public string DocumentId => MatchHash;
 
         public MatchBase(IVersionProvider versionProvider, MatchEntity matchEntity, MatchBaseType matchBaseType, MatchBaseMethod matchBaseMethod, double defaultScore = 1.1)
         {

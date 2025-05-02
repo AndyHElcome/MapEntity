@@ -1,6 +1,10 @@
 ﻿using MMIv8_Ktype.Api.Requests;
 using MMIv8_Ktype.Models.Attributes;
+using MongoDB.Bson;
+using Version = MMIv8_Ktype.Models.Collections.Version;
 using Refit;
+using Microsoft.AspNetCore.Mvc;
+using MMIv8_Ktype.Models.Collections;
 
 namespace MMIv8_Ktype.Api.Endpoints
 {
@@ -8,15 +12,21 @@ namespace MMIv8_Ktype.Api.Endpoints
     public interface IVersionEndpoints : IEndpoint
     {
         [Get("")]
-        Task<List<Models.Collections.Version>> GetAll();
+        Task<List<Version>> GetAll();
 
         [Get("/{VersionNumber}")]
-        Task<Models.Collections.Version?> GetByVersion(int VersionNumber);
+        Task<Version?> GetByVersion(int VersionNumber);
+
+        [Get("/CurrentVersionID")]
+        Task<ObjectId?> GetCurrentVersionID();
 
         [Get("/CurrentVersion")]
-        Task<Models.Collections.Version?> GetCurrentVersion();
+        Task<Version?> GetCurrentVersion();
 
         [Put("/Create")]
-        Task<Models.Collections.Version?> CreateVersion(CreateVersionRequest request);
+        Task<Version?> CreateVersion(CreateVersionRequest request);
+
+        [Patch("/{VersionNumber}")]
+        Task<Version?> UpdateVersion([FromHeader] int VersionNumber, [FromQuery] string? TecdocEntityVersion = null, [FromQuery] string? MMIv8EntityVersion = null, [FromQuery] string? UserName = null);
     }
 }

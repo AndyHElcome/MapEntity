@@ -1,4 +1,5 @@
-﻿using MMIv8_Ktype.Api.Responses;
+﻿using Microsoft.Extensions.Options;
+using MMIv8_Ktype.Api.Responses;
 using MongoDB.Driver;
 using Serilog;
 using System.Diagnostics;
@@ -7,11 +8,11 @@ namespace MMIv8_Ktype.Core.Contexts
 {
     public class MongoBaseContext(MongoDBContext MMIv8_Ktype)
     {
-        public async Task<IAsyncCursor<T>> GetCursor<T>(IMongoCollection<T> collection, FilterDefinition<T>? filter = null, SortDefinition<T>? sort = null, int? skip = null, int? take = null, int? batchSize = null)
+        public async Task<IAsyncCursor<TOut>> GetCursor<T, TOut>(IMongoCollection<T> collection, FilterDefinition<T>? filter = null, SortDefinition<T>? sort = null, int? skip = null, int? take = null, int? batchSize = null, ProjectionDefinition<T, TOut>? projection = null)
         {
             filter ??= Builders<T>.Filter.Empty;
 
-            FindOptions<T> options = new()
+            FindOptions<T, TOut> options = new()
             {
                 BatchSize = batchSize,
                 Skip = skip,
@@ -21,19 +22,32 @@ namespace MMIv8_Ktype.Core.Contexts
             if (sort is not null)
                 options.Sort = sort;
 
+            if (projection is not null)
+                options.Projection = projection;
+
             return await collection.FindAsync(filter, options);
         }
 
-        public async Task<T?> GetSingleDocument<T>(IMongoCollection<T> collection, FilterDefinition<T>? filter = null, SortDefinition<T>? sort = null)
+        public async Task<IAsyncCursor<T>> GetCursor<T>(IMongoCollection<T> collection, FilterDefinition<T>? filter = null, SortDefinition<T>? sort = null, int? skip = null, int? take = null, int? batchSize = null, ProjectionDefinition<T, T>? projection = null)
         {
-            var result = await GetCursor(collection, filter, sort, take: 1);
+            return await GetCursor<T,T>(collection, filter, sort, skip, take, batchSize, projection);
+        }
 
-            return result.FirstOrDefault();
+        public async Task<TOut> GetSingleDocument<T, TOut>(IMongoCollection<T> collection, FilterDefinition<T>? filter = null, SortDefinition<T>? sort = null, int? skip = null, ProjectionDefinition<T, TOut>? projection = null)
+        {
+            var result = await GetCursor(collection, filter, sort, skip, take: 1, projection: projection);
+
+            return await result.FirstOrDefaultAsync();
+        }
+
+        public async Task<T> GetSingleDocument<T>(IMongoCollection<T> collection, FilterDefinition<T>? filter = null, SortDefinition<T>? sort = null, int? skip = null, ProjectionDefinition<T, T>? projection = null)
+        {
+            return await GetSingleDocument<T, T>(collection, filter, sort, skip, projection: projection);
         }
 
         public async Task<IEnumerable<T>> GetMultipleDocuments<T>(IMongoCollection<T> collection, FilterDefinition<T>? filter = null, SortDefinition<T>? sort = null)
         {
-            var result = await GetCursor(collection, filter, sort);
+            var result = await GetCursor<T, T>(collection, filter, sort);
 
             return await result.ToListAsync();
         }
@@ -48,7 +62,7 @@ namespace MMIv8_Ktype.Core.Contexts
 
             Log.Information("Paging {Type} page: {page}", typeof(T).Name, page - 1);
 
-            var result = await GetCursor(collection, filter, sort, (page - 1) * pageSize, pageSize);
+            var result = await GetCursor<T, T>(collection, filter, sort, (page - 1) * pageSize, pageSize);
 
             var items = await result.ToListAsync();
 
@@ -70,7 +84,7 @@ namespace MMIv8_Ktype.Core.Contexts
 
             int i = 0;
 
-            using var cursor = await GetCursor(collection, filter: filter, batchSize: batchSize);
+            using var cursor = await GetCursor<T, T>(collection, filter: filter, batchSize: batchSize);
             while (await cursor.MoveNextAsync())
             {
                 yield return cursor.Current;
@@ -83,8 +97,14 @@ namespace MMIv8_Ktype.Core.Contexts
             Log.Debug("Completed Enumerate {Type} {Time}", typeof(T).Name, sw);
         }
 
-        public async Task<long> CountByFilter<T>(IMongoCollection<T> collection, FilterDefinition<T> filter)
+        public IQueryable<T> GetQuery<T>(IMongoCollection<T> collection)
         {
+            return collection.AsQueryable();
+        }
+
+        public async Task<long> CountByFilter<T>(IMongoCollection<T> collection, FilterDefinition<T>? filter = null)
+        {
+            filter ??= Builders<T>.Filter.Empty;
             return await collection.Find(filter).CountDocumentsAsync();
         }
 
@@ -100,6 +120,7 @@ namespace MMIv8_Ktype.Core.Contexts
             Log.Debug("Created {Count} {Type}", newEntity.Length, typeof(T).Name);
         }
 
+        [Obsolete("UseComboUpdate")]
         public async Task<UpdateResult> Update<T>(IMongoCollection<T> collection, FilterDefinition<T> filter, UpdateDefinition<T> update)
         {
             var result = await collection.UpdateManyAsync(filter, update);
@@ -107,6 +128,7 @@ namespace MMIv8_Ktype.Core.Contexts
             return result;
         }
 
+        [Obsolete("UseComboUpdate")]
         public async Task<T> FindOneAndUpdate<T>(IMongoCollection<T> collection, FilterDefinition<T> filter, UpdateDefinition<T> update)
         {
             var result = await collection.FindOneAndUpdateAsync(filter, update, new FindOneAndUpdateOptions<T, T>() { ReturnDocument = ReturnDocument.After });
@@ -121,12 +143,11 @@ namespace MMIv8_Ktype.Core.Contexts
             return result;
         }
 
-        public async Task<ClientBulkWriteResult> BulkWrite(IReadOnlyList<BulkWriteModel> bulkWriteModels)
+        public async Task<T> FindOneAndDelete<T>(IMongoCollection<T> collection, FilterDefinition<T> filter)
         {
-            var results = await MMIv8_Ktype.Client.BulkWriteAsync(bulkWriteModels);
-            Log.Debug("Matched {Count} {Type} Inserted: {Inserted} Upserted: {Upserted} Modified: {Modified} Deleted: {Deleted}", results.MatchedCount, "unknown", results.InsertedCount, results.UpsertedCount, results.ModifiedCount, results.DeletedCount);
-            return results;
+            var result = await collection.FindOneAndDeleteAsync(filter);
+            Log.Debug("Deleted 1 {Type}", typeof(T).Name);
+            return result;
         }
-
     }
 }

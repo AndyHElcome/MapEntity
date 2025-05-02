@@ -89,8 +89,6 @@ namespace MMIv8_Ktype.Core.Services.Mapping
 
             sw.Stop();
             Log.Information("Complete {count} {TotalTime}", i, sw);
-
-            await MappingService.RecalculateMatchBase();
         }
 
         #endregion

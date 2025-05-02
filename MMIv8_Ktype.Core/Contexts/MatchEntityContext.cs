@@ -9,7 +9,7 @@ namespace MMIv8_Ktype.Core.Contexts
 
     public class MatchEntityContext(MongoDBContext MMIv8_Ktype) : MongoBaseContext(MMIv8_Ktype)
     {
-        public async Task<IAsyncCursor<ObjectId>> GetAllMakeModelMatchID(IMongoCollection<MatchEntity> collection, FilterDefinition<MatchEntity>? filter = null)// TODO Check speed
+        public async Task<IAsyncCursor<ObjectId>> GetAllMakeModelMatchID(IMongoCollection<MatchEntity> collection, FilterDefinition<MatchEntity>? filter = null)// TODO Check speed //TODO Turn into Projections
         {
             var filterBuilder = Builders<MatchEntity>.Filter;
             filter ??= filterBuilder.Empty;
@@ -22,7 +22,7 @@ namespace MMIv8_Ktype.Core.Contexts
             return await collection.DistinctAsync<ObjectId>("MatchMakeModelMatchID", filter, options);
         }
 
-        public async Task<IAsyncCursor<ObjectId>> GetAllMMIv8EntityIds(IMongoCollection<MatchEntity> collection, FilterDefinition<MatchEntity>? filter = null)// TODO Check speed
+        public async Task<IAsyncCursor<ObjectId>> GetAllMMIv8EntityIds(IMongoCollection<MatchEntity> collection, FilterDefinition<MatchEntity>? filter = null)// TODO Check speed //TODO Turn into Projections
         {
             var filterBuilder = Builders<MatchEntity>.Filter;
             filter ??= filterBuilder.Empty;
@@ -47,12 +47,12 @@ namespace MMIv8_Ktype.Core.Contexts
             return matches.ToList().SelectMany(x => x.dictionary.Values).GroupBy(g => g.MatchHash).Select(g => g.First());
         }
 
-        public async Task<IAsyncCursor<MatchBase>> GetMatchBaseByType(IMongoCollection<MatchEntity> collection, MatchBaseType matchBaseType, MatchBaseMethod[]? method, string? matchHashID, bool emptyScore, FilterDefinition<MatchEntity>? filter = null)
+        public async Task<IAsyncCursor<MatchBase>> GetMatchBaseByType(IMongoCollection<MatchEntity> collection, MatchBaseType matchBaseType, MatchBaseMethod[]? method, string? matchHashID, bool emptyScore, FilterDefinition<MatchEntity>? filter = null)// TODO Try and convert to driver based query
         {
             var filterBuilder = Builders<MatchEntity>.Filter;
             filter ??= filterBuilder.Empty;
 
-            var matchBaseFilter = filterBuilder.Empty;
+            var matchBaseFilter = filterBuilder.Empty;// TODO Try and convert to driver based query maybe once this is its own class
             if (method is not null)
                 matchBaseFilter &= filterBuilder.In($"EntityComparison.{matchBaseType}.MatchBaseMethod", method.Select(c => c.ToString()));
             if (matchHashID is not null)
@@ -60,7 +60,7 @@ namespace MMIv8_Ktype.Core.Contexts
             if (emptyScore)
                 matchBaseFilter &= filterBuilder.Exists($"EntityComparison.{matchBaseType}.Score", true);
 
-            var uniqueObjects = collection.Aggregate()
+            var uniqueObjects = collection.Aggregate()// TODO Try and convert to driver based query maybe once this is its own class
                 .Match(filter)
                 .Sort(new BsonDocument
                     {

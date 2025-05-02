@@ -5,7 +5,7 @@ using MongoDB.Bson.Serialization.Attributes;
 namespace MMIv8_Ktype.Models.Collections
 {
 
-    public class MatchMakeModel : IStatusHistory
+    public class MatchMakeModel : ICollectionEntity<ObjectId>, IStatusHistory
     {
         [BsonId]
         public ObjectId MatchID { get; set; }
@@ -16,6 +16,9 @@ namespace MMIv8_Ktype.Models.Collections
         [BsonIgnoreIfDefault]
         public MongoSourceEntityModel MMIv8Model { get; set; }
         public StatusHistory Status { get; set; }
+
+        [BsonIgnore]
+        public ObjectId DocumentId => MatchID;
 
         [Obsolete("VersionProvider Required", true)]
         [BsonConstructor]

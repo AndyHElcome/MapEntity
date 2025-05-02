@@ -11,6 +11,7 @@ namespace MMIv8_Ktype.Core.Contexts
         public MongoDBCollections(IConfiguration configuration, IMongoDatabase mongoDatabase)
         {
             Version = GetCollection<Models.Collections.Version>(mongoDatabase, "Version");
+            EntityRelation = GetCollection<EntityRelation>(mongoDatabase);
             User = GetCollection<User>(mongoDatabase);
 
             SourceTecDocPC = GetCollection<MongoSourceTecDocPC>(mongoDatabase, "SourceTecDocPC");
@@ -30,6 +31,7 @@ namespace MMIv8_Ktype.Core.Contexts
         }
 
         public readonly IMongoCollection<Models.Collections.Version> Version;
+        public readonly IMongoCollection<EntityRelation> EntityRelation;
         public readonly IMongoCollection<User> User;
 
         public readonly IMongoCollection<MongoSourceTecDocPC> SourceTecDocPC;

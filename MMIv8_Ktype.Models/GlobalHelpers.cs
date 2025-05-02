@@ -119,7 +119,6 @@ namespace MMIv8_Ktype.Models
             if (type != typeof(T) && !type.IsAssignableTo(typeof(T)))
                 throw new Exception("Type and T are not related");
 
-
             if (constructorArgs is null)
                 throw new NullReferenceException("constructorArgs is empty or missing");
 

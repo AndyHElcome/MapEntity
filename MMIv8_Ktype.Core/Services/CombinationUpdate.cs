@@ -104,6 +104,7 @@ namespace MMIv8_Ktype.Core.Services
         public BulkWriteOptions? WriteOptions { get; set; }
         public List<BulkWriteModel> BulkWriteModels { get => combinationPipelines.Select(c => c.ToBulkWriteModel()).ToList(); }
 
+        public int Count() => combinationPipelines.Count;
         private readonly List<ICombinationPipeline> combinationPipelines = [];
 
         public BulkCombinationUpdate(MongoDBContext mmiv8_Ktype)

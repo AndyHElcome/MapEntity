@@ -1,38 +1,35 @@
 ﻿using MMIv8_Ktype.Core.Contexts;
 using MMIv8_Ktype.Models.Collections;
+using MongoDB.Bson;
 using MongoDB.Driver;
+using Serilog;
 
 namespace MMIv8_Ktype.Core.Services
 {
-    public class UserService(MongoDBContext MMIv8_Ktype, 
-                             MongoBaseContext BaseContext)
+    public class UserService(MongoDBContext MMIv8_Ktype) : BaseService<User, ObjectId>(MMIv8_Ktype.Collections.User)
     {
-        public async Task<IAsyncCursor<User>> GetAll()
-        {
-            return await BaseContext.GetCursor(MMIv8_Ktype.Collections.User);
-        }
-
         public async Task<User?> GetByName(string userName)
         {
             var filter = Builders<User>.Filter.Eq(e => e.Name, userName);
-            return await BaseContext.GetSingleDocument(MMIv8_Ktype.Collections.User, filter);
+            return await base.GetSingleDocument(filter);
         }
 
-        public async Task Create(string newUser)
+        public async Task Create(string newUserName)
         {
-            var filter = Builders<User>.Filter.Eq(e => e.Name, newUser);
-            var user = await BaseContext.GetSingleDocument(MMIv8_Ktype.Collections.User, filter);
-
-            if (user is not null)
-                throw new Exception($"User '" + newUser + "' already exists");
-
-            await BaseContext.Create(MMIv8_Ktype.Collections.User, new User(newUser));
+            var user = new User(newUserName);
+            await base.Create(user);
         }
 
-        public async Task Delete(string userName)
+        public async Task<User> CreateAndReturn(string newUserName)
+        {
+            await this.Create(newUserName);
+            return await this.GetByName(newUserName);
+        }
+
+        public async Task DeleteByName(string userName)
         {
             var filter = Builders<User>.Filter.Eq(e => e.Name, userName);
-            await BaseContext.Delete(MMIv8_Ktype.Collections.User, filter);
+            await base.Delete(filter);
         }
     }
 }

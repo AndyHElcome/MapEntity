@@ -1,8 +1,10 @@
 ﻿using MMIv8_Ktype.Api.Requests;
 using MMIv8_Ktype.Api.Responses;
 using MMIv8_Ktype.Core.Contexts;
+using MMIv8_Ktype.Models;
 using MMIv8_Ktype.Models.Collections;
 using MMIv8_Ktype.Models.Indexes;
+using MMIv8_Ktype.Models.Status;
 using MMIv8_Ktype.Models.Util;
 using MongoDB.Bson;
 using MongoDB.Driver;
@@ -12,7 +14,8 @@ using System.Diagnostics;
 namespace MMIv8_Ktype.Core.Services.Match
 {
     public class MatchEntityService(MongoDBContext MMIv8_Ktype,
-                                    MatchEntityContext MatchEntityContext) : IMongoCollectionService<MatchEntity>
+                                    MatchEntityContext MatchEntityContext,
+                                    IVersionProvider versionProvider) : IMongoCollectionService<MatchEntity> //TODO Move MatchEntityContext into here
     {
         public IMongoCollection<MatchEntity> Collection => MMIv8_Ktype.Collections.MatchEntity;
 
@@ -32,6 +35,11 @@ namespace MMIv8_Ktype.Core.Services.Match
         public async Task<IAsyncCursor<MatchEntity>> GetAll(FilterDefinition<MatchEntity>? filter = null, int? batchSize = 10000)
         {
             return await MatchEntityContext.GetCursor(Collection, filter: filter, batchSize: batchSize);
+        }
+
+        public IQueryable<MatchEntity> GetQuery()
+        {
+            return MatchEntityContext.GetQuery(Collection);
         }
 
         public async Task<PagedResponse<MatchEntity>> PageAll(PagedSortFilter<MatchEntity> request)
@@ -58,19 +66,12 @@ namespace MMIv8_Ktype.Core.Services.Match
             return await MatchEntityContext.CountUsedBaseMatches(Collection, matchBase, filter: filter);
         }
 
-        public async Task BulkCreateEntityMatch(List<MatchEntity> newMatches)
+        public async Task CreateEntityMatch(List<MatchEntity> newMatches)
         {
             await MatchEntityContext.Create(Collection, newMatches.ToArray());
         }
 
-        public async Task CreateEntityMatch(List<MatchEntity> newMatches)
-        {
-            foreach (var newMatch in newMatches)
-            {
-                await CreateEntityMatch(newMatch);
-            }
-        }
-
+        [Obsolete("Not in use?",true)]
         public async Task CreateEntityMatch(MatchEntity newMatch) // TODO Simplify these calls so they only validate and do the thing e.g Add a new record. Then make new calls in mapping to actually build the record
         {
             var builder = Builders<MatchEntity>.Filter;
@@ -94,7 +95,7 @@ namespace MMIv8_Ktype.Core.Services.Match
             return new CombinationPipeline<MatchEntity>(Collection, filter);
         }
 
-        public CombinationPipeline<MatchEntity> UpdateMissingMatchBase(MatchBase matchBase, FilterDefinition<MatchEntity>? filter = null)
+        public CombinationPipeline<MatchEntity> UpdateMissingMatchBase(MatchBase matchBase, FilterDefinition<MatchEntity>? filter = null)// TODO Try and convert to driver based query
         {
             var filterBuilder = Builders<MatchEntity>.Filter;
             filter ??= filterBuilder.Empty;
@@ -105,7 +106,7 @@ namespace MMIv8_Ktype.Core.Services.Match
             return new CombinationPipeline<MatchEntity>(Collection, filter).AppendPipeline(c => c.UpdateMatchBase(matchBase));
         }
 
-        public CombinationPipeline<MatchEntity> UpdateMatchBaseScoreMatchResult(MatchBase matchBase, FilterDefinition<MatchEntity>? filter = null)
+        public CombinationPipeline<MatchEntity> UpdateMatchBaseScoreMatchResult(MatchBase matchBase, FilterDefinition<MatchEntity>? filter = null)// TODO Try and convert to driver based query
         {
             var filterBuilder = Builders<MatchEntity>.Filter;
             filter ??= filterBuilder.Empty;
@@ -116,12 +117,12 @@ namespace MMIv8_Ktype.Core.Services.Match
                                                                                                  .UpdateScoreMatchResult());
         }
 
-        public CombinationPipeline<MatchEntity> UpdateEntity(SourceEntity sourceEntity) //TODO check this is still updating properly
-        {
-            var filter = Builders<MatchEntity>.Filter.Eq(c => c.TecDocEntity.SourceEntityID, sourceEntity.SourceEntityID);
+        //public CombinationPipeline<MatchEntity> UpdateEntity(SourceEntity sourceEntity) //TODO check this is still updating properly
+        //{
+        //    var filter = Builders<MatchEntity>.Filter.Eq(c => c.TecDocEntity.SourceEntityID, sourceEntity.SourceEntityID);
 
-            return new CombinationPipeline<MatchEntity>(Collection, filter).AppendUpdate(c => c.UpdateEntity(sourceEntity));
-        }
+        //    return new CombinationPipeline<MatchEntity>(Collection, filter).AppendUpdate(c => c.UpdateEntity(sourceEntity));
+        //}
 
         public CombinationPipeline<MatchEntity> UpdateEntity(MongoSourceTecDocPC sourceEntity)
         {
@@ -169,6 +170,34 @@ namespace MMIv8_Ktype.Core.Services.Match
             }
 
             sw.Stop();
+        }
+
+        public CombinationPipeline<MatchEntity> CombinationUpdatePreviousMatchedFlag(FilterDefinition<MatchEntity> filter, bool matchFlag)
+        {
+            return new CombinationPipeline<MatchEntity>(Collection, filter).AppendUpdate(c => c.SetPreviousMatchedFlag(matchFlag))
+                                                                           .AppendPipeline(c => c.AppendStatus(versionProvider.NewStatus(Status.Updated, $"Updated Previous Match Flag")));
+        }
+
+        public CombinationPipeline<MatchEntity> CombinationUpdatePreviousMatchedFlag(int KTypNr, int MMI_V8_Key, bool matchFlag)
+        {
+            //    var matchEntityFilter = Builders<MatchEntity>.Filter.Eq(c => c.TecDocEntity.ExternalId, KTypNr)
+            //                          & Builders<MatchEntity>.Filter.Eq(c => c.MMIv8Entity.ExternalId, MMI_V8_Key);
+            var matchEntityFilter = Builders<MatchEntity>.Filter.Eq(c => c.TecDocEntity.KTypNr, KTypNr) //REPLACE
+                                  & Builders<MatchEntity>.Filter.Eq(c => c.MMIv8Entity.MMI_V8_Key, MMI_V8_Key);
+
+            return CombinationUpdatePreviousMatchedFlag(matchEntityFilter, matchFlag);
+        }
+
+        public BulkCombinationUpdate BulkCombinationUpdatePreviousMatchedFlag(List<EntityRelation> entityRelations, bool matchFlag = true)
+        {
+            var bulkCombinationUpdate = new BulkCombinationUpdate(MMIv8_Ktype);
+
+            foreach (var entityRelation in entityRelations)
+            {
+                bulkCombinationUpdate.AddCombinationUpdate(CombinationUpdatePreviousMatchedFlag(entityRelation.KTypNr, entityRelation.MMI_V8_Key, matchFlag));
+            }
+
+            return bulkCombinationUpdate;
         }
 
         public async Task<BulkCombinationUpdate> BulkCombinationUpdateMatchRefine(IEnumerable<int> mmi_V8_Keys) //TODO Move into unique MatchRefine Class

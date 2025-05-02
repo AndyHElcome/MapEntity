@@ -3,7 +3,7 @@
 namespace MMIv8_Ktype.Models.Collections
 {
     [Serializable]
-    public class MongoSourceEntityModel
+    public class MongoSourceEntityModel : ICollectionEntity<string>
     {
         [BsonId]
         public string SourceEntityModelHash { get; set; }
@@ -13,5 +13,8 @@ namespace MMIv8_Ktype.Models.Collections
         [BsonIgnoreIfNull]
         public List<string>? DetailedModels { get; set; }
         public int? Popularity { get; set; }
+
+        [BsonIgnore]
+        public string DocumentId => SourceEntityModelHash;
     }
 }

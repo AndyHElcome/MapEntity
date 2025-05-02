@@ -9,7 +9,7 @@ namespace MMIv8_Ktype.Models.Status
             History = new([ versionProvider.NewStatus(Status.Created) ]);
         }
 
-        [Obsolete("Version is now required", true)]
+        [Obsolete("Version is now required")]
         public StatusHistory()
         {
         }

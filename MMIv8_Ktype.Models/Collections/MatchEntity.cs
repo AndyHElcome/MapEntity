@@ -8,17 +8,19 @@ using MMIv8_Ktype.Models.Indexes;
 
 namespace MMIv8_Ktype.Models.Collections
 {
-    public class MatchEntity : IStatusHistory
+    public class MatchEntity : ICollectionEntity<ObjectId>, IStatusHistory
     {
         [BsonId]
         public ObjectId MatchEntityID { get; set; }
         public MongoSourceTecDocPC TecDocEntity { get; set; }
         public MongoSourceMMIv8 MMIv8Entity { get; set; }
         public ObjectId MatchMakeModelMatchID { get; set; }
+        [BsonElement]
+        public string RelationKey => $"{MMIv8Entity.MMI_V8_Key}-{TecDocEntity.KTypNr}";
         public StatusHistory Status { get; set; }
 
         [BsonElement]
-        public MMIv8_Ktype.Models.DateIntersection.DateIntersection DateIntersection => new(TecDocEntity.DateRange, MMIv8Entity.DateRange);
+        public DateIntersection.DateIntersection DateIntersection => new(TecDocEntity.DateRange, MMIv8Entity.DateRange);
 
         [BsonSerializer(typeof(EnumDictionarySerializer<MatchBaseType, Dictionary<MatchBaseType, MatchBase>>))]
         public Dictionary<MatchBaseType, MatchBase> EntityComparison { get; set; }
@@ -32,6 +34,9 @@ namespace MMIv8_Ktype.Models.Collections
         public bool Matched { get; set; } = false;
         public string? MatchDetail { get; set; }
 
+        [BsonIgnore]
+        public ObjectId DocumentId => MatchEntityID;
+
 
         public MatchEntity(IVersionProvider versionProvider, MongoSourceTecDocPC tecdoc, MongoSourceMMIv8 mmiv8, ObjectId matchMakeModelMatchID)
         {
@@ -39,6 +44,18 @@ namespace MMIv8_Ktype.Models.Collections
             TecDocEntity = tecdoc;
             MMIv8Entity = mmiv8;
             MatchMakeModelMatchID = matchMakeModelMatchID;
+
+            CalculateMatchBases(versionProvider);
+        }
+
+        public MatchEntity(IVersionProvider versionProvider, MongoSourceTecDocPC tecdoc, MongoSourceMMIv8 mmiv8, ObjectId matchMakeModelMatchID, bool previous = false)
+        {
+            Status = new(versionProvider);
+            TecDocEntity = tecdoc;
+            MMIv8Entity = mmiv8;
+            MatchMakeModelMatchID = matchMakeModelMatchID;
+
+            MatchResult.PreviousMatch = previous;
 
             CalculateMatchBases(versionProvider);
         }
