@@ -8,6 +8,7 @@ using MMIv8_Ktype.Api.Responses;
 using Serilog;
 using System.Diagnostics;
 using Microsoft.AspNetCore.Authentication;
+using MongoDB.Driver.Linq;
 
 namespace MMIv8_Ktype.Core.Services
 {
@@ -16,10 +17,9 @@ namespace MMIv8_Ktype.Core.Services
     {
         public IMongoCollection<T> Collection = Collection;
 
-        public FilterDefinition<T> GetIdFilter(Tid documentId)
-        {
-            return Builders<T>.Filter.Eq(c => c.DocumentId, documentId);
-        }
+        public SortDefinition<T> GetSortById() => Builders<T>.Sort.Ascending("_id");
+
+        public FilterDefinition<T> GetFilterById(Tid documentId) => Builders<T>.Filter.Eq("_id", documentId);
 
         #region Query
         public IQueryable<T> GetQuery()
@@ -30,12 +30,12 @@ namespace MMIv8_Ktype.Core.Services
         public async Task<long> CountByFilter(FilterDefinition<T>? filter = null)
         {
             filter ??= Builders<T>.Filter.Empty;
-            return await Collection.Find(filter).CountDocumentsAsync();
+            return await Collection.Find(filter).Sort(this.GetSortById()).CountDocumentsAsync();
         }
         #endregion
 
         #region Get Documents
-        public async Task<IAsyncCursor<TOut>> GetAll<TOut>(FilterDefinition<T>? filter = null, SortDefinition<T>? sort = null, int? skip = null, int? take = null, int? batchSize = null, ProjectionDefinition<T, TOut>? projection = null)
+        public async Task<IAsyncCursor<TOut>> GetCursor<TOut>(FilterDefinition<T>? filter = null, SortDefinition<T>? sort = null, int? skip = null, int? take = null, int? batchSize = null, ProjectionDefinition<T, TOut>? projection = null)
         {
             filter ??= Builders<T>.Filter.Empty;
 
@@ -44,6 +44,7 @@ namespace MMIv8_Ktype.Core.Services
                 BatchSize = batchSize,
                 Skip = skip,
                 Limit = take,
+                Sort = this.GetSortById(), //TODO Check this is slowing down queries
             };
 
             if (sort is not null)
@@ -55,14 +56,20 @@ namespace MMIv8_Ktype.Core.Services
             return await Collection.FindAsync(filter, options);
         }
 
-        public async Task<IAsyncCursor<T>> GetAll(FilterDefinition<T>? filter = null, SortDefinition<T>? sort = null, int? skip = null, int? take = null, int? batchSize = null, ProjectionDefinition<T, T>? projection = null)
+        public async Task<IAsyncCursor<T>> GetCursor(FilterDefinition<T>? filter = null, SortDefinition<T>? sort = null, int? skip = null, int? take = null, int? batchSize = null, ProjectionDefinition<T, T>? projection = null)
         {
-            return await this.GetAll<T>(filter, sort, skip, take, batchSize, projection);
+            return await this.GetCursor<T>(filter, sort, skip, take, batchSize, projection);
+        }
+
+        public async Task<IAsyncCursor<TOut>> GetDistinctCursor<TOut>(string fieldName, FilterDefinition<T>? filter = null)
+        {
+            filter ??= Builders<T>.Filter.Empty;
+            return await Collection.DistinctAsync<TOut>(fieldName, filter);
         }
 
         public async Task<TOut> GetSingleDocument<TOut>(FilterDefinition<T>? filter = null, SortDefinition<T>? sort = null, int? skip = null, ProjectionDefinition<T, TOut>? projection = null)
         {
-            var result = await this.GetAll(filter, sort, skip, take: 1, projection: projection);
+            var result = await this.GetCursor(filter, sort, skip, take: 1, projection: projection);
 
             return await result.FirstOrDefaultAsync();
         }
@@ -74,17 +81,17 @@ namespace MMIv8_Ktype.Core.Services
 
         public async Task<T> GetById(Tid documentId)
         {
-            return await this.GetSingleDocument( this.GetIdFilter(documentId));
+            return await this.GetSingleDocument( this.GetFilterById(documentId));
         }
 
         public async Task<IEnumerable<T>> GetMultipleDocuments(FilterDefinition<T>? filter = null, SortDefinition<T>? sort = null)
         {
-            var result = await this.GetAll<T>(filter, sort);
+            var result = await this.GetCursor<T>(filter, sort);
 
             return await result.ToListAsync();
         }
 
-        public async Task<PagedResponse<T>> PaginateDocuments(SortDefinition<T> sort, FilterDefinition<T>? filter = null, int page = 1, int pageSize = 100)
+        public async Task<PagedResponse<T>> PaginateDocuments(FilterDefinition<T>? filter = null, SortDefinition<T>? sort = null, int page = 1, int pageSize = 100)
         {
             var sw = Stopwatch.StartNew();
 
@@ -94,7 +101,8 @@ namespace MMIv8_Ktype.Core.Services
 
             Log.Information("Paging {Type} page: {page}", typeof(T).Name, page - 1);
 
-            var result = await this.GetAll<T>(filter, sort, (page - 1) * pageSize, pageSize);
+            sort = sort is null ? this.GetSortById() : sort.Ascending("_id");
+            var result = await this.GetCursor<T>(filter, sort, (page - 1) * pageSize, pageSize);
 
             var items = await result.ToListAsync();
 
@@ -116,7 +124,7 @@ namespace MMIv8_Ktype.Core.Services
 
             int i = 0;
 
-            using var cursor = await this.GetAll<T>(filter: filter, batchSize: batchSize);
+            using var cursor = await this.GetCursor<T>(filter: filter, batchSize: batchSize);
             while (await cursor.MoveNextAsync())
             {
                 yield return cursor.Current;
@@ -175,7 +183,7 @@ namespace MMIv8_Ktype.Core.Services
         #endregion
 
         #region Deletion
-        public async Task<DeleteResult> Delete(FilterDefinition<T> filter)
+        public async Task<DeleteResult> DeleteByFilter(FilterDefinition<T> filter)
         {
             var result = await Collection.DeleteManyAsync(filter);
             Log.Debug("Deleted {Count} {Type}", result.DeletedCount, typeof(T).Name);
@@ -185,7 +193,7 @@ namespace MMIv8_Ktype.Core.Services
         public async Task<DeleteResult> DeleteAll()
         {
             var filter = Builders<T>.Filter.Empty;
-            return await this.Delete(filter);
+            return await this.DeleteByFilter(filter);
         }
 
         public async Task<T> FindOneAndDelete(FilterDefinition<T> filter)
@@ -195,21 +203,21 @@ namespace MMIv8_Ktype.Core.Services
             return result;
         }
 
-        public async Task<T> Delete(Tid documentId)
+        public async Task<T> DeleteById(Tid documentId)
         {
-            return await this.FindOneAndDelete(this.GetIdFilter(documentId));
-        }//TODO Rname ById
+            return await this.FindOneAndDelete(this.GetFilterById(documentId));
+        }
 
         public async Task<T> Delete(T document)
         {
-            return await this.Delete(document.DocumentId);
+            return await this.DeleteById(document.DocumentId);
         }
 
         public async Task Delete(T[] documents)
         {
             foreach (var document in documents)
             {
-                _ = await this.Delete(document.DocumentId);
+                _ = await this.DeleteById(document.DocumentId);
             }
         }
         #endregion

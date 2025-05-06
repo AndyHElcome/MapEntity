@@ -111,7 +111,7 @@ namespace MMIv8_Ktype.Core.Services.Mapping
 
             if (currentEntity is null || currentEntity.SourceEntityModelHash != sourceEntity.SourceEntityModelHash)
             {
-                await MatchEntityService.Delete(filter); //TODO Create previous match collection and then keep these updated
+                await MatchEntityService.DeleteByFilter(filter); //TODO Create previous match collection and then keep these updated
 
                 using var makeModelMatches = await MatchMakeModelService.GetByModelId(sourceEntity.SourceIndex, sourceEntity.SourceEntityModelHash);
                 while (await makeModelMatches.MoveNextAsync())

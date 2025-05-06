@@ -114,7 +114,7 @@ namespace MMIv8_Ktype.Core.Services.Mapping
                 var filterBuilder = Builders<MatchEntity>.Filter;
                 var filter = filterBuilder.Eq(c => c.MatchMakeModelMatchID, modelMatch.MatchID);
 
-                await MatchEntityService.Delete(filter);
+                await MatchEntityService.DeleteByFilter(filter);
             }
         }
 
@@ -133,7 +133,7 @@ namespace MMIv8_Ktype.Core.Services.Mapping
             var filterBuilder = Builders<MatchEntity>.Filter;
             var filter = filterBuilder.Eq(c => c.MatchMakeModelMatchID, modelMatch.MatchID);
 
-            await MatchEntityService.Delete(filter);
+            await MatchEntityService.DeleteByFilter(filter);
 
             return modelMatch.MatchID;
         }
@@ -153,7 +153,7 @@ namespace MMIv8_Ktype.Core.Services.Mapping
             var filterBuilder = Builders<MatchEntity>.Filter;
             var filter = filterBuilder.Eq(c => c.MatchMakeModelMatchID, modelMatch.MatchID);
 
-            await MatchEntityService.Delete(filter);
+            await MatchEntityService.DeleteByFilter(filter);
 
             return modelMatch.MatchID;
         }
@@ -194,7 +194,7 @@ namespace MMIv8_Ktype.Core.Services.Mapping
 
         public async Task CheckMatchBaseDeprecated()//TODO Utilise Deprecate Match Base
         {
-            var currentMatch = await MatchBaseService.GetAll(batchSize: 1000);
+            var currentMatch = await MatchBaseService.GetCursor(batchSize: 1000);
 
             while (await currentMatch.MoveNextAsync())
             {
@@ -232,7 +232,7 @@ namespace MMIv8_Ktype.Core.Services.Mapping
         {
             Log.Debug($"Gathering MatchBases for Recalculation");
 
-            var matchEntityManual = await MatchEntityService.GetMatchBase(matchBaseType, [ MatchBaseMethod.Manual, MatchBaseMethod.Partial ], null, false, filter);
+            var matchEntityManual = await MatchEntityService.GetMatchBaseByType(matchBaseType, [ MatchBaseMethod.Manual, MatchBaseMethod.Partial ], null, false, filter);
             Dictionary<MatchBaseType, IEnumerable<MatchBase>> matchBaseDict = new() { { matchBaseType, await matchEntityManual.ToListAsync() } };
 
             Log.Debug("Retrived {Count} for {MatchBaseType}", matchBaseDict[ matchBaseType ].Count(), matchBaseType);
@@ -247,7 +247,7 @@ namespace MMIv8_Ktype.Core.Services.Mapping
             Dictionary<MatchBaseType, IEnumerable<MatchBase>> matchBaseDict = new();
             foreach (MatchBaseType matchBaseType in (MatchBaseType[])Enum.GetValues(typeof(MatchBaseType)))
             {
-                var matchEntityManual = await MatchEntityService.GetMatchBase(matchBaseType, [ MatchBaseMethod.Manual, MatchBaseMethod.Partial ], null, false, filter);
+                var matchEntityManual = await MatchEntityService.GetMatchBaseByType(matchBaseType, [ MatchBaseMethod.Manual, MatchBaseMethod.Partial ], null, false, filter);
                 matchBaseDict.Add(matchBaseType, matchEntityManual.ToList());
 
                 Log.Debug("Retrived {Count} for {MatchBaseType}", matchBaseDict[ matchBaseType ].Count(), matchBaseType);
@@ -262,7 +262,7 @@ namespace MMIv8_Ktype.Core.Services.Mapping
             Dictionary<MatchBaseType, IEnumerable<MatchBase>> matchBaseDict = new();
             foreach (MatchBaseType matchBaseType in (MatchBaseType[])Enum.GetValues(typeof(MatchBaseType)))
             {
-                var matchEntityManual = await MatchEntityService.GetMatchBase(matchBaseType, [ MatchBaseMethod.Manual ], null, false);
+                var matchEntityManual = await MatchEntityService.GetMatchBaseByType(matchBaseType, [ MatchBaseMethod.Manual ], null, false);
                 var matchBasePartial = await MatchBaseService.GetByTypeAndMethod(matchBaseType, MatchBaseMethod.Partial, Builders<MatchBase>.Filter.Ne(x => x.Status.Current.Status, Status.Deprecated));
                 matchBaseDict.Add(matchBaseType, [ .. matchEntityManual.ToList(), .. matchBasePartial.ToList() ]);
 
@@ -379,7 +379,7 @@ namespace MMIv8_Ktype.Core.Services.Mapping
 
         public async Task StorePartialMatchBase(MatchBaseType matchBaseType, string matchHash, decimal? newScore = null)
         {
-            var matchEntityPartials = await MatchEntityService.GetMatchBase(matchBaseType, [ MatchBaseMethod.Partial ], matchHash);
+            var matchEntityPartials = await MatchEntityService.GetMatchBaseByType(matchBaseType, [ MatchBaseMethod.Partial ], matchHash);
 
             var matchEntityPartial = matchEntityPartials.ToList().FirstOrDefault();
 
@@ -402,14 +402,14 @@ namespace MMIv8_Ktype.Core.Services.Mapping
 
             await UpdateMatchScore(matchBaseType, matchHash, matchEntityPartial.Reset(versionProvider).Score);
 
-            await MatchBaseService.Delete(matchHash);
+            await MatchBaseService.DeleteById(matchHash);
         }
         #endregion
 
         #region Match Entity
         public async Task<MatchEntity> CheckMatchVadlidity(int KtypNr, int MMI_V8_Key)
         {
-            var currentMatch = await MatchEntityService.GetMatchEntity(KtypNr, MMI_V8_Key);
+            var currentMatch = await MatchEntityService.GetByExternalIds(KtypNr, MMI_V8_Key);
             if (currentMatch is not null)
                 return currentMatch;
 
@@ -457,7 +457,7 @@ namespace MMIv8_Ktype.Core.Services.Mapping
             var newMatchesList = newMatches.Select(c => (c.TecDocEntity.KTypNr, c.MMIv8Entity.MMI_V8_Key)).ToList();
             Task<List<EntityRelation>> checkTask = CheckPreviousMatchedFlag(newMatchesList);
 
-            await MatchEntityService.CreateEntityMatch(newMatches);
+            await MatchEntityService.Create([ .. newMatches ]);
 
             var checkedEntityRelations = await checkTask;
             var checkedEntityRelationsList = checkedEntityRelations.Select(c => (c.KTypNr, c.MMI_V8_Key)).ToList();
@@ -759,7 +759,7 @@ namespace MMIv8_Ktype.Core.Services.Mapping
                 return;
             }
 
-            await UserService.Delete(userName);
+            await UserService.DeleteByFilter(userName);
         }
         #endregion
     }

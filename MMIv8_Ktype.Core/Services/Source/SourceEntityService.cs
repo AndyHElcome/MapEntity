@@ -28,7 +28,7 @@ namespace MMIv8_Ktype.Core.Services.Source
         public async Task<IAsyncCursor<T>> GetByModelId(string SourceEntityModelHash, int? batchSize = null)
         {
             var filter = Builders<T>.Filter.Eq(e => e.SourceEntityModelHash, SourceEntityModelHash);
-            return await base.GetAll(filter: filter, batchSize: batchSize);
+            return await base.GetCursor(filter: filter, batchSize: batchSize);
         }
 
         public CombinationPipeline<T> UpdateSourceEntity(T entity)

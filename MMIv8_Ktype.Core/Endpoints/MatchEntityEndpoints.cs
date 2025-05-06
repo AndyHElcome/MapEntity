@@ -13,7 +13,7 @@ namespace MMIv8_Ktype.Core.Endpoints
     {
         public async Task<PagedResponse<MatchEntity>> GetAll(PagedRequest pagedRequest) //TODO change to stream call
         {
-            return await matchEntityService.PageAll(new PagedSortFilter<MatchEntity>(pagedRequest));
+            return await matchEntityService.PaginateDocuments(page: pagedRequest.Page, pageSize: pagedRequest.PageSize ?? 100);
         }
 
         public async Task<PagedResponse<MatchEntity>> GetAllMatchRefine(PagedRequest pagedRequest) //TODO change to stream call
@@ -23,12 +23,12 @@ namespace MMIv8_Ktype.Core.Endpoints
                        & (filterBuilder.Eq(c => c.MatchRefine.IsCheck, true) | filterBuilder.Size(c => c.MatchRefine.ChosenMatches, 0));
 
 
-            return await matchEntityService.PageAll(new PagedSortFilter<MatchEntity>(pagedRequest, filter));
+            return await matchEntityService.PaginateDocuments(filter: filter, page: pagedRequest.Page, pageSize: pagedRequest.PageSize ?? 100);
         }
 
         public async Task<MatchEntity?> GetMatchEntity(MatchEntityByExternalRequest request)
         {
-            return await matchEntityService.GetMatchEntity(request.KtypNr, request.MMI_V8_Key);
+            return await matchEntityService.GetByExternalIds(request.KtypNr, request.MMI_V8_Key);
         }
 
         public async Task UpdateMatchedFlag(UpdateFlagRequest request)

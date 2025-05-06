@@ -16,7 +16,7 @@ namespace MMIv8_Ktype.Core.Services.Match
             var builder = Builders<MatchBase>.Filter;
             filter ??= builder.Empty;
             filter &= builder.Eq(c => c.MatchBaseType, matchBaseType);
-            return await base.GetAll(filter: filter, batchSize: batchSize);
+            return await base.GetCursor(filter: filter, batchSize: batchSize);
         }
 
         public async Task<IAsyncCursor<MatchBase>> GetByTypeAndMethod(MatchBaseType matchBaseType, MatchBaseMethod method, FilterDefinition<MatchBase>? filter = null, int? batchSize = null) //TODO Rename or remove
@@ -25,7 +25,7 @@ namespace MMIv8_Ktype.Core.Services.Match
             filter ??= builder.Empty;
             filter &= builder.Eq(c => c.MatchBaseType, matchBaseType)
                     & builder.Eq(c => c.MatchBaseMethod, method);
-            return await base.GetAll(filter: filter, batchSize: batchSize);
+            return await base.GetCursor(filter: filter, batchSize: batchSize);
         }
 
         public CombinationPipeline<MatchBase> UpdateMatchBase(MatchBase matchBase)

@@ -22,7 +22,7 @@ namespace MMIv8_Ktype.Core.Endpoints
     {
         public async Task<List<T>> GetAll() //TODO change to stream call
         {
-            var response = await sourceEntityService.GetAll(batchSize: 100);
+            var response = await sourceEntityService.GetCursor(batchSize: 100);
             return await response.ToListAsync();
         }
 

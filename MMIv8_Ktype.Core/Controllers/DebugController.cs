@@ -34,7 +34,7 @@ namespace MMIv8_Ktype.Core.Controllers
         public async Task<IActionResult> BulkReloadAllEntityMatch(string objectId)
         {
             var filter = Builders<MatchEntity>.Filter.Eq(c => c.MatchMakeModelMatchID, ObjectId.Parse(objectId));
-            await MatchEntityService.Delete(filter);
+            await MatchEntityService.DeleteByFilter(filter);
 
             var matchMakeModel= await MatchMakeModelService.GetById(ObjectId.Parse(objectId));
 
@@ -101,7 +101,7 @@ namespace MMIv8_Ktype.Core.Controllers
         public async Task<IActionResult> CheckPrev(string objectId)
         {
             var filter = Builders<MatchEntity>.Filter.Eq(c => c.MatchMakeModelMatchID, ObjectId.Parse(objectId));
-            var matches = await MatchEntityService.GetAll(filter);
+            var matches = await MatchEntityService.GetCursor(filter);
 
             var matches2 = await matches.ToListAsync();
 

@@ -29,7 +29,7 @@ namespace MMIv8_Ktype.Core.Services
         public async Task DeleteByName(string userName)
         {
             var filter = Builders<User>.Filter.Eq(e => e.Name, userName);
-            await base.Delete(filter);
+            await base.DeleteByFilter(filter);
         }
     }
 }

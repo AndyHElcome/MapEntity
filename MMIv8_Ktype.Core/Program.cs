@@ -32,8 +32,6 @@ internal class Program
         builder.Services.Configure<Microsoft.AspNetCore.Http.Json.JsonOptions>(opts => JsonSerializationOptions.ApplyJsonSettings(opts.SerializerOptions));
 
         builder.Services.AddSingleton<MongoDBContext>();
-        builder.Services.AddScoped<MongoBaseContext>();
-        builder.Services.AddScoped<MatchEntityContext>();
 
         builder.Services.AddScoped<VersionService>();
         builder.Services.AddScoped<EntityRelationService>();

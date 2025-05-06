@@ -20,7 +20,7 @@ namespace MMIv8_Ktype.Core.Services.Match
                     & filterBuilder.Exists(m => m.MMIv8Model.SourceEntityModelHash)
                     & filterBuilder.Ne(x => x.Status.Current.Status, Status.Deprecated);
 
-            return await base.GetAll(filter, batchSize: batchSize);
+            return await base.GetCursor(filter, batchSize: batchSize);
         }
 
         public async Task<IAsyncCursor<MatchMakeModel>> GetByModelId(SourceIndex sourceIndex, string SourceEntityModelHash)
@@ -34,7 +34,7 @@ namespace MMIv8_Ktype.Core.Services.Match
             if (sourceIndex == SourceIndex.MMIv8)
                 filter = builder.Eq(e => e.MMIv8Model.SourceEntityModelHash, SourceEntityModelHash);
 
-            return await base.GetAll(filter);
+            return await base.GetCursor(filter);
         }
 
         public async Task<MatchMakeModel?> GetByModelIds(MatchMakeModelRequest request)

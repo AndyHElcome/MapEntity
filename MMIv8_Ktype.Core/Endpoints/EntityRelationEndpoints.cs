@@ -17,7 +17,7 @@ namespace MMIv8_Ktype.Core.Endpoints
     {
         public async Task<List<EntityRelation>> GetAll() //TODO change to stream call
         {
-            var response = await entityRelationService.GetAll();
+            var response = await entityRelationService.GetCursor();
             return await response.ToListAsync();
         }
 
@@ -35,12 +35,12 @@ namespace MMIv8_Ktype.Core.Endpoints
             return await response.ToListAsync();
         }
 
-        public async Task CreateEntityRelation(int versionNumber, List<PutEntityRelationRequest> entityRelationsRequest) //TODO change to stream call
+        public async Task CreateEntityRelation(int versionNumber, List<PutEntityRelationRequest> entityRelationsRequest)
         {
             await mappingService.CreateEntityRelation(versionNumber, entityRelationsRequest);
         }
 
-        public async Task CreateOne(EntityRelation entityRelationsRequest) //TODO change to stream call
+        public async Task CreateOne(EntityRelation entityRelationsRequest)
         {
             await entityRelationService.Create(entityRelationsRequest);
         }

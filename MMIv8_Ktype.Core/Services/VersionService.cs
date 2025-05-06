@@ -50,7 +50,7 @@ namespace MMIv8_Ktype.Core.Services
         {
             var filter = Builders<Version>.Filter.Eq(e => e.User.Name, userName);
 
-            return await base.GetAll(filter: filter);
+            return await base.GetCursor(filter: filter);
         }
 
         public async Task<Version> Create(string tecdocEntityVersion, string mmiv8EntityVersion, User user)
