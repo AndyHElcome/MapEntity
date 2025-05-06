@@ -40,11 +40,11 @@ namespace MMIv8_Ktype.Core.Services.Match
             return update;
         }
 
-        public static UpdateDefinition<MatchEntity> UpdateEntity(this UpdateDefinition<MatchEntity> update, SourceEntity sourceEntity)
-        {
-            update = update.Set(c => c.TecDocEntity, sourceEntity);
-            return update;
-        }
+        //public static UpdateDefinition<MatchEntity> UpdateEntity(this UpdateDefinition<MatchEntity> update, SourceEntity sourceEntity)
+        //{
+        //    update = update.Set(c => c.TecDocEntity, sourceEntity);
+        //    return update;
+        //}
 
         public static UpdateDefinition<MatchEntity> UpdateEntity(this UpdateDefinition<MatchEntity> update, MongoSourceTecDocPC sourceEntity)
         {
@@ -64,7 +64,7 @@ namespace MMIv8_Ktype.Core.Services.Match
             return update;
         }
 
-        public static PipelineDefinition<MatchEntity, MatchEntity> UpdateMatchBase(this PipelineDefinition<MatchEntity, MatchEntity> pipeline, MatchBase matchBase)
+        public static PipelineDefinition<MatchEntity, MatchEntity> UpdateMatchBase(this PipelineDefinition<MatchEntity, MatchEntity> pipeline, MatchBase matchBase)// TODO Try and convert to driver based query maybe once this is its own class
         {
             return pipeline.AppendStage<MatchEntity, MatchEntity, MatchEntity>(@"
                       {
@@ -75,7 +75,7 @@ namespace MMIv8_Ktype.Core.Services.Match
                     ");
         }
 
-        public static PipelineDefinition<MatchEntity, MatchEntity> UpdateScoreMatchResult(this PipelineDefinition<MatchEntity, MatchEntity> pipeline)
+        public static PipelineDefinition<MatchEntity, MatchEntity> UpdateScoreMatchResult(this PipelineDefinition<MatchEntity, MatchEntity> pipeline)// TODO Try and convert to driver based query
         {
             return pipeline.AppendStage<MatchEntity, MatchEntity, MatchEntity>(@"
                       {

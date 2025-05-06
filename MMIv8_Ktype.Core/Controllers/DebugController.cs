@@ -6,13 +6,18 @@ using MMIv8_Ktype.Core.Services.Match;
 using MMIv8_Ktype.Models;
 using MMIv8_Ktype.Models.Collections;
 using MMIv8_Ktype.Models.Status;
+using MongoDB.Bson;
 using MongoDB.Driver;
+using Serilog;
+using System.Diagnostics;
+using System.Linq;
 
 namespace MMIv8_Ktype.Core.Controllers
 {
     [ApiController]
     [Route("[controller]")]
     public class DebugController(MatchEntityService MatchEntityService,
+                                 MatchMakeModelService MatchMakeModelService,
                                  MappingService MappingService,
                                  BulkMappingService BulkMappingService,
                                  MongoDBContext mongoDBContext,
@@ -25,7 +30,20 @@ namespace MMIv8_Ktype.Core.Controllers
             return Ok("updated");
         }
 
-        [ HttpPost("Entity/BulkRecalculateMatchBase")]
+        [HttpPost("Entity/TestBulkReloadAllEntityMatch/{objectId}")]
+        public async Task<IActionResult> BulkReloadAllEntityMatch(string objectId)
+        {
+            var filter = Builders<MatchEntity>.Filter.Eq(c => c.MatchMakeModelMatchID, ObjectId.Parse(objectId));
+            await MatchEntityService.DeleteByFilter(filter);
+
+            var matchMakeModel= await MatchMakeModelService.GetById(ObjectId.Parse(objectId));
+
+            await MappingService.StoreEntityMatch(matchMakeModel!);
+
+            return Ok("updated");
+        }
+
+        [HttpPost("Entity/BulkRecalculateMatchBase")]
         public async Task<IActionResult> BulkRecalculateMatchBase()
         {
             await MappingService.RecalculateMatchBase();
@@ -77,6 +95,55 @@ namespace MMIv8_Ktype.Core.Controllers
         {
             mongoDBContext.Collections.CreateAllIndexes(true);
             return Ok("updated");
+        }
+
+        [HttpPost("Test/CheckPrev")]
+        public async Task<IActionResult> CheckPrev(string objectId)
+        {
+            var filter = Builders<MatchEntity>.Filter.Eq(c => c.MatchMakeModelMatchID, ObjectId.Parse(objectId));
+            var matches = await MatchEntityService.GetCursor(filter);
+
+            var matches2 = await matches.ToListAsync();
+
+            var matches3 = matches2.Select(c => ( c.TecDocEntity.KTypNr, c.MMIv8Entity.MMI_V8_Key)).ToList();
+
+            var sw = Stopwatch.StartNew();
+
+            //Log.Information("test1 start");
+            //sw.Restart();
+            //var test1 = MappingService.CheckPreviousMatchedFlag_test1(matches3);
+            //var result = new List<EntityRelation>();
+            //await foreach(var t in test1)
+            //{
+            //    if (t is not null)
+            //        result.Add(t);
+            //}
+            //sw.Stop();    
+            //Log.Information("test1 stopped {count} {time}", result.Count, sw);
+            //test1 = null;
+
+            //Log.Information("test2 start");
+            //sw.Restart();
+            //var test2 = MappingService.CheckPreviousMatchedFlag_test2(matches3);
+            //result = new List<EntityRelation>();
+            //await foreach (var t in test2)
+            //{
+            //    if (t is not null)
+            //        result.Add(t);
+            //}
+            //sw.Stop();
+            //Log.Information("test2 stopped {count} {time}", result.Count, sw);
+            //test2 = null;
+
+            Log.Information("test3 start");
+            sw.Restart();
+            var test3 = await MappingService.CheckPreviousMatchedFlag(matches3);
+            sw.Stop();
+            Log.Information("test3 stopped {count} {time}", test3.Count, sw);
+
+
+
+            return Ok("complete");
         }
 
         //[HttpPost("Indexes/UpdatePreviousMatch")]

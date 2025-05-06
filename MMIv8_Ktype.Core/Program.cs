@@ -12,6 +12,7 @@ using MMIv8_Ktype.Core.Services.Source;
 using System.Reflection;
 using MMIv8_Ktype.Models.Util;
 using MMIv8_Ktype.Api.Endpoints;
+using MongoDB.Bson.IO;
 
 internal class Program
 {
@@ -20,20 +21,20 @@ internal class Program
         var builder = WebApplication.CreateBuilder(args);
 
         //BsonDefaults.GuidRepresentationMode = GuidRepresentationMode.V3;
+        JsonWriterSettings.Defaults.OutputMode = JsonOutputMode.Shell;
 
         ConventionRegistry.Register("EnumStringConvention", new ConventionPack { new EnumRepresentationConvention(BsonType.String) }, t => true);
         ConventionRegistry.Register("IgnoreIfNullConvention", new ConventionPack { new IgnoreIfNullConvention(true) }, t => true);
+        
 
-
-        builder.Services.AddControllers().AddJsonOptions(opts => JsonSerializationOptions.ApplyJsonSettings(opts.JsonSerializerOptions));
+        builder.Services.AddControllers().AddJsonOptions(opts => JsonSerializationOptions.ApplyJsonSettings(opts.JsonSerializerOptions)); // Not required if not controllers
 
         builder.Services.Configure<Microsoft.AspNetCore.Http.Json.JsonOptions>(opts => JsonSerializationOptions.ApplyJsonSettings(opts.SerializerOptions));
 
         builder.Services.AddSingleton<MongoDBContext>();
-        builder.Services.AddScoped<MongoBaseContext>();
-        builder.Services.AddScoped<MatchEntityContext>();
 
         builder.Services.AddScoped<VersionService>();
+        builder.Services.AddScoped<EntityRelationService>();
         builder.Services.AddScoped<UserService>();
 
         builder.Services.AddScoped<IVersionProvider, VersionProviderMongo>();
@@ -42,7 +43,6 @@ internal class Program
         builder.Services.AddScoped<SourceMMIv8Service>();
         builder.Services.AddScoped<SourceTecDocEntityModelService>();
         builder.Services.AddScoped<SourceMMIv8EntityModelService>();
-
 
         builder.Services.AddScoped<MatchEntityService>();
         builder.Services.AddScoped<MatchBaseService>();

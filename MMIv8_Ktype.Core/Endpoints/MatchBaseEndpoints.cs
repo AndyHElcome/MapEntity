@@ -13,13 +13,13 @@ namespace MMIv8_Ktype.Core.Endpoints
     {
         public async Task<List<MatchBase>> GetAll() //TODO change to stream call
         {
-            var response = await matchBaseService.GetAll();
+            var response = await matchBaseService.GetCursor();
             return await response.ToListAsync();
         }
 
         public async Task<List<MatchBase>> GetByMatchBaseType(MatchBaseType MatchBaseType) //TODO change to stream call
         {
-            var response = await matchBaseService.GetAll(MatchBaseType);
+            var response = await matchBaseService.GetByType(MatchBaseType);
             return await response.ToListAsync();
         }
 

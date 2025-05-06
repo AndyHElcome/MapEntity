@@ -1,7 +1,7 @@
 ﻿
 namespace MMIv8_Ktype.Models.Outputs
 {
-    public class MatchResult
+    public class MatchResult //TODO potentially make this a struct
     {
         public int ComparisonCount { get; set; }
         public int MatchCount { get; set; }

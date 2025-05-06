@@ -3,6 +3,7 @@ using MMIv8_Ktype.Api;
 using MMIv8_Ktype.Api.Endpoints;
 using MMIv8_Ktype.Api.Requests;
 using MMIv8_Ktype.Models;
+using MMIv8_Ktype.Models.Collections;
 using Serilog;
 using System.Data;
 using System.Data.OleDb;
@@ -235,6 +236,25 @@ namespace MMIv8_Ktype.AccessMdb.Operations
         }
     }
 
+    public class LoadPreviousMatches(string dbPath, string tableName, int versionNumber) : AccessDBOperation(dbPath, tableName)
+    {
+        public int VersionNumber = versionNumber;
+
+        public async override Task ExecuteOperation(ILogger log)
+        {
+            IEntityRelationEndpoints entityRelationEndpoints = new RefitClient(log).CreateService<IEntityRelationEndpoints>();
+
+            DataTable dataTable = AddTableToDataSet(TableName, log) ?? throw new NoNullAllowedException();
+
+            var data = dataTable.Select().Select(c => GlobalHelpers.StringToObject<PutEntityRelationRequest>( c.ItemArray.Select(c => c?.ToString() ?? string.Empty).ToArray()) ).ToList();
+
+            if (data != null ) 
+                await entityRelationEndpoints.CreateEntityRelation(VersionNumber, data); //TODO Create return types
+
+            log.Information("Loaded {count} Previous Matches for Version {vesionNumber}", data?.Count, VersionNumber);
+        }
+    }
+
     public class GenerateMakeModelMatch(string dbPath, string tableName) : AccessDBOperation(dbPath, tableName)
     {
         public async override Task ExecuteOperation(ILogger log)
@@ -243,10 +263,9 @@ namespace MMIv8_Ktype.AccessMdb.Operations
 
             var matchMakeModels = await new RefitClient(log).CreateService<IMatchMakeModelEndpoints>().GenerateMakeModelMatch();
 
-            MatchMakeModelRecord matchMakeModels1 = matchMakeModels.First();
+            MatchMakeModelRecord matchMakeModels1 = matchMakeModels.First(); //TODO Change this
 
             DataTable dataTable = AddNewTableToDataSet(matchMakeModels1, TableName, [ "MatchID" ], log) ?? throw new NoNullAllowedException();
-
 
             foreach (MatchMakeModelRecord matchMakeModel in matchMakeModels)
             { 

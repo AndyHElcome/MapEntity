@@ -27,7 +27,7 @@ namespace MMIv8_Ktype.Core.Services.Mapping
 
         public async Task<List<MatchMakeModel>> GenerateMakeModelMatch()
         {
-            List<MatchMakeModel> currentMatch = (await MatchMakeModelService.GetAll()).ToList();
+            List<MatchMakeModel> currentMatch = (await MatchMakeModelService.GetCursor()).ToList();
 
             var MMIv8Models = await SourceMMIv8EntityModelService.GetByNotId(currentMatch.Select(m => m.MMIv8Model.SourceEntityModelHash).ToArray());
 
@@ -89,8 +89,6 @@ namespace MMIv8_Ktype.Core.Services.Mapping
 
             sw.Stop();
             Log.Information("Complete {count} {TotalTime}", i, sw);
-
-            await MappingService.RecalculateMatchBase();
         }
 
         #endregion

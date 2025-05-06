@@ -11,6 +11,7 @@ namespace MMIv8_Ktype.Core.Contexts
         public MongoDBCollections(IConfiguration configuration, IMongoDatabase mongoDatabase)
         {
             Version = GetCollection<Models.Collections.Version>(mongoDatabase, "Version");
+            EntityRelation = GetCollection<EntityRelation>(mongoDatabase);
             User = GetCollection<User>(mongoDatabase);
 
             SourceTecDocPC = GetCollection<MongoSourceTecDocPC>(mongoDatabase, "SourceTecDocPC");
@@ -30,6 +31,7 @@ namespace MMIv8_Ktype.Core.Contexts
         }
 
         public readonly IMongoCollection<Models.Collections.Version> Version;
+        public readonly IMongoCollection<EntityRelation> EntityRelation;
         public readonly IMongoCollection<User> User;
 
         public readonly IMongoCollection<MongoSourceTecDocPC> SourceTecDocPC;
@@ -212,6 +214,25 @@ namespace MMIv8_Ktype.Core.Contexts
             }
 
             CreateIndex(MatchEntity, matchEntityIndexModels, regenerate);
+            #endregion
+
+            #region Entity Relation
+            var entityRelationIndexBuilder = Builders<EntityRelation>.IndexKeys;
+            var entityRelationIndexModels = new List<CreateIndexModel<EntityRelation>>
+            {
+                new (entityRelationIndexBuilder.Ascending(c => c.VersionID),
+                     new() { Name = "VersionID", Unique = false, Background = true }
+                ),
+                new (entityRelationIndexBuilder.Ascending(c => c.MMI_V8_Key)
+                                               .Ascending(c => c.KTypNr),
+                     new() { Name = "MMI_V8_Key_KTypNr", Unique = true, Background = true }
+                ),
+                new (entityRelationIndexBuilder.Ascending(c => c.RelationKey),
+                     new() { Name = "RelationKey", Unique = false, Background = true }
+                ),
+            };
+
+            CreateIndex(EntityRelation, entityRelationIndexModels, regenerate);
             #endregion
 
             #region Match Base

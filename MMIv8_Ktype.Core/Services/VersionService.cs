@@ -1,66 +1,89 @@
 ﻿using MMIv8_Ktype.Api.Requests;
 using MMIv8_Ktype.Core.Contexts;
 using MMIv8_Ktype.Models.Collections;
+using Version = MMIv8_Ktype.Models.Collections.Version;
 using MongoDB.Driver;
+using System;
+using Serilog;
+using MongoDB.Bson;
 
 namespace MMIv8_Ktype.Core.Services
 {
-    public class VersionService(MongoDBContext MMIv8_Ktype, 
-                                MongoBaseContext BaseContext, 
-                                UserService UserService) //TODO remove user service and move calls containing into anouther mapping esq service
+    public class VersionService(MongoDBContext MMIv8_Ktype) : BaseService<Version, ObjectId>(MMIv8_Ktype.Collections.Version)
     {
-        public async Task<IAsyncCursor<Models.Collections.Version>> GetAll()
+        public async Task<Version> GetCurrentVersion()
         {
-            return await BaseContext.GetCursor(MMIv8_Ktype.Collections.Version);
+            var sort = Builders<Version>.Sort.Descending(m => m.VersionNumber);
+
+            return await base.GetSingleDocument(sort: sort);
         }
 
-        public async Task<Models.Collections.Version?> GetCurrentVersion()
+        public async Task<ObjectId> GetCurrentVersionID()
         {
-            var filter = Builders<Models.Collections.Version>.Filter.Empty;
-            var sort = Builders<Models.Collections.Version>.Sort.Descending(m => m.VersionNumber);
+            var sort = Builders<Version>.Sort.Descending(m => m.VersionNumber);
+            var projection = Builders<Version>.Projection.Expression(c => c.VersionID);
 
-            return await BaseContext.GetSingleDocument(MMIv8_Ktype.Collections.Version, sort: sort);
+            return await base.GetSingleDocument(sort: sort, projection: projection);
         }
 
-        public async Task<Models.Collections.Version?> GetByVersion(int version)
+        /// <summary>
+        /// Get older versions skip = 0 is current version.
+        /// </summary>
+        /// <param name="skip"></param>
+        /// <returns></returns>
+        public async Task<ObjectId> GetPreviousVersionID(int skip = 1)
         {
-            var filter = Builders<Models.Collections.Version>.Filter.Eq(e => e.VersionNumber, version);
-            return await BaseContext.GetSingleDocument(MMIv8_Ktype.Collections.Version, filter: filter);
+            var sort = Builders<Version>.Sort.Descending(m => m.VersionNumber);
+            var projection = Builders<Version>.Projection.Expression(c => c.VersionID);
+
+            return await base.GetSingleDocument(sort: sort, skip: skip, projection: projection);
         }
 
-        public async Task<Models.Collections.Version?> Create(CreateVersionRequest request)
+        public async Task<Version> GetByVersion(int version)
+        {
+            var filter = Builders<Version>.Filter.Eq(e => e.VersionNumber, version);
+
+            return await base.GetSingleDocument(filter: filter);
+        }
+
+        public async Task<IAsyncCursor<Version>> GetByUser(string userName)
+        {
+            var filter = Builders<Version>.Filter.Eq(e => e.User.Name, userName);
+
+            return await base.GetCursor(filter: filter);
+        }
+
+        public async Task<Version> Create(string tecdocEntityVersion, string mmiv8EntityVersion, User user)
         {
             var currentVersion = await GetCurrentVersion();
             int newVersionNumber = currentVersion is null ? 0 : currentVersion.VersionNumber + 1;
 
-            var user = await UserService.GetByName(request.User);
-
-            if (user is null)
-            {
-                user = new User(request.User);
-                await UserService.Create(request.User);
-            }
-
-            Models.Collections.Version newVersion = new()
-            { 
-                VersionNumber = newVersionNumber,
-                TecDocEntityVersion = request.TecDocEntityVersion,
-                MMIv8EntityVersion = request.MMIv8EntityVersion,
-                User = user,
-            };
-
-            // save
-            await BaseContext.Create(MMIv8_Ktype.Collections.Version, newVersion);
+            await base.Create( new Version(newVersionNumber, tecdocEntityVersion, mmiv8EntityVersion, user) );
 
             return await GetCurrentVersion();
         }
 
-        public async Task Delete(int version)
+        public async Task<Version?> Update(int versionNumber, string? tecdocEntityVersion = null, string? mmiv8EntityVersion = null, User? user = null)
         {
-            var filter = Builders<Models.Collections.Version>.Filter.Eq(e => e.VersionNumber, version);
-            await BaseContext.Delete(MMIv8_Ktype.Collections.Version, filter);
+            if (tecdocEntityVersion is null && mmiv8EntityVersion is null && user is null)
+            {
+                Log.Warning("No updates given for Version {versionNumber}", versionNumber);
+                return null; 
+            }
 
-            await GetCurrentVersion();
+            var filter = Builders<Version>.Filter.Eq(c => c.VersionNumber, versionNumber);
+            var update = Builders<Version>.Update.Combine();
+
+            if (tecdocEntityVersion is not null)
+                update = update.Set(c => c.TecDocEntityVersion, tecdocEntityVersion);
+
+            if (mmiv8EntityVersion is not null)
+                update = update.Set(c => c.MMIv8EntityVersion, mmiv8EntityVersion);
+
+            if (user is not null)
+                update = update.Set(c => c.User, user);
+
+            return await base.FindOneAndUpdate(filter, update);
         }
     }
 }

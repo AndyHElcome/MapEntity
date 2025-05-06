@@ -9,8 +9,6 @@ namespace MMIv8_Ktype.CSV.Maps
         {
             Map(m => m.Status);
             Map(m => m.DateOfChange);
-
-            References<VersionMap>(m => m.Version);
         }
     }
 }

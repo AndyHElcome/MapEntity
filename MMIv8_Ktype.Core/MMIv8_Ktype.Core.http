@@ -13,3 +13,8 @@ Content-Type: application/json
 GET {{MMIv8_Ktype.Core_HostAddress}}/Version
 
 ###
+
+@VersionNumber=3
+PATCH {{MMIv8_Ktype.Core_HostAddress}}/Version/{{VersionNumber}}?TecDocEntityVersion=2001_01
+
+###

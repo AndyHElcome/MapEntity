@@ -30,11 +30,13 @@ internal class Program
     {
         var Log = Logger.Log;
 
-        args = [ "MMIv8_Ktype.AccessMdb", "TestAccessDBOperation", @"C:\Users\andy.hargreaves\OneDrive - Elcome Ltd\Desktop\NEW MMI TO KTYPE\MMIv8_Ktype2.accdb", "API_StorePartialMatchBase", "ApiResponse" ];
+        //args = [ "MMIv8_Ktype.AccessMdb", "TestAccessDBOperation", @"C:\Users\andy.hargreaves\OneDrive - Elcome Ltd\Desktop\NEW MMI TO KTYPE\MMIv8_Ktype2.accdb", "API_StorePartialMatchBase", "ApiResponse" ];
 
-        args = [ "MMIv8_Ktype.AccessMdb", "StorePartialMatchBase", @"C:\Users\andy.hargreaves\OneDrive - Elcome Ltd\Desktop\NEW MMI TO KTYPE\MMIv8_Ktype2.accdb", "API_StorePartialMatchBase", "ApiResponse" ];
+        //args = [ "MMIv8_Ktype.AccessMdb", "StorePartialMatchBase", @"C:\Users\andy.hargreaves\OneDrive - Elcome Ltd\Desktop\NEW MMI TO KTYPE\MMIv8_Ktype2.accdb", "API_StorePartialMatchBase", "ApiResponse" ];
 
-        args = [ "MMIv8_Ktype.AccessMdb", "GenerateMakeModelMatch", @"C:\Users\andy.hargreaves\OneDrive - Elcome Ltd\Desktop\NEW MMI TO KTYPE\MMIv8_Ktype2.accdb", "MatchMakeModel" ];
+        //args = [ "MMIv8_Ktype.AccessMdb", "GenerateMakeModelMatch", @"C:\Users\andy.hargreaves\OneDrive - Elcome Ltd\Desktop\NEW MMI TO KTYPE\MMIv8_Ktype2.accdb", "MatchMakeModel" ];
+
+        args = [ "MMIv8_Ktype.AccessMdb", "LoadPreviousMatches", @"C:\Users\andy.hargreaves\OneDrive - Elcome Ltd\Desktop\NEW MMI TO KTYPE\MMIv8_Ktype2.accdb", "LegacyMasterlist", "1" ];
 
         //args = [ "MMIv8_Ktype.CSV", "TestCsvReadOperation", @"C:\Users\andy.hargreaves\OneDrive - Elcome Ltd\Desktop\NEW MMI TO KTYPE\Output\MakeModelMatch.csv" ];
 
@@ -56,16 +58,18 @@ internal class Program
 
         try
         {
+            var assemblyName = new AssemblyName(library);
+            var availableTypes = Assembly.Load(assemblyName)
+                                            .GetTypes()
+                                            .Where(t => !t.IsAbstract && !t.IsInterface && t.IsAssignableTo(typeof(IOperation)));
             //Get Operation Type
-            Type? type = Assembly.Load(new AssemblyName(library))
-                .GetTypes()
-                .FirstOrDefault(
-                    t => t.Name.Equals(className, StringComparison.OrdinalIgnoreCase) 
-                      && t.IsAssignableTo(typeof(IOperation)));
+            var type = availableTypes.FirstOrDefault(t => t.Name.Equals(className, StringComparison.OrdinalIgnoreCase));
 
             if (type == null)
-                throw new Exception($"Class '{className}' of '{nameof(IOperation)}' not found in '{library}'.");
-
+            {
+                Log.Error("Try one of the following {@types}", availableTypes.Select(c => c.Name));
+                throw new Exception($"Class '{className}' of '{nameof(IOperation)}' not found in '{library}'");
+            }
 
             //// Find a constructor that matches the number of parameters
             //var constructor = type.GetConstructors().FirstOrDefault(c => c.GetParameters().Length == constructorArgs.Length);

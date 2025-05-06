@@ -17,12 +17,12 @@ namespace MMIv8_Ktype.Core.Endpoints
     { }
 
     public class SourceEntityEndpoints<T>(SourceEntityService<T> sourceEntityService,
-                                          SourceEntityUpdateService<T> updateService) : ISourceEntityEndpoints<T>
+                                          ISourceEntityUpdateService<T> updateService) : ISourceEntityEndpoints<T>
         where T : SourceEntity
     {
         public async Task<List<T>> GetAll() //TODO change to stream call
         {
-            var response = await sourceEntityService.GetAll(100);
+            var response = await sourceEntityService.GetCursor(batchSize: 100);
             return await response.ToListAsync();
         }
 
