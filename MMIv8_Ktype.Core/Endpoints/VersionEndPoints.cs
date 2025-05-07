@@ -22,7 +22,7 @@ namespace MMIv8_Ktype.Core.Endpoints
         public async Task<ObjectId?> GetCurrentVersionID()
         {
             var version = await versionService.GetCurrentVersion();
-            return version?.VersionID;
+            return version?.DocumentId;
         }
 
         public async Task<Version?> GetCurrentVersion()

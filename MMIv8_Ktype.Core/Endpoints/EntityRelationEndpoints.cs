@@ -24,14 +24,14 @@ namespace MMIv8_Ktype.Core.Endpoints
         public async Task<List<EntityRelation>> GetCurrentEntityRelations() //TODO change to stream call
         {
             var version = await versionService.GetCurrentVersion();
-            var response = await entityRelationService.GetByVersion(version.VersionID);
+            var response = await entityRelationService.GetByVersion(version.DocumentId);
             return await response.ToListAsync();
         }
 
         public async Task<List<EntityRelation>> GetPreviousEntityRelations() //TODO change to stream call
         {
             var version = await mappingService.GetPreviousVersionIDWithEntityRelations();
-            var response = await entityRelationService.GetByVersion(version.VersionID);
+            var response = await entityRelationService.GetByVersion(version.DocumentId);
             return await response.ToListAsync();
         }
 

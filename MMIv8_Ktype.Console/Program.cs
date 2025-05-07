@@ -44,6 +44,8 @@ internal class Program
 
         //args = [ "MMIv8_Ktype.CSV", "GenerateModelMatchCSV", @"C:\Users\andy.hargreaves\OneDrive - Elcome Ltd\Desktop\NEW MMI TO KTYPE\Output\MakeModelMatch.csv" ];
 
+        args = [ "MMIv8_Ktype.CSV", "CSVBackupOperation", @"C:\Users\andy.hargreaves\OneDrive - Elcome Ltd\Desktop\NEW MMI TO KTYPE\Backup"];
+
         if (args.Length < 2)
         {
             Log.Error("No args parsed. Usage: <Library> <ClassName> <ConstructorArgs...>");

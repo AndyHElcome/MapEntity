@@ -26,6 +26,19 @@ namespace MMIv8_Ktype.Core.Endpoints
             return await matchEntityService.PaginateDocuments(filter: filter, page: pagedRequest.Page, pageSize: pagedRequest.PageSize ?? 100);
         }
 
+        public async Task<IAsyncCursor<object>> GetBackup() //TODO change to stream call
+        {
+            var filterBuilder = Builders<MatchEntity>.Filter;
+            var filter = filterBuilder.Eq(c => c.Matched, true)
+                       | filterBuilder.Eq(c => c.Status.Current.Status, Models.Status.Status.Check)
+                       | filterBuilder.Eq(c => c.Status.Current.Status, Models.Status.Status.Checked);
+
+            var sort = Builders<MatchEntity>.Sort.Ascending(c => c.MMIv8Entity.MMI_V8_Key).Ascending(c => c.TecDocEntity.KTypNr);
+            var projection = Builders<MatchEntity>.Projection.Expression<object>(c => new { c.MMIv8Entity.MMI_V8_Key, c.TecDocEntity.KTypNr, c.Matched, c.MatchDetail, c.MatchResult.Failed, c.MatchResult.FailDetail, c.Status.Current.Status});
+
+            return await matchEntityService.GetCursor(filter: filter, sort: sort, batchSize: 10000, projection: projection); 
+        }
+
         public async Task<MatchEntity?> GetMatchEntity(MatchEntityByExternalRequest request)
         {
             return await matchEntityService.GetByExternalIds(request.KtypNr, request.MMI_V8_Key);

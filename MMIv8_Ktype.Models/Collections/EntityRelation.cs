@@ -12,7 +12,7 @@ namespace MMIv8_Ktype.Models.Collections
     public class EntityRelation(ObjectId versionID, int mmi_V8_Key, int ktypNr, string? comment, int versionNumber) : ICollectionEntity<ObjectId>
     {
         [BsonId]
-        public ObjectId EntityRelationID { get; set; } = ObjectId.GenerateNewId();
+        public ObjectId DocumentId { get; set; } = ObjectId.GenerateNewId();
         public ObjectId VersionID { get; set; } = versionID;
         [BsonElement]
         public string RelationKey => $"{MMI_V8_Key}-{KTypNr}";
@@ -20,8 +20,5 @@ namespace MMIv8_Ktype.Models.Collections
         public int KTypNr { get; set; } = ktypNr;
         public string? Comment { get; set; } = comment;
         public int VersionNumber { get; set; } = versionNumber;
-
-        [BsonIgnore]
-        public ObjectId DocumentId => EntityRelationID;
     }
 }

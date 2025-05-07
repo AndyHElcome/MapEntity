@@ -16,8 +16,8 @@ namespace MMIv8_Ktype.Core.Services.Match
         {
             var filterBuilder = Builders<MatchMakeModel>.Filter;
             filter ??= filterBuilder.Empty;
-            filter &= filterBuilder.Exists(m => m.TecDocModel.SourceEntityModelHash)
-                    & filterBuilder.Exists(m => m.MMIv8Model.SourceEntityModelHash)
+            filter &= filterBuilder.Exists(m => m.TecDocModel.DocumentId)
+                    & filterBuilder.Exists(m => m.MMIv8Model.DocumentId)
                     & filterBuilder.Ne(x => x.Status.Current.Status, Status.Deprecated);
 
             return await base.GetCursor(filter, batchSize: batchSize);
@@ -29,10 +29,10 @@ namespace MMIv8_Ktype.Core.Services.Match
             var filter = builder.Empty;
 
             if (sourceIndex == SourceIndex.TecDocPC)
-                filter = builder.Eq(e => e.TecDocModel.SourceEntityModelHash, SourceEntityModelHash);
+                filter = builder.Eq(e => e.TecDocModel.DocumentId, SourceEntityModelHash);
 
             if (sourceIndex == SourceIndex.MMIv8)
-                filter = builder.Eq(e => e.MMIv8Model.SourceEntityModelHash, SourceEntityModelHash);
+                filter = builder.Eq(e => e.MMIv8Model.DocumentId, SourceEntityModelHash);
 
             return await base.GetCursor(filter);
         }
@@ -40,8 +40,8 @@ namespace MMIv8_Ktype.Core.Services.Match
         public async Task<MatchMakeModel?> GetByModelIds(MatchMakeModelRequest request)
         {
             var builder = Builders<MatchMakeModel>.Filter;
-            var filter = builder.Eq(e => e.TecDocModel.SourceEntityModelHash, request.TD_SourceEntityModelHash)
-                       & builder.Eq(e => e.MMIv8Model.SourceEntityModelHash, request.MMI_SourceEntityModelHash);
+            var filter = builder.Eq(e => e.TecDocModel.DocumentId, request.TD_SourceEntityModelHash)
+                       & builder.Eq(e => e.MMIv8Model.DocumentId, request.MMI_SourceEntityModelHash);
 
             return await base.GetSingleDocument(filter);
         }
@@ -49,8 +49,8 @@ namespace MMIv8_Ktype.Core.Services.Match
         public async Task<bool> CheckValid(MongoSourceEntityModel tecdoc, MongoSourceEntityModel mmiv8)
         {
             var builder = Builders<MatchMakeModel>.Filter;
-            var filter = builder.Eq(m => m.TecDocModel.SourceEntityModelHash, tecdoc.SourceEntityModelHash) 
-                       & builder.Eq(m => m.MMIv8Model.SourceEntityModelHash, mmiv8.SourceEntityModelHash)
+            var filter = builder.Eq(m => m.TecDocModel.DocumentId, tecdoc.DocumentId) 
+                       & builder.Eq(m => m.MMIv8Model.DocumentId, mmiv8.DocumentId)
                        & builder.Ne(x => x.Status.Current.Status, Status.Deprecated);
 
             bool match = await base.GetSingleDocument(filter) is not null;
@@ -64,7 +64,7 @@ namespace MMIv8_Ktype.Core.Services.Match
             {
                 await base.Create(model);
 
-                await UpdateRelatedMatches(model, $"Added match {model.MatchID.ToString()}");
+                await UpdateRelatedMatches(model, $"Added match {model.DocumentId.ToString()}");
             }
             catch (MongoWriteException mwe)
             {
@@ -76,12 +76,12 @@ namespace MMIv8_Ktype.Core.Services.Match
         {
             var filterBuilder = Builders<MatchMakeModel>.Filter;
 
-            var tecdocMatches = await GetByModelId(SourceIndex.TecDocPC, model.TecDocModel.SourceEntityModelHash);
-            var mmiMatches = await GetByModelId(SourceIndex.MMIv8, model.MMIv8Model.SourceEntityModelHash);
+            var tecdocMatches = await GetByModelId(SourceIndex.TecDocPC, model.TecDocModel.DocumentId);
+            var mmiMatches = await GetByModelId(SourceIndex.MMIv8, model.MMIv8Model.DocumentId);
 
-            var updateFilter = filterBuilder.Exists(m => m.TecDocModel.SourceEntityModelHash) & filterBuilder.Exists(m => m.MMIv8Model.SourceEntityModelHash);
-            var tecdocFilter = filterBuilder.In(m => m.TecDocModel.SourceEntityModelHash, mmiMatches.ToList().Select(m => m.TecDocModel.SourceEntityModelHash));
-            var mmiFilter = filterBuilder.In(m => m.MMIv8Model.SourceEntityModelHash, tecdocMatches.ToList().Select(m => m.MMIv8Model.SourceEntityModelHash));
+            var updateFilter = filterBuilder.Exists(m => m.TecDocModel.DocumentId) & filterBuilder.Exists(m => m.MMIv8Model.DocumentId);
+            var tecdocFilter = filterBuilder.In(m => m.TecDocModel.DocumentId, mmiMatches.ToList().Select(m => m.TecDocModel.DocumentId));
+            var mmiFilter = filterBuilder.In(m => m.MMIv8Model.DocumentId, tecdocMatches.ToList().Select(m => m.MMIv8Model.DocumentId));
 
             updateFilter &= tecdocFilter | mmiFilter;
 

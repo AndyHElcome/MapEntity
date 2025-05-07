@@ -10,7 +10,7 @@ namespace MMIv8_Ktype.CSV.Maps
         public MongoSourceMMIv8Map()
         {
             AutoMap(CultureInfo.InvariantCulture);
-            Map(m => m.SourceEntityID).TypeConverter<ObjectIdConverter>();
+            Map(m => m.DocumentId).TypeConverter<ObjectIdConverter>();
             Map(m => m.MMI_V8_Key).Name("MMI V8 Key");
             Map(m => m.Mark_or_Series).Name("Mark or Series");
             Map(m => m.Engine_Size).TypeConverter<NAtoDecimalConverter>().Name("Engine Size");
@@ -29,7 +29,7 @@ namespace MMIv8_Ktype.CSV.Maps
             Map(m => m.Doors).TypeConverter<NAtoIntConverter>();
             Map(m => m.Engine_Code).Name("Engine Code");
 
-            Map(m => m.SourceEntityID).Ignore();
+            Map(m => m.DocumentId).Ignore();
             Map(m => m.SourceIndex).Ignore();
             Map(m => m.Status).Ignore();
             Map(m => m.EntityHash).Ignore();
@@ -41,12 +41,12 @@ namespace MMIv8_Ktype.CSV.Maps
         public MMIv8AutoMap()
         {
             AutoMap(CultureInfo.InvariantCulture);
-            Map(m => m.SourceEntityID).TypeConverter<ObjectIdConverter>();
+            Map(m => m.DocumentId).TypeConverter<ObjectIdConverter>();
 
             Map(m => m.DateRange.Start).Name("MMI_Start");
             Map(m => m.DateRange.End).Name("MMI_End");
 
-            Map(m => m.SourceEntityID).Ignore();
+            Map(m => m.DocumentId).Ignore();
             Map(m => m.SourceIndex).Ignore();
             Map(m => m.Status).Ignore();
             Map(m => m.EntityHash).Ignore();

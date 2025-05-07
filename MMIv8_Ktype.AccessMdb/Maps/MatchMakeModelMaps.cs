@@ -26,11 +26,11 @@ namespace MMIv8_Ktype.AccessMdb.Maps
                                         string? Detail)
     {
         public static implicit operator MatchMakeModelRecord(MatchMakeModel matchMakeModel) 
-            => new(matchMakeModel.MatchID,
-                   matchMakeModel.TecDocModel.SourceEntityModelHash,
+            => new(matchMakeModel.DocumentId,
+                   matchMakeModel.TecDocModel.DocumentId,
                    matchMakeModel.TecDocModel.Make,
                    matchMakeModel.TecDocModel.Model,
-                   matchMakeModel.MMIv8Model.SourceEntityModelHash,
+                   matchMakeModel.MMIv8Model.DocumentId,
                    matchMakeModel.MMIv8Model.Make,
                    matchMakeModel.MMIv8Model.Model,
                    matchMakeModel.Status.Current.Status,

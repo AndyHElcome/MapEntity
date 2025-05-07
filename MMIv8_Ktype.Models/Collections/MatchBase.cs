@@ -4,6 +4,7 @@ using MongoDB.Bson;
 using MongoDB.Bson.Serialization.Attributes;
 using MongoDB.Driver;
 using System.Dynamic;
+using System.Text.Json.Serialization;
 
 namespace MMIv8_Ktype.Models.Collections
 {
@@ -14,12 +15,12 @@ namespace MMIv8_Ktype.Models.Collections
     public abstract class MatchBase : ICollectionEntity<string>, IStatusHistory
     {
         [BsonId]
-        public string MatchHash { get; set; }
-        public MatchBaseType MatchBaseType;
-        public MatchBaseMethod MatchBaseMethod;
-        public double DefaultScore;
-        public Dictionary<string, dynamic> TecDocEntity = new();
-        public Dictionary<string, dynamic> MMIEntity = new();
+        public string DocumentId { get; set; }
+        public MatchBaseType MatchBaseType { get; set; }
+        public MatchBaseMethod MatchBaseMethod { get; set; }
+        public double DefaultScore { get; set; }
+        public Dictionary<string, dynamic> TecDocEntity { get; set; } = new();
+        public Dictionary<string, dynamic> MMIEntity { get; set; } = new();
 
         [BsonDefaultValue(null)]
         [BsonRepresentation(BsonType.Decimal128)]
@@ -30,9 +31,6 @@ namespace MMIv8_Ktype.Models.Collections
 
         public StatusHistory Status { get; set; }
 
-        [BsonIgnore]
-        public string DocumentId => MatchHash;
-
         public MatchBase(IVersionProvider versionProvider, MatchEntity matchEntity, MatchBaseType matchBaseType, MatchBaseMethod matchBaseMethod, double defaultScore = 1.1)
         {
             Status = new(versionProvider);
@@ -42,14 +40,8 @@ namespace MMIv8_Ktype.Models.Collections
 
             TecDocEntity = CreateTecDocEntity(matchEntity);
             MMIEntity = CreateMMIEntity(matchEntity);
-            MatchHash = GenerateMatchKey();
+            DocumentId = GenerateMatchKey();
             Score = CalculateScore();
-        }
-
-        [Obsolete("VersionProvider Required")]
-        public MatchBase(MatchEntity matchEntity, MatchBaseType matchBaseType, MatchBaseMethod matchBaseMethod, double defaultScore = 1.1)
-        {
-            throw new NotImplementedException("VersionProvider is now required");
         }
 
         public abstract decimal CalculateScore();
@@ -72,14 +64,14 @@ namespace MMIv8_Ktype.Models.Collections
         {
             string tecdocEntity = string.Join(' ', TecDocEntity.Select(c => c.Value.ToString()).Where(c => !string.IsNullOrWhiteSpace(c)));
             string mmiEntity = string.Join(' ', MMIEntity.Select(c => c.Value.ToString()).Where(c => !string.IsNullOrWhiteSpace(c)));
-            return $"MatchBaseType {MatchBaseType} Score {Score} TD [{tecdocEntity}] MMI [{mmiEntity}] MatchHash {MatchHash}";
+            return $"MatchBaseType {MatchBaseType} Score {Score} TD [{tecdocEntity}] MMI [{mmiEntity}] MatchHash {DocumentId}";
         }
 
         public dynamic BuildCsvObject()
         {
             dynamic csvObj = new ExpandoObject();
 
-            csvObj.MatchHash = MatchHash;
+            csvObj.MatchHash = DocumentId;
             csvObj.MatchBaseType = MatchBaseType;
 
             foreach (var p in TecDocEntity)

@@ -23,6 +23,13 @@ namespace MMIv8_Ktype.Core.Endpoints
             return await response.ToListAsync();
         }
 
+        public async Task<List<dynamic>>  GetCSVObject(MatchBaseType MatchBaseType) //TODO change to stream call
+        {
+            var response = await matchBaseService.GetByType(MatchBaseType);
+            var responseList = await response.ToListAsync();
+            return responseList.Select(m => m.BuildCsvObject()).ToList();
+        }
+
         public async Task<MatchBase?> GetById(string MatchHash)
         {
             return await matchBaseService.GetById(MatchHash);

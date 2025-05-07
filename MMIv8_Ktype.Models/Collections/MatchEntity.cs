@@ -11,7 +11,7 @@ namespace MMIv8_Ktype.Models.Collections
     public class MatchEntity : ICollectionEntity<ObjectId>, IStatusHistory
     {
         [BsonId]
-        public ObjectId MatchEntityID { get; set; }
+        public ObjectId DocumentId { get; set; }
         public MongoSourceTecDocPC TecDocEntity { get; set; }
         public MongoSourceMMIv8 MMIv8Entity { get; set; }
         public ObjectId MatchMakeModelMatchID { get; set; }
@@ -33,10 +33,6 @@ namespace MMIv8_Ktype.Models.Collections
         public bool IsBest => ScoreSum == MatchRefine.BestScore;
         public bool Matched { get; set; } = false;
         public string? MatchDetail { get; set; }
-
-        [BsonIgnore]
-        public ObjectId DocumentId => MatchEntityID;
-
 
         public MatchEntity(IVersionProvider versionProvider, MongoSourceTecDocPC tecdoc, MongoSourceMMIv8 mmiv8, ObjectId matchMakeModelMatchID)
         {

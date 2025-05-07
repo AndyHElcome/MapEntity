@@ -169,10 +169,10 @@ namespace MMIv8_Ktype.Core.Contexts
                 //                            .Ascending(c => c.TecDocEntity.SourceEntityID),
                 //     new() { Name = "MMIv8Entity.SourceEntityID_TecDocEntity.SourceEntityID", Unique = true, Background = true }
                 //),
-                new (matchEntityIndexBuilder.Ascending(c => c.MMIv8Entity.SourceEntityID),
+                new (matchEntityIndexBuilder.Ascending(c => c.MMIv8Entity.DocumentId),
                      new() { Name = "MMIv8Entity.SourceEntityID", Unique = false, Background = true }
                 ),
-                new (matchEntityIndexBuilder.Ascending(c => c.TecDocEntity.SourceEntityID),
+                new (matchEntityIndexBuilder.Ascending(c => c.TecDocEntity.DocumentId),
                      new() { Name = "TecDocEntity.SourceEntityID", Unique = false, Background = true }
                 ),
                 new (matchEntityIndexBuilder.Ascending(c => c.MMIv8Entity.MMI_V8_Key)
@@ -254,10 +254,10 @@ namespace MMIv8_Ktype.Core.Contexts
             var matchMakeModelIndexBuilder = Builders<MatchMakeModel>.IndexKeys;
             var matchMakeModelIndexModels = new List<CreateIndexModel<MatchMakeModel>>
             {
-                new (matchMakeModelIndexBuilder.Ascending(c => c.MMIv8Model.SourceEntityModelHash),
+                new (matchMakeModelIndexBuilder.Ascending(c => c.MMIv8Model.DocumentId),
                      new() { Name = "MMIv8Model.SourceEntityModelHash", Unique = false, Background = true }
                 ),
-                new (matchMakeModelIndexBuilder.Ascending(c => c.TecDocModel.SourceEntityModelHash),
+                new (matchMakeModelIndexBuilder.Ascending(c => c.TecDocModel.DocumentId),
                      new() { Name = "TecDocModel.SourceEntityModelHash", Unique = false, Background = true }
                 ),
                 new (matchMakeModelIndexBuilder.Ascending(c => c.Status.Current.Status),

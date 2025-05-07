@@ -29,13 +29,13 @@ namespace MMIv8_Ktype.Core.Services.Mapping
         {
             List<MatchMakeModel> currentMatch = (await MatchMakeModelService.GetCursor()).ToList();
 
-            var MMIv8Models = await SourceMMIv8EntityModelService.GetByNotId(currentMatch.Select(m => m.MMIv8Model.SourceEntityModelHash).ToArray());
+            var MMIv8Models = await SourceMMIv8EntityModelService.GetByNotId(currentMatch.Select(m => m.MMIv8Model.DocumentId).ToArray());
 
             var MMINoMatches = MMIv8Models.ToList().Select(m =>
                 new MatchMakeModel(tecDocModel: new(), mmiv8Model: m, versionProvider)).ToList();
 
 
-            var TecDocPCModels = await SourceTecDocEntityModelService.GetByNotId(currentMatch.Select(m => m.TecDocModel.SourceEntityModelHash).ToArray());
+            var TecDocPCModels = await SourceTecDocEntityModelService.GetByNotId(currentMatch.Select(m => m.TecDocModel.DocumentId).ToArray());
 
             var TecDocNoMatches = TecDocPCModels.ToList().Select(m =>
                 new MatchMakeModel(tecDocModel: m, mmiv8Model: new(), versionProvider)).ToList();
@@ -43,7 +43,7 @@ namespace MMIv8_Ktype.Core.Services.Mapping
             List<MatchMakeModel> matchMakeModels = currentMatch
                                                         .Union(MMINoMatches)
                                                         .Union(TecDocNoMatches)
-                                                        .GroupBy(i => new { mmiHash = i.MMIv8Model.SourceEntityModelHash, tdHash = i.TecDocModel.SourceEntityModelHash })
+                                                        .GroupBy(i => new { mmiHash = i.MMIv8Model.DocumentId, tdHash = i.TecDocModel.DocumentId })
                                                         .Select(g => g.First())
                                                         .OrderBy(o => String.Concat(o.MMIv8Model.Make, o.TecDocModel.Make))
                                                         .ThenBy(o  => String.Concat(o.MMIv8Model.Model, o.TecDocModel.Model))

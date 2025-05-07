@@ -9,7 +9,7 @@ namespace MMIv8_Ktype.CSV.Maps
     {
         public MatchMakeModelMap()
         {
-            Map(m => m.MatchID).TypeConverter<ObjectIdConverter>().Name(nameof(MatchMakeModel.MatchID));
+            Map(m => m.DocumentId).TypeConverter<ObjectIdConverter>().Name(nameof(MatchMakeModel.DocumentId));
             References<MongoSourceEntityModelMap>(m => m.TecDocModel).Prefix("TD_");
             References<MongoSourceEntityModelMap>(m => m.MMIv8Model).Prefix("MMI_");
 

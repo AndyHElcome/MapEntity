@@ -10,7 +10,7 @@ namespace MMIv8_Ktype.Api;
     public class VersionProviderApi(RefitClient RefitClient) : IVersionProvider
     {
     public ObjectId VersionID { get; } = RefitClient.CreateService<IVersionEndpoints>().GetCurrentVersionID().Result
-                                      ?? RefitClient.CreateService<IVersionEndpoints>().CreateVersion(new("Legacy", "Legacy", "Admin")).Result?.VersionID
+                                      ?? RefitClient.CreateService<IVersionEndpoints>().CreateVersion(new("Legacy", "Legacy", "Admin")).Result?.DocumentId
                                       ?? throw new NotImplementedException(); //TODO Test this works
 
         public StatusChange NewStatus(Status status, string? detail = null) => new()

@@ -12,7 +12,7 @@ namespace MMIv8_Ktype.Core.Services.Source
     {
         public async Task<IAsyncCursor<MongoSourceEntityModel>> GetByNotId(string[] id, int? batchSize = null)
         {
-            var filter = Builders<MongoSourceEntityModel>.Filter.Nin(e => e.SourceEntityModelHash, id);
+            var filter = Builders<MongoSourceEntityModel>.Filter.Nin(e => e.DocumentId, id);
             return await base.GetCursor(filter: filter, batchSize: batchSize);
         }
 

@@ -12,8 +12,8 @@ namespace MMIv8_Ktype.CSV.Maps
         public MatchEntityMap()
         {
             //AutoMap(CultureInfo.InvariantCulture);
-            Map(m => m.MatchEntityID).Ignore();
-            Map(m => m.MatchEntityID).TypeConverter<ObjectIdConverter>();
+            Map(m => m.DocumentId).Ignore();
+            Map(m => m.DocumentId).TypeConverter<ObjectIdConverter>();
             Map(m => m.MatchMakeModelMatchID).TypeConverter<ObjectIdConverter>();
 
             References<TecDocAutoMap>(m => m.TecDocEntity).Prefix("TD_");
@@ -24,7 +24,7 @@ namespace MMIv8_Ktype.CSV.Maps
                 Map(m => m.EntityComparison, false).Name($"{key.ToString()}_MatchHash").Convert(args =>
                 {
                     var dict = args.Value.EntityComparison;
-                    return dict != null && dict.ContainsKey(key) ? dict[key].MatchHash : string.Empty;
+                    return dict != null && dict.ContainsKey(key) ? dict[key].DocumentId : string.Empty;
                 });
 
                 Map(m => m.EntityComparison, false).Name($"{key.ToString()}_Score").Convert(args =>

@@ -4,6 +4,7 @@ using MMIv8_Ktype.Api.Endpoints;
 using MMIv8_Ktype.Api.Requests;
 using MMIv8_Ktype.CSV.Maps;
 using MMIv8_Ktype.Models.Collections;
+using MMIv8_Ktype.Models.Util;
 using Serilog;
 using SharpCompress.Writers;
 using System.Formats.Asn1;
@@ -57,7 +58,66 @@ namespace MMIv8_Ktype.CSV.Operations
         }
     }
 
-    public class TestCsvReadOperation : CSVReadOperation
+    public sealed class CSVBackupOperation(string csvPath) : ICSVOperation
+    {
+        public string CSVPath { get; set; } = csvPath;
+
+        public async Task ExecuteOperation(ILogger log)
+        {
+            var path = Path.GetFullPath(CSVPath);
+            var client = new RefitClient(log);
+
+
+            log.Information("Starting Backup into {path}", path);
+
+            var matchMakeModel = client.CreateService<IMatchMakeModelEndpoints>();
+
+            var filepath = Path.Combine(path, "MatchMakeModel.csv");
+            using (var csvWriter = new CsvWritingStream(filepath).CsvWriter)
+            {
+                csvWriter.Context.RegisterClassMap<MatchMakeModelMap>();
+                csvWriter.WriteRecords(await matchMakeModel.GenerateMakeModelMatch());
+            }
+
+            log.Information("Created file for Match Make Model {path}", filepath);
+
+
+            var matchBase = client.CreateService<IMatchBaseEndpoints>();
+            
+            foreach (var key in (MatchBaseType[])Enum.GetValues(typeof(MatchBaseType)))
+            {
+                filepath = Path.Combine(path, $"Match{key.ToString()}.csv");
+                var matchBases = await matchBase.GetCSVObject(key);
+
+                using (var csvWriter = new CsvWritingStream(filepath).CsvWriter)
+                {
+                    csvWriter.WriteRecords(matchBases);
+                }
+
+                log.Information("Created file for Match Make Model {path}", filepath);
+            }
+
+
+            var matchEntity = client.CreateService<IMatchEntityEndpoints>();
+
+            filepath = Path.Combine(path, "MatchMakeModel.csv");
+            using (var csvWriter = new CsvWritingStream(filepath).CsvWriter)
+            using (var entities = await matchEntity.GetBackup())
+            {
+                csvWriter.Context.AutoMap<object>();
+                while (entities.MoveNext())
+                {
+                    csvWriter.WriteRecords(entities.Current);
+                }
+            }
+            log.Information("Created file for Match Make Model {path}", filepath);
+
+
+
+        }
+    }
+
+    public sealed class TestCsvReadOperation : CSVReadOperation
     {
         public TestCsvReadOperation(string csvPath) : base(csvPath) { }
 
@@ -79,7 +139,7 @@ namespace MMIv8_Ktype.CSV.Operations
         }
     }
 
-    public class TestCsvWriteOperation : CSVWriteOperation
+    public sealed class TestCsvWriteOperation : CSVWriteOperation
     {
         public TestCsvWriteOperation(string csvPath, bool append) : base(csvPath, append) { }
         public TestCsvWriteOperation(string csvPath) : base(csvPath) { }
@@ -98,7 +158,7 @@ namespace MMIv8_Ktype.CSV.Operations
         }
     }
 
-    public class GenerateMakeModelMatch : CSVWriteOperation
+    public sealed class GenerateMakeModelMatch : CSVWriteOperation
     {
         public GenerateMakeModelMatch(string csvPath, bool append) : base(csvPath, append) { }
         public GenerateMakeModelMatch(string csvPath) : base(csvPath) { }

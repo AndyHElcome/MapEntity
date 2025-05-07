@@ -14,7 +14,7 @@ namespace MMIv8_Ktype.CSV.Maps
             Map(m => m.MatchContexts).Ignore();
         }
     }
-    
+
     public sealed class MatchBaseScoreMap : ClassMap<MatchBase>
     {
         public MatchBaseScoreMap()

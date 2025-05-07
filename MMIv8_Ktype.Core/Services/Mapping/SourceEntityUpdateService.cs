@@ -69,8 +69,8 @@ namespace MMIv8_Ktype.Core.Services.Mapping
             var filterBuilder = Builders<MatchEntity>.Filter;
             return typeof(TEntity) switch
             {
-                Type t when t == typeof(MongoSourceTecDocPC) => filterBuilder.Eq(e => e.TecDocEntity.SourceEntityID, sourceEntity.SourceEntityID),
-                Type t when t == typeof(MongoSourceMMIv8) => filterBuilder.Eq(e => e.MMIv8Entity.SourceEntityID, sourceEntity.SourceEntityID),
+                Type t when t == typeof(MongoSourceTecDocPC) => filterBuilder.Eq(e => e.TecDocEntity.DocumentId, sourceEntity.DocumentId),
+                Type t when t == typeof(MongoSourceMMIv8) => filterBuilder.Eq(e => e.MMIv8Entity.DocumentId, sourceEntity.DocumentId),
                 _ => throw new NotImplementedException()
             };
         }
@@ -118,10 +118,10 @@ namespace MMIv8_Ktype.Core.Services.Mapping
                 {
                     foreach (var makeModelMatch in makeModelMatches.Current)
                     {
-                        var tecdocEntities = await GetEntities<MongoSourceTecDocPC>(makeModelMatch.TecDocModel.SourceEntityModelHash);
-                        var mmiEntities = await GetEntities<MongoSourceMMIv8>(makeModelMatch.MMIv8Model.SourceEntityModelHash);
+                        var tecdocEntities = await GetEntities<MongoSourceTecDocPC>(makeModelMatch.TecDocModel.DocumentId);
+                        var mmiEntities = await GetEntities<MongoSourceMMIv8>(makeModelMatch.MMIv8Model.DocumentId);
 
-                        await foreach (var newMatch in MappingService.GenerateEntityMatch(tecdocEntities, mmiEntities, makeModelMatch.MatchID))
+                        await foreach (var newMatch in MappingService.GenerateEntityMatch((IEnumerable<MongoSourceTecDocPC>)tecdocEntities, (IEnumerable<MongoSourceMMIv8>)mmiEntities, makeModelMatch.DocumentId))
                         {
                             await MappingService.BulkCreateEntityMatch(newMatch.ToList());
                         }

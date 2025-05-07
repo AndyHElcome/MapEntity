@@ -26,5 +26,8 @@ namespace MMIv8_Ktype.Api.Endpoints
 
         [Delete("/Partial/{MatchBaseType}/{MatchHash}")]
         Task RemovePartialMatchBase(MatchBaseType MatchBaseType, string MatchHash);
+
+        [Get("/Debug/GetCSVObject/{MatchBaseType}")]
+        Task<List<dynamic>> GetCSVObject(MatchBaseType MatchBaseType);
     }
 }

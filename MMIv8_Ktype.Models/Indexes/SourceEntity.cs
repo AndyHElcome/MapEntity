@@ -12,7 +12,7 @@ namespace MMIv8_Ktype.Models.Indexes
     {
         [BsonId]
         [DoNotUpdateDifferences]
-        public ObjectId SourceEntityID { get; set; } = ObjectId.GenerateNewId();
+        public ObjectId DocumentId { get; set; } = ObjectId.GenerateNewId();
         public SourceIndex SourceIndex { get; set; } = sourceIndex;
         public int ExternalId { get; } = externalId;
 
@@ -22,8 +22,5 @@ namespace MMIv8_Ktype.Models.Indexes
         public abstract DateTimeRange DateRange { get; }
         public abstract string EntityHash { get; }
         public abstract string SourceEntityModelHash { get; }
-
-        [BsonIgnore]
-        public ObjectId DocumentId => SourceEntityID;
     }
 }

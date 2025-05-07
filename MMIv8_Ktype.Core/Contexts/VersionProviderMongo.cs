@@ -10,8 +10,8 @@ namespace MMIv8_Ktype.Core.Contexts
 {
     public class VersionProviderMongo(VersionService versionService, UserService userService) : IVersionProvider
     {
-        public ObjectId VersionID { get; } = versionService.GetCurrentVersion().Result?.VersionID
-                                          ?? versionService.Create("Legacy", "Legacy", userService.CreateAndReturn("Admin").Result).Result?.VersionID //TODO Test this works
+        public ObjectId VersionID { get; } = versionService.GetCurrentVersion().Result?.DocumentId
+                                          ?? versionService.Create("Legacy", "Legacy", userService.CreateAndReturn("Admin").Result).Result?.DocumentId //TODO Test this works
                                           ?? throw new NotImplementedException();
 
         public StatusChange NewStatus(Status status, string? detail = null) => new()
