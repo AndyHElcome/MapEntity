@@ -1,7 +1,9 @@
 ﻿using CsvHelper;
+using Microsoft.AspNetCore.Mvc.RazorPages;
 using MMIv8_Ktype.Api;
 using MMIv8_Ktype.Api.Endpoints;
 using MMIv8_Ktype.Api.Requests;
+using MMIv8_Ktype.Api.Responses;
 using MMIv8_Ktype.CSV.Maps;
 using MMIv8_Ktype.Models.Collections;
 using MMIv8_Ktype.Models.Util;
@@ -67,50 +69,49 @@ namespace MMIv8_Ktype.CSV.Operations
             var path = Path.GetFullPath(CSVPath);
             var client = new RefitClient(log);
 
-
             log.Information("Starting Backup into {path}", path);
 
             var matchMakeModel = client.CreateService<IMatchMakeModelEndpoints>();
-
             var filepath = Path.Combine(path, "MatchMakeModel.csv");
             using (var csvWriter = new CsvWritingStream(filepath).CsvWriter)
             {
                 csvWriter.Context.RegisterClassMap<MatchMakeModelMap>();
                 csvWriter.WriteRecords(await matchMakeModel.GenerateMakeModelMatch());
             }
-
             log.Information("Created file for Match Make Model {path}", filepath);
 
 
             var matchBase = client.CreateService<IMatchBaseEndpoints>();
-            
-            foreach (var key in (MatchBaseType[])Enum.GetValues(typeof(MatchBaseType)))
+            foreach (var matchBaseType in (MatchBaseType[])Enum.GetValues(typeof(MatchBaseType)))
             {
-                filepath = Path.Combine(path, $"Match{key.ToString()}.csv");
-                var matchBases = await matchBase.GetCSVObject(key);
+                filepath = Path.Combine(path, $"Match{matchBaseType.ToString()}.csv");
+                var matchBases = await matchBase.GetByMatchBaseType(matchBaseType);
 
                 using (var csvWriter = new CsvWritingStream(filepath).CsvWriter)
                 {
-                    csvWriter.WriteRecords(matchBases);
+                    csvWriter.WriteRecords(matchBases.Select(c => c.BuildCsvObject()));
                 }
 
-                log.Information("Created file for Match Make Model {path}", filepath);
+                log.Information("Created file for Match {matchBaseType} {path}", matchBaseType.ToString(), filepath);
             }
 
 
             var matchEntity = client.CreateService<IMatchEntityEndpoints>();
-
-            filepath = Path.Combine(path, "MatchMakeModel.csv");
+            filepath = Path.Combine(path, "MatchEntity.csv");
             using (var csvWriter = new CsvWritingStream(filepath).CsvWriter)
-            using (var entities = await matchEntity.GetBackup())
             {
-                csvWriter.Context.AutoMap<object>();
-                while (entities.MoveNext())
+                int page = 1;
+                PagedResponse<MatchEntityBackup> response;
+
+                do
                 {
-                    csvWriter.WriteRecords(entities.Current);
+                    response = await matchEntity.GetMatchEntityBackup(new PagedRequest(page, 10000));
+                    csvWriter.WriteRecords(response.Items);
+                    page++;
                 }
+                while (response.HasNextPage);
             }
-            log.Information("Created file for Match Make Model {path}", filepath);
+            log.Information("Created file for Match Entity {path}", filepath);
 
 
 

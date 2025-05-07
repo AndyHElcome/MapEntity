@@ -91,7 +91,7 @@ namespace MMIv8_Ktype.Core.Services
             return await result.ToListAsync();
         }
 
-        public async Task<PagedResponse<T>> PaginateDocuments(FilterDefinition<T>? filter = null, SortDefinition<T>? sort = null, int page = 1, int pageSize = 100)
+        public async Task<PagedResponse<TOut>> PaginateDocuments<TOut>(FilterDefinition<T>? filter = null, SortDefinition<T>? sort = null, int page = 1, int pageSize = 100, ProjectionDefinition<T, TOut>? projection = null)
         {
             var sw = Stopwatch.StartNew();
 
@@ -102,17 +102,17 @@ namespace MMIv8_Ktype.Core.Services
             Log.Information("Paging {Type} page: {page}", typeof(T).Name, page - 1);
 
             sort = sort is null ? this.GetSortById() : sort.Ascending("_id");
-            var result = await this.GetCursor<T>(filter, sort, (page - 1) * pageSize, pageSize);
+            var result = await this.GetCursor<TOut>(filter, sort, (page - 1) * pageSize, pageSize, projection: projection);
 
             var items = await result.ToListAsync();
 
             sw.Stop();
             Log.Debug("Completed Enumerate of {count} {Type} in {Time}", items.Count, typeof(T).Name, sw);
 
-            return new PagedResponse<T>(items, Convert.ToInt32(count), page, pageSize);
+            return new PagedResponse<TOut>(items, Convert.ToInt32(count), page, pageSize);
         }
 
-        public async IAsyncEnumerable<IEnumerable<T>> EnumerateDocuments(FilterDefinition<T> filter, int batchSize = 10000)
+        public async IAsyncEnumerable<IEnumerable<TOut>> EnumerateDocuments<TOut>(FilterDefinition<T> filter, int batchSize = 10000, ProjectionDefinition<T, TOut>? projection = null)
         {
             var sw = Stopwatch.StartNew();
 
@@ -124,7 +124,7 @@ namespace MMIv8_Ktype.Core.Services
 
             int i = 0;
 
-            using var cursor = await this.GetCursor<T>(filter: filter, batchSize: batchSize);
+            using var cursor = await this.GetCursor<TOut>(filter: filter, batchSize: batchSize);
             while (await cursor.MoveNextAsync())
             {
                 yield return cursor.Current;

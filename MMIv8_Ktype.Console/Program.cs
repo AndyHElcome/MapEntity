@@ -6,8 +6,6 @@ using MMIv8_Ktype.Models;
 
 internal class Program
 {    
-
-
     public static class Logger
     {
         public static ILogger Log = SetupLogger();
@@ -72,23 +70,6 @@ internal class Program
                 Log.Error("Try one of the following {@types}", availableTypes.Select(c => c.Name));
                 throw new Exception($"Class '{className}' of '{nameof(IOperation)}' not found in '{library}'");
             }
-
-            //// Find a constructor that matches the number of parameters
-            //var constructor = type.GetConstructors().FirstOrDefault(c => c.GetParameters().Length == constructorArgs.Length);
-            //if (constructor == null)
-            //    throw new Exception($"No matching constructor found for class '{className}' with {constructorArgs.Length} parameters.");
-
-
-            //// Convert parameters to the constructor parameter types
-            //var parameters = constructor.GetParameters();
-            //object[] parsedArgs = new object[ constructorArgs.Length ];
-            //for (int i = 0; i < constructorArgs.Length; i++)
-            //{
-            //    parsedArgs[ i ] = Convert.ChangeType(constructorArgs[ i ], parameters[ i ].ParameterType);
-            //}
-
-            //// Instantiate the class
-            //IOperation instance = (IOperation)constructor.Invoke(parsedArgs);
 
             IOperation instance = type.StringToObject<IOperation>(constructorArgs);
 

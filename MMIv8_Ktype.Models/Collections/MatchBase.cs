@@ -8,11 +8,13 @@ using System.Text.Json.Serialization;
 
 namespace MMIv8_Ktype.Models.Collections
 {
+    //TODO Implement this: https://youtu.be/v6cYTcEfZ8A?si=kwpt3lbMri5HZ89E
+
     [BsonDiscriminator(Required = true)]
     [BsonKnownTypes(typeof(MatchModel), typeof(MatchMark), typeof(MatchIdentifier), typeof(MatchEngineCode),
                     typeof(MatchBody), typeof(MatchDrive), typeof(MatchFuel),
                     typeof(MatchCC), typeof(MatchCylinders), typeof(MatchValves), typeof(MatchBHP), typeof(MatchKW), typeof(MatchRegion), typeof(MatchDate))]
-    public abstract class MatchBase : ICollectionEntity<string>, IStatusHistory
+    public class MatchBase : ICollectionEntity<string>, IStatusHistory
     {
         [BsonId]
         public string DocumentId { get; set; }
@@ -44,9 +46,14 @@ namespace MMIv8_Ktype.Models.Collections
             Score = CalculateScore();
         }
 
-        public abstract decimal CalculateScore();
-        public abstract Dictionary<string, dynamic> CreateTecDocEntity(MatchEntity matchEntity);
-        public abstract Dictionary<string, dynamic> CreateMMIEntity(MatchEntity matchEntity);
+        [Obsolete()]
+        public MatchBase()
+        {
+        }
+
+        public virtual decimal CalculateScore() => throw new NotImplementedException();
+        public virtual Dictionary<string, dynamic> CreateTecDocEntity(MatchEntity matchEntity) => throw new NotImplementedException();
+        public virtual Dictionary<string, dynamic> CreateMMIEntity(MatchEntity matchEntity) => throw new NotImplementedException();
 
         public string GenerateMatchKey() => GlobalHelpers.GenerateKey(new { MatchBaseType, TecDocEntity, MMIEntity });
 

@@ -32,7 +32,7 @@ namespace MMIv8_Ktype.Api.Endpoints
         [Put("/UpdateMatchRefineStatus")]
         Task UpdateMatchRefineStatus([FromBody] int[] MMI_V8_Keys);
 
-        [Post("Debug/GetBackup")]
-        Task<IAsyncCursor<object>> GetBackup();
+        [Post("/Debug/GetMatchEntityBackup")]
+        Task<PagedResponse<MatchEntityBackup>> GetMatchEntityBackup(PagedRequest pagedRequest);
     }
 }
