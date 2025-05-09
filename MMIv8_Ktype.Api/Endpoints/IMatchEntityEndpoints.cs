@@ -34,5 +34,8 @@ namespace MMIv8_Ktype.Api.Endpoints
 
         [Post("/Debug/GetMatchEntityBackup")]
         Task<PagedResponse<MatchEntityBackup>> GetMatchEntityBackup(PagedRequest pagedRequest);
+
+        [Delete("/Debug/DeleteAll")]
+        Task DeleteAll();
     }
 }

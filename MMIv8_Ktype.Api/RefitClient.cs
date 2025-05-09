@@ -21,6 +21,7 @@ namespace MMIv8_Ktype.Api
                 new RequestPropertyHandler(new RequestLoggingHandler(_log)))
                 {
                     BaseAddress = new Uri("https://localhost:44304/"),
+                    Timeout = TimeSpan.FromMinutes(1)
                 };
 
             _httpClient.DefaultRequestHeaders.Add("Accept", "application/json");

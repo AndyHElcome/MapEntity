@@ -22,7 +22,7 @@ namespace MMIv8_Ktype.Api.Endpoints
         [Post("/CreateEntityRelation")]
         Task CreateEntityRelation(int versionNumber, List<PutEntityRelationRequest> entityRelationsRequest);
 
-        [Post("/CreateOne")]
-        Task CreateOne(EntityRelation entityRelationsRequest);
+        [Delete("/Debug/DeleteAll")]
+        Task DeleteAll();
     }
 }

@@ -7,6 +7,7 @@ using Version = MMIv8_Ktype.Models.Collections.Version;
 using MongoDB.Bson;
 using MMIv8_Ktype.Models.Collections;
 using Serilog;
+using MMIv8_Ktype.Core.Services.Match;
 
 namespace MMIv8_Ktype.Core.Endpoints
 {
@@ -35,7 +36,7 @@ namespace MMIv8_Ktype.Core.Endpoints
             return await versionService.GetByVersion(VersionNumber);
         }
 
-        public async Task<Version?> CreateVersion(CreateVersionRequest request)
+        public async Task<Version> CreateVersion(CreateVersionRequest request)
         {
             return await mappingService.CreateVersion(request);
         }
@@ -50,6 +51,11 @@ namespace MMIv8_Ktype.Core.Endpoints
             }
 
             return await mappingService.UpdateVersion(VersionNumber, TecdocEntityVersion, MMIv8EntityVersion, UserName);
+        }
+
+        public async Task DeleteAll()
+        {
+            await versionService.DeleteAll();
         }
     }
 }

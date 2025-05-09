@@ -1,5 +1,6 @@
 ﻿using MMIv8_Ktype.Api.Endpoints;
 using MMIv8_Ktype.Api.Requests;
+using MMIv8_Ktype.Core.Services;
 using MMIv8_Ktype.Core.Services.Mapping;
 using MMIv8_Ktype.Core.Services.Match;
 using MMIv8_Ktype.Models.Collections;
@@ -48,6 +49,11 @@ namespace MMIv8_Ktype.Core.Endpoints
         public async Task RemovePartialMatchBase(MatchBaseType MatchBaseType, string MatchHash)
         {
             await mappingService.RemovePartialMatchBase(MatchBaseType, MatchHash);
+        }
+
+        public async Task DeleteAll()
+        {
+            await matchBaseService.DeleteAll();
         }
     }
 }

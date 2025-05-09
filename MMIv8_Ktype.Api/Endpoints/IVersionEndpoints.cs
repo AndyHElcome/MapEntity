@@ -24,9 +24,12 @@ namespace MMIv8_Ktype.Api.Endpoints
         Task<Version?> GetCurrentVersion();
 
         [Put("/Create")]
-        Task<Version?> CreateVersion(CreateVersionRequest request);
+        Task<Version> CreateVersion(CreateVersionRequest request);
 
         [Patch("/{VersionNumber}")]
         Task<Version?> UpdateVersion([FromHeader] int VersionNumber, [FromQuery] string? TecdocEntityVersion = null, [FromQuery] string? MMIv8EntityVersion = null, [FromQuery] string? UserName = null);
+
+        [Delete("/Debug/DeleteAll")]
+        Task DeleteAll();
     }
 }

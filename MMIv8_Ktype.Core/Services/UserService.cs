@@ -8,7 +8,7 @@ namespace MMIv8_Ktype.Core.Services
 {
     public class UserService(MongoDBContext MMIv8_Ktype) : BaseService<User, ObjectId>(MMIv8_Ktype.Collections.User)
     {
-        public async Task<User?> GetByName(string userName)
+        public async Task<User> GetByName(string userName)
         {
             var filter = Builders<User>.Filter.Eq(e => e.Name, userName);
             return await base.GetSingleDocument(filter);
@@ -16,8 +16,10 @@ namespace MMIv8_Ktype.Core.Services
 
         public async Task Create(string newUserName)
         {
-            var user = new User(newUserName);
-            await base.Create(user);
+            if (await this.GetByName(newUserName) is not null)
+                return;
+
+            await base.Create(new User(newUserName));
         }
 
         public async Task<User> CreateAndReturn(string newUserName)

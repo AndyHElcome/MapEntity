@@ -5,6 +5,7 @@ using MMIv8_Ktype.Core.Services;
 using MMIv8_Ktype.Core.Services.Mapping;
 using MMIv8_Ktype.Core.Services.Match;
 using MMIv8_Ktype.Models.Collections;
+using MMIv8_Ktype.Models.Indexes;
 using MongoDB.Bson;
 using MongoDB.Driver;
 using Serilog;
@@ -17,22 +18,26 @@ namespace MMIv8_Ktype.Core.Endpoints
     {
         public async Task<List<EntityRelation>> GetAll() //TODO change to stream call
         {
-            var response = await entityRelationService.GetCursor();
-            return await response.ToListAsync();
+            return await entityRelationService.GetMultipleDocuments();
+        }
+
+        public async Task<List<EntityRelation>> GetByVersion(ObjectId versionID)
+        {
+            var filter = Builders<EntityRelation>.Filter.Eq(e => e.VersionID, versionID);
+
+            return await entityRelationService.GetMultipleDocuments(filter: filter);
         }
 
         public async Task<List<EntityRelation>> GetCurrentEntityRelations() //TODO change to stream call
         {
             var version = await versionService.GetCurrentVersion();
-            var response = await entityRelationService.GetByVersion(version.DocumentId);
-            return await response.ToListAsync();
+            return await this.GetByVersion(version.DocumentId);
         }
 
         public async Task<List<EntityRelation>> GetPreviousEntityRelations() //TODO change to stream call
         {
             var version = await mappingService.GetPreviousVersionIDWithEntityRelations();
-            var response = await entityRelationService.GetByVersion(version.DocumentId);
-            return await response.ToListAsync();
+            return await this.GetByVersion(version.DocumentId);
         }
 
         public async Task CreateEntityRelation(int versionNumber, List<PutEntityRelationRequest> entityRelationsRequest)
@@ -40,9 +45,9 @@ namespace MMIv8_Ktype.Core.Endpoints
             await mappingService.CreateEntityRelation(versionNumber, entityRelationsRequest);
         }
 
-        public async Task CreateOne(EntityRelation entityRelationsRequest)
+        public async Task DeleteAll()
         {
-            await entityRelationService.Create(entityRelationsRequest);
+            await entityRelationService.DeleteAll();
         }
     }
 }

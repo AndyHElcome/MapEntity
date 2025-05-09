@@ -17,9 +17,9 @@ namespace MMIv8_Ktype.Core.Services
     {
         public IMongoCollection<T> Collection = Collection;
 
-        public SortDefinition<T> GetSortById() => Builders<T>.Sort.Ascending("_id");
+        public SortDefinition<T> GetSortById() => Builders<T>.Sort.Ascending(c => c.DocumentId);
 
-        public FilterDefinition<T> GetFilterById(Tid documentId) => Builders<T>.Filter.Eq("_id", documentId);
+        public FilterDefinition<T> GetFilterById(Tid documentId) => Builders<T>.Filter.Eq(c => c.DocumentId, documentId);
 
         #region Query
         public IQueryable<T> GetQuery()
@@ -84,7 +84,7 @@ namespace MMIv8_Ktype.Core.Services
             return await this.GetSingleDocument( this.GetFilterById(documentId));
         }
 
-        public async Task<IEnumerable<T>> GetMultipleDocuments(FilterDefinition<T>? filter = null, SortDefinition<T>? sort = null)
+        public async Task<List<T>> GetMultipleDocuments(FilterDefinition<T>? filter = null, SortDefinition<T>? sort = null)
         {
             var result = await this.GetCursor<T>(filter, sort);
 
@@ -101,7 +101,7 @@ namespace MMIv8_Ktype.Core.Services
 
             Log.Information("Paging {Type} page: {page}", typeof(T).Name, page - 1);
 
-            sort = sort is null ? this.GetSortById() : sort.Ascending("_id");
+            sort = sort is null ? this.GetSortById() : sort.Ascending(c => c.DocumentId);
             var result = await this.GetCursor<TOut>(filter, sort, (page - 1) * pageSize, pageSize, projection: projection);
 
             var items = await result.ToListAsync();

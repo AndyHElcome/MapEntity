@@ -43,5 +43,10 @@ namespace MMIv8_Ktype.Core.Endpoints
         {
             _ = await mappingService.DeleteMakeModelMatch(MatchID);
         }
+
+        public async Task DeleteAll()
+        {
+            _ = await matchMakeModelService.DeleteAll();
+        }
     }
 }

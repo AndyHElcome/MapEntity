@@ -71,5 +71,10 @@ namespace MMIv8_Ktype.Core.Endpoints
         {
             return await mappingService.CheckMatchVadlidity(request.KtypNr, request.MMI_V8_Key);
         }
+
+        public async Task DeleteAll()
+        {
+            await matchEntityService.DeleteAll();
+        }
     }
 }

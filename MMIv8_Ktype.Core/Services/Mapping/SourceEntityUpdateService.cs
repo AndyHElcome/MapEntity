@@ -121,7 +121,7 @@ namespace MMIv8_Ktype.Core.Services.Mapping
                         var tecdocEntities = await GetEntities<MongoSourceTecDocPC>(makeModelMatch.TecDocModel.DocumentId);
                         var mmiEntities = await GetEntities<MongoSourceMMIv8>(makeModelMatch.MMIv8Model.DocumentId);
 
-                        await foreach (var newMatch in MappingService.GenerateEntityMatch((IEnumerable<MongoSourceTecDocPC>)tecdocEntities, (IEnumerable<MongoSourceMMIv8>)mmiEntities, makeModelMatch.DocumentId))
+                        await foreach (var newMatch in MappingService.GenerateEntityMatch(tecdocEntities, mmiEntities, makeModelMatch.DocumentId))
                         {
                             await MappingService.BulkCreateEntityMatch(newMatch.ToList());
                         }

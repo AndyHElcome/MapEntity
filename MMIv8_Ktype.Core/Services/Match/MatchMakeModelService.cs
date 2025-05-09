@@ -40,8 +40,25 @@ namespace MMIv8_Ktype.Core.Services.Match
         public async Task<MatchMakeModel?> GetByModelIds(MatchMakeModelRequest request)
         {
             var builder = Builders<MatchMakeModel>.Filter;
-            var filter = builder.Eq(e => e.TecDocModel.DocumentId, request.TD_SourceEntityModelHash)
-                       & builder.Eq(e => e.MMIv8Model.DocumentId, request.MMI_SourceEntityModelHash);
+            var filter = builder.Empty;
+
+            if (request.TD_SourceEntityModelHash != "")
+            {
+                filter &= builder.Eq(e => e.TecDocModel.DocumentId, request.TD_SourceEntityModelHash);
+            }
+            else
+            {
+                filter &= builder.Exists(e => e.TecDocModel.DocumentId, false);
+            }
+
+            if (request.MMI_SourceEntityModelHash != "")
+            {
+                filter &= builder.Eq(e => e.MMIv8Model.DocumentId, request.MMI_SourceEntityModelHash);
+            }
+            else
+            {
+                filter &= builder.Exists(e => e.MMIv8Model.DocumentId, false);
+            }
 
             return await base.GetSingleDocument(filter);
         }

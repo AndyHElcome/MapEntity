@@ -179,9 +179,9 @@ namespace MMIv8_Ktype.Core.Services.Mapping
                     var matchRefineResult = await matchRefineUpdate.CommitBulkWrite();
                     Log.Information("Updated Match Refine of {count} MatchEntities", matchRefineResult?.ModifiedCount ?? 0);
                 }
-                else if (updateMatch.Status.Current.Status == Status.Check)
+                else if (updateMatch.Status.Current.Status == Status.Check) //Move this into a update status call
                 {
-                    CombinationPipeline<MatchBase> matchBaseUpdate = MatchBaseService.UpdateMatchBase(updateMatch).AppendPipeline(c => c.AppendStatus(versionProvider.NewStatus(Status.Check)));
+                    CombinationPipeline<MatchBase> matchBaseUpdate = MatchBaseService.UpdateMatchBase(updateMatch).AppendPipeline(c => c.AppendStatus(versionProvider.NewStatus(Status.Checked)));
                     var matchBaseResult = await matchBaseUpdate.UpdateDocuments();
                     Log.Information("Updated {MatchBase} Status to Checked", updateMatch.ToString(), matchBaseResult?.ModifiedCount ?? 0);
                 }
@@ -460,7 +460,6 @@ namespace MMIv8_Ktype.Core.Services.Mapping
             await MatchEntityService.Create([ .. newMatches ]);
 
             var checkedEntityRelations = await checkTask;
-            var checkedEntityRelationsList = checkedEntityRelations.Select(c => (c.KTypNr, c.MMI_V8_Key)).ToList();
 
             var bulk = MatchEntityService.BulkCombinationUpdatePreviousMatchedFlag(checkedEntityRelations);
             var bulkresult = await bulk.CommitBulkWrite();
@@ -670,7 +669,7 @@ namespace MMIv8_Ktype.Core.Services.Mapping
 
 
         #region Version
-        public async Task<Version?> CreateVersion(CreateVersionRequest request)
+        public async Task<Version> CreateVersion(CreateVersionRequest request)
         {
             var user = await UserService.CreateAndReturn(request.UserName);
             return await VersionService.Create(request.TecDocEntityVersion, request.MMIv8EntityVersion, user);
@@ -689,18 +688,22 @@ namespace MMIv8_Ktype.Core.Services.Mapping
             var sw = Stopwatch.StartNew();
 
             Version? version = await VersionService.GetByVersion(versionNumber);
-            var entityRelations = entityRelationsRequest.ConvertAll(c => new EntityRelation(version.DocumentId, c.MMI_V8_Key, c.KtypNr, c.Comment, c.VersionNumber));
+            var entityRelations = entityRelationsRequest.ConvertAll(c => new EntityRelation(version.DocumentId, c.MMI_V8_Key, c.KTypNr, c.Comment, c.VersionNumber));
+            Log.Debug("Converted in {time}", sw);
 
             await EntityRelationService.Create([ .. entityRelations ]);
+            Log.Debug("Created in {time}", sw);
 
             var bulkPreviousFlagUpdate = MatchEntityService.BulkCombinationUpdatePreviousMatchedFlag(entityRelations);
             var bulkPreviousFlagResult = await bulkPreviousFlagUpdate.CommitBulkWrite();
+            Log.Debug("PrevFlag in {time}", sw);
 
-            var bulkMatchRefineUpdate = await MatchEntityService.BulkCombinationUpdateMatchRefine(entityRelations.Select(c => c.MMI_V8_Key));
+            var bulkMatchRefineUpdate = await MatchEntityService.BulkCombinationUpdateMatchRefine(entityRelations.Select(c => c.MMI_V8_Key).Distinct());
             var bulkMatchRefineResult = await bulkMatchRefineUpdate.CommitBulkWrite();
+            Log.Debug("MatchRefine in {time}", sw);
 
             sw.Stop();
-            Log.Information("Created {entityRelationCount} EntityRelations; Updated MatchEntities: {previousFlagCount} Previous Flags; {count} MatchRefines in {time}", entityRelations.Count, bulkPreviousFlagResult.ModifiedCount, bulkMatchRefineResult.ModifiedCount, sw);
+            Log.Information("Created {entityRelationCount} EntityRelations; Updated MatchEntities: {previousFlagCount} Previous Flags; {count} MatchRefines in {time}", entityRelations.Count, bulkPreviousFlagResult.Acknowledged ? bulkPreviousFlagResult.ModifiedCount : "notAcknowledged", bulkMatchRefineResult.Acknowledged ? bulkMatchRefineResult.ModifiedCount : "notAcknowledged", sw);
         }
 
         public async Task DeleteEntityRelation(List<EntityRelation> entityRelations) // This could be an endpoint
@@ -709,14 +712,14 @@ namespace MMIv8_Ktype.Core.Services.Mapping
 
             await EntityRelationService.Delete([ .. entityRelations ]);
 
-            var bulkPreviousFlagUpdate = MatchEntityService.BulkCombinationUpdatePreviousMatchedFlag(entityRelations);
+            var bulkPreviousFlagUpdate = MatchEntityService.BulkCombinationUpdatePreviousMatchedFlag(entityRelations, false);
             var bulkPreviousFlagResult = await bulkPreviousFlagUpdate.CommitBulkWrite();
 
             var bulkMatchRefineUpdate = await MatchEntityService.BulkCombinationUpdateMatchRefine(entityRelations.Select(c => c.MMI_V8_Key));
             var bulkMatchRefineResult = await bulkMatchRefineUpdate.CommitBulkWrite();
 
             sw.Stop();
-            Log.Information("Created {entityRelationCount} EntityRelations; Updated MatchEntities: {previousFlagCount} Previous Flags; {count} MatchRefines in {time}", entityRelations.Count, bulkPreviousFlagResult.ModifiedCount, bulkMatchRefineResult.ModifiedCount, sw);
+            Log.Information("Deleted {entityRelationCount} EntityRelations; Updated MatchEntities: {previousFlagCount} Previous Flags; {count} MatchRefines in {time}", entityRelations.Count, bulkPreviousFlagResult.Acknowledged ? bulkPreviousFlagResult.ModifiedCount : "notAcknowledged", bulkMatchRefineResult.Acknowledged ? bulkMatchRefineResult.ModifiedCount : "notAcknowledged", sw);
         }
 
         public async Task<Version> GetPreviousVersionIDWithEntityRelations()
@@ -734,6 +737,9 @@ namespace MMIv8_Ktype.Core.Services.Mapping
         public async Task<List<EntityRelation>> CheckPreviousMatchedFlag(List<(int KTypNr, int MMI_V8_Key)> entityRelations)
         {
             var previousVersion = await GetPreviousVersionIDWithEntityRelations();
+
+            if (previousVersion is null)
+                throw new Exception("Exception with CheckPreviousMatchedFlag previousVersion is null");
 
             var query = EntityRelationService.GetQuery().Where(c => c.VersionID == previousVersion.DocumentId && entityRelations.Contains(new(c.KTypNr, c.MMI_V8_Key)));
 

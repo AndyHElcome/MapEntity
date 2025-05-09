@@ -29,5 +29,8 @@ namespace MMIv8_Ktype.Api.Endpoints
 
         [Get("/Debug/GetCSVObject/{MatchBaseType}")]
         Task<List<dynamic>> GetCSVObject(MatchBaseType MatchBaseType);
+
+        [Delete("/Debug/DeleteAll")]
+        Task DeleteAll();
     }
 }
