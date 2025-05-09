@@ -160,10 +160,12 @@ namespace MMIv8_Ktype.Core.Services.Mapping
         #endregion
 
         #region Match Base
-        public async Task UpdateMatchScore(MatchBaseType matchBaseType, string matchHash, decimal newScore)
+        public async Task UpdateMatchScore(MatchBaseType matchBaseType, string matchHash, decimal newScore) // could be endpoint?
         {
             try
             {
+                var sw = Stopwatch.StartNew(); 
+
                 var updateMatch = await MatchBaseService.GetById(matchHash) ?? throw new Exception("Match does not exist");
 
                 if (updateMatch.Score != newScore)
@@ -173,22 +175,28 @@ namespace MMIv8_Ktype.Core.Services.Mapping
 
                     CombinationPipeline<MatchEntity> matchEntityUpdate = MatchEntityService.UpdateMatchBaseScoreMatchResult(updateMatch); //TODO this might need to be recalculate
                     var matchEntityResult = await matchEntityUpdate.UpdateDocuments();
-                    Log.Information("Updated {count} MatchEntities for {MatchBase}", matchEntityResult?.ModifiedCount ?? 0, updateMatch.ToString());
+                    Log.Debug("Match Entities {time}", sw);
 
                     BulkCombinationUpdate matchRefineUpdate = await MatchEntityService.BulkCombinationUpdateMatchRefine(matchEntityUpdate.Filter);
                     var matchRefineResult = await matchRefineUpdate.CommitBulkWrite();
-                    Log.Information("Updated Match Refine of {count} MatchEntities", matchRefineResult?.ModifiedCount ?? 0);
+                    Log.Debug("Match Refine {time}", sw);
+
+                    sw.Stop();
+                    Log.Information("Updated {updateMatch} in {time} ({matchEntitiesCount} MatchEntities) ({matchRefineCount} MatchRefine) ", updateMatch.ToString(), sw, matchEntityResult.IsAcknowledged ? matchEntityResult.ModifiedCount : "notAcknowledged", matchRefineResult.Acknowledged ? matchRefineResult.ModifiedCount : "notAcknowledged");
+
                 }
                 else if (updateMatch.Status.Current.Status == Status.Check) //Move this into a update status call
                 {
                     CombinationPipeline<MatchBase> matchBaseUpdate = MatchBaseService.UpdateMatchBase(updateMatch).AppendPipeline(c => c.AppendStatus(versionProvider.NewStatus(Status.Checked)));
                     var matchBaseResult = await matchBaseUpdate.UpdateDocuments();
-                    Log.Information("Updated {MatchBase} Status to Checked", updateMatch.ToString(), matchBaseResult?.ModifiedCount ?? 0);
+
+                    sw.Stop();
+                    Log.Information("Updated {updateMatch} Status to Checked in {time}", updateMatch.ToString(), matchBaseResult?.ModifiedCount ?? 0, sw);
                 }
             }
             catch (Exception ex)
             {
-                Log.Error(ex, "Cannot update score match {MatchHash}", matchHash);
+                Log.Error(ex, "Cannot update score match {matchBaseType} {matchHash}", matchBaseType, matchHash);
             }
         }
 
@@ -377,7 +385,7 @@ namespace MMIv8_Ktype.Core.Services.Mapping
         //    }
         //}
 
-        public async Task StorePartialMatchBase(MatchBaseType matchBaseType, string matchHash, decimal? newScore = null)
+        public async Task StorePartialMatchBase(MatchBaseType matchBaseType, string matchHash, decimal? newScore = null) // could be end point
         {
             var matchEntityPartials = await MatchEntityService.GetMatchBaseByType(matchBaseType, [ MatchBaseMethod.Partial ], matchHash);
 
@@ -392,7 +400,7 @@ namespace MMIv8_Ktype.Core.Services.Mapping
                 await UpdateMatchScore(matchBaseType, matchHash, newScore ?? 0);
         }
 
-        public async Task RemovePartialMatchBase(MatchBaseType matchBaseType, string matchHash)
+        public async Task RemovePartialMatchBase(MatchBaseType matchBaseType, string matchHash) // could be end point
         {
             var matchEntityPartial = await MatchBaseService.GetById(matchHash);
 

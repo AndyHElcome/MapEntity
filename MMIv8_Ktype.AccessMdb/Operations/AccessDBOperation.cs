@@ -207,7 +207,7 @@ namespace MMIv8_Ktype.AccessMdb.Operations
 
         public async override Task ExecuteOperation(ILogger log)
         {
-            IMatchBaseEndpoints matchBaseEndpoints = new RefitClient(log).CreateService<IMatchBaseEndpoints>();
+            IMatchBaseEndpoints matchBaseEndpoints = new RefitClient(log, 5).CreateService<IMatchBaseEndpoints>();
 
             DataTable dataTable = AddTableToDataSet(TableName, log) ?? throw new NoNullAllowedException();
 
@@ -248,8 +248,11 @@ namespace MMIv8_Ktype.AccessMdb.Operations
 
             var data = dataTable.Select().Select(c => GlobalHelpers.StringToObject<PutEntityRelationRequest>( c.ItemArray.Select(c => c?.ToString() ?? string.Empty).ToArray()) ).ToList();
 
-            if (data != null ) 
-                await entityRelationEndpoints.CreateEntityRelation(VersionNumber, data); //TODO Create return types
+
+            foreach (var mmi in data.GroupBy(c => c.MMI_V8_Key).ToDictionary(g => g.Key, g => g.ToList()))
+            {
+                await entityRelationEndpoints.CreateEntityRelation(VersionNumber, mmi.Value); //TODO Create return types
+            }
 
             log.Information("Loaded {count} Previous Matches for Version {vesionNumber}", data?.Count, VersionNumber);
         }

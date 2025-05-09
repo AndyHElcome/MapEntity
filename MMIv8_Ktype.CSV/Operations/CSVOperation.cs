@@ -337,7 +337,7 @@ namespace MMIv8_Ktype.CSV.Operations
     {
         public async override Task ExecuteOperation(ILogger log)
         {
-            var matchBaseEndpoints = new RefitClient(log).CreateService<IMatchBaseEndpoints>();
+            var matchBaseEndpoints = new RefitClient(log, 5).CreateService<IMatchBaseEndpoints>();
             int count = 0;
 
             using (var csvReader = CsvStream.CsvReader)
@@ -363,7 +363,7 @@ namespace MMIv8_Ktype.CSV.Operations
     {
         public async override Task ExecuteOperation(ILogger log)
         {
-            var matchBaseEndpoints = new RefitClient(log).CreateService<IMatchBaseEndpoints>();
+            var matchBaseEndpoints = new RefitClient(log, 5).CreateService<IMatchBaseEndpoints>();
             int count = 0;
 
             using (var csvReader = CsvStream.CsvReader)
