@@ -25,7 +25,7 @@ namespace MMIv8_Ktype.Core.Services.Mapping
     {
         #region Match Make Model
 
-        public async Task<List<MatchMakeModel>> GenerateMakeModelMatch()
+        public async Task<List<MatchMakeModel>> GenerateMakeModelMatch()// could be endpoint
         {
             List<MatchMakeModel> currentMatch = (await MatchMakeModelService.GetCursor()).ToList();
 
@@ -56,7 +56,7 @@ namespace MMIv8_Ktype.Core.Services.Mapping
             var builder = Builders<MatchMakeModel>.Filter;
             var updateFilter = builder.Eq(x => x.Status.Current.Status, Status.Check);
 
-            await MatchMakeModelService.UpdateMatchStatus(Status.Checked, updateFilter);
+            await MatchMakeModelService.UpdateStatus(updateFilter, Status.Checked);
         }
 
         #endregion

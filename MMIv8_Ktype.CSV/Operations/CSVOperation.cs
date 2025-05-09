@@ -56,7 +56,7 @@ namespace MMIv8_Ktype.CSV.Operations
     {
         public StreamReader Reader => new StreamReader(csvPath, Encoding.UTF8);
         //public CsvReader CsvReader => new CsvReader(Reader, CultureInfo.InvariantCulture);
-        public CsvReader CsvReader => new CsvReader(Reader, new CsvConfiguration(CultureInfo.InvariantCulture) {Encoding = Encoding.UTF8 });
+        public CsvReader CsvReader => new CsvReader(Reader, new CsvConfiguration(CultureInfo.InvariantCulture) { Encoding = Encoding.UTF8 });
 
         public void Dispose()
         {
@@ -276,28 +276,28 @@ namespace MMIv8_Ktype.CSV.Operations
                 {
                     var record = new MongoSourceTecDocPC(csvReader.GetField<int>("KTypNr"), client.VersionProvider)
                     {
-                        Make             = csvReader.GetField("Make") ?? string.Empty,
-                        KModNr           = csvReader.GetField<int>("KModNr"),
-                        Model            = csvReader.GetField("Model") ?? string.Empty,
-                        Type             = csvReader.GetField("Type") ?? string.Empty,
-                        DFrom            = csvReader.GetConverted<int>("dFrom", NAtoIntConverter),
-                        DTo              = csvReader.GetConverted<int>("dTo", NAtoIntConverter),
-                        KW               = csvReader.GetConverted<int>("KW", NAtoIntConverter),
-                        PS               = csvReader.GetConverted<int>("PS", NAtoIntConverter),
-                        Litre            = csvReader.GetConverted<decimal>("Litre", NAtoDecimalConverter),
-                        Valves =           csvReader.GetConverted<int>("Valves", NAtoIntConverter),
-                        Cyl =              csvReader.GetConverted<int>("Cyl", NAtoIntConverter),
-                        Drive =            csvReader.GetField("4WD") ?? string.Empty,
-                        FuelType =         csvReader.GetField("Fuel Type") ?? string.Empty,
-                        BodyType =         csvReader.GetField("Body Type") ?? string.Empty,
-                        CCTech =           csvReader.GetConverted<int>("ccTech", NAtoIntConverter),
-                        SalesDesc =        csvReader.GetField("SalesDesc") ?? string.Empty,
-                        ModelGeneration =  csvReader.GetField("ModelGeneration") ?? string.Empty,
-                        TypeDesc =         csvReader.GetField("TypeDesc") ?? string.Empty,
-                        Exclude =          csvReader.GetField<bool>("Exclude"),
-                        Door =             csvReader.GetConverted<int>("Door", NAtoIntConverter),
-                        Region =           csvReader.GetField("Region") ?? string.Empty,
-                        LinkedEngineCodes =csvReader.GetField("LinkedEngineCodes") ?? string.Empty,
+                        Make = csvReader.GetField("Make") ?? string.Empty,
+                        KModNr = csvReader.GetField<int>("KModNr"),
+                        Model = csvReader.GetField("Model") ?? string.Empty,
+                        Type = csvReader.GetField("Type") ?? string.Empty,
+                        DFrom = csvReader.GetConverted<int>("dFrom", NAtoIntConverter),
+                        DTo = csvReader.GetConverted<int>("dTo", NAtoIntConverter),
+                        KW = csvReader.GetConverted<int>("KW", NAtoIntConverter),
+                        PS = csvReader.GetConverted<int>("PS", NAtoIntConverter),
+                        Litre = csvReader.GetConverted<decimal>("Litre", NAtoDecimalConverter),
+                        Valves = csvReader.GetConverted<int>("Valves", NAtoIntConverter),
+                        Cyl = csvReader.GetConverted<int>("Cyl", NAtoIntConverter),
+                        Drive = csvReader.GetField("4WD") ?? string.Empty,
+                        FuelType = csvReader.GetField("Fuel Type") ?? string.Empty,
+                        BodyType = csvReader.GetField("Body Type") ?? string.Empty,
+                        CCTech = csvReader.GetConverted<int>("ccTech", NAtoIntConverter),
+                        SalesDesc = csvReader.GetField("SalesDesc") ?? string.Empty,
+                        ModelGeneration = csvReader.GetField("ModelGeneration") ?? string.Empty,
+                        TypeDesc = csvReader.GetField("TypeDesc") ?? string.Empty,
+                        Exclude = csvReader.GetField<bool>("Exclude"),
+                        Door = csvReader.GetConverted<int>("Door", NAtoIntConverter),
+                        Region = csvReader.GetField("Region") ?? string.Empty,
+                        LinkedEngineCodes = csvReader.GetField("LinkedEngineCodes") ?? string.Empty,
                     };
 
                     await sourceEntity.Create(record);
@@ -306,6 +306,58 @@ namespace MMIv8_Ktype.CSV.Operations
             }
 
             log.Information("Deleted All Entities and reloaded: {CSVPath} ({count} records)", CSVPath, count);
+        }
+    }
+
+    public sealed class UpdateTecDocEntity(string csvPath) : CSVReadOperation(csvPath)
+    {
+        public async override Task ExecuteOperation(ILogger log)
+        {
+            var client = new RefitClient(log);
+            var sourceEntity = client.CreateService<ISourceTecDocPCEndpoints>();
+
+            int count = 0;
+            using (var csvReader = CsvStream.CsvReader)
+            {
+                var NAtoIntConverter = new NAtoIntConverter();
+                var NAtoDecimalConverter = new NAtoDecimalConverter();
+
+                csvReader.Read();
+                csvReader.ReadHeader();
+                while (csvReader.Read())
+                {
+                    var record = new MongoSourceTecDocPC(csvReader.GetField<int>("KTypNr"), client.VersionProvider)
+                    {
+                        Make = csvReader.GetField("Make") ?? string.Empty,
+                        KModNr = csvReader.GetField<int>("KModNr"),
+                        Model = csvReader.GetField("Model") ?? string.Empty,
+                        Type = csvReader.GetField("Type") ?? string.Empty,
+                        DFrom = csvReader.GetConverted<int>("dFrom", NAtoIntConverter),
+                        DTo = csvReader.GetConverted<int>("dTo", NAtoIntConverter),
+                        KW = csvReader.GetConverted<int>("KW", NAtoIntConverter),
+                        PS = csvReader.GetConverted<int>("PS", NAtoIntConverter),
+                        Litre = csvReader.GetConverted<decimal>("Litre", NAtoDecimalConverter),
+                        Valves = csvReader.GetConverted<int>("Valves", NAtoIntConverter),
+                        Cyl = csvReader.GetConverted<int>("Cyl", NAtoIntConverter),
+                        Drive = csvReader.GetField("4WD") ?? string.Empty,
+                        FuelType = csvReader.GetField("Fuel Type") ?? string.Empty,
+                        BodyType = csvReader.GetField("Body Type") ?? string.Empty,
+                        CCTech = csvReader.GetConverted<int>("ccTech", NAtoIntConverter),
+                        SalesDesc = csvReader.GetField("SalesDesc") ?? string.Empty,
+                        ModelGeneration = csvReader.GetField("ModelGeneration") ?? string.Empty,
+                        TypeDesc = csvReader.GetField("TypeDesc") ?? string.Empty,
+                        Exclude = csvReader.GetField<bool>("Exclude"),
+                        Door = csvReader.GetConverted<int>("Door", NAtoIntConverter),
+                        Region = csvReader.GetField("Region") ?? string.Empty,
+                        LinkedEngineCodes = csvReader.GetField("LinkedEngineCodes") ?? string.Empty,
+                    };
+
+                    await sourceEntity.UpdateEntity(record);
+                    count++;
+                }
+            }
+
+            log.Information("Updated {count} Entities: {CSVPath}", count, CSVPath);
         }
     }
 

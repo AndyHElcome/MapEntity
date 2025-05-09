@@ -54,6 +54,8 @@ internal class Program
 
         //args = [ "MMIv8_Ktype.CSV", "LoadEntityRelation", @"C:\Users\andy.hargreaves\OneDrive - Elcome Ltd\Desktop\NEW MMI TO KTYPE\Backup\PreviousRelations.csv", "1" ];
 
+        args = [ "MMIv8_Ktype.CSV", "UpdateTecDocEntity", @"C:\Users\andy.hargreaves\OneDrive - Elcome Ltd\Desktop\NEW MMI TO KTYPE\Backup\Source_TD_PC-124.txt"];
+
         if (args.Length < 2)
         {
             Log.Error("No args parsed. Usage: <Library> <ClassName> <ConstructorArgs...>");

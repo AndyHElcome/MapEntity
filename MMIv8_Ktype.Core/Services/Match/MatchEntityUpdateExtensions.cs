@@ -46,12 +46,26 @@ namespace MMIv8_Ktype.Core.Services.Match
         //    return update;
         //}
 
+        public static UpdateDefinition<MatchEntity> UpdateEntity(this UpdateDefinition<MatchEntity> update, SourceEntity sourceEntity) // TODO Check this works
+        {
+            update = sourceEntity.SourceIndex switch
+            {
+                SourceIndex.TecDocPC => update.Set(c => c.TecDocEntity, (MongoSourceTecDocPC)sourceEntity),
+                SourceIndex.MMIv8 => update.Set(c => c.MMIv8Entity, (MongoSourceMMIv8)sourceEntity),
+                SourceIndex.TecDocEngine => throw new NotImplementedException(),
+                _ => throw new NotImplementedException(),
+            };
+            return update;
+        }
+
+        [Obsolete("not in use?")]
         public static UpdateDefinition<MatchEntity> UpdateEntity(this UpdateDefinition<MatchEntity> update, MongoSourceTecDocPC sourceEntity)
         {
             update = update.Set(c => c.TecDocEntity, sourceEntity);
             return update;
         }
 
+        [Obsolete("not in use?")]
         public static UpdateDefinition<MatchEntity> UpdateEntity(this UpdateDefinition<MatchEntity> update, MongoSourceMMIv8 sourceEntity)
         {
             update = update.Set(c => c.MMIv8Entity, sourceEntity);

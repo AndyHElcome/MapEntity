@@ -9,7 +9,7 @@ using MongoDB.Bson;
 
 namespace MMIv8_Ktype.Core.Services.Match
 {
-    public class MatchBaseService(MongoDBContext MMIv8_Ktype, IVersionProvider versionProvider) : BaseService<MatchBase, string>(MMIv8_Ktype.Collections.MatchBase)
+    public class MatchBaseService(MongoDBContext MMIv8_Ktype, IVersionProvider versionProvider) : BaseServiceWithVersion<MatchBase, string>(MMIv8_Ktype.Collections.MatchBase, versionProvider)
     {
         public async Task<IAsyncCursor<MatchBase>> GetByType(MatchBaseType matchBaseType, FilterDefinition<MatchBase>? filter = null, int? batchSize = null) //TODO Rename or remove
         {
@@ -28,20 +28,12 @@ namespace MMIv8_Ktype.Core.Services.Match
             return await base.GetCursor(filter: filter, batchSize: batchSize);
         }
 
-        public CombinationPipeline<MatchBase> UpdateMatchBase(MatchBase matchBase)
-        {
-            var filter = Builders<MatchBase>.Filter.Eq(c => c.DocumentId, matchBase.DocumentId);
-
-            return new CombinationPipeline<MatchBase>(Collection, filter);
-        }
-
         public CombinationPipeline<MatchBase> UpdateScore(MatchBase matchBase, decimal newScore)
         {
             var filter = Builders<MatchBase>.Filter.Eq(c => c.DocumentId, matchBase.DocumentId);
 
-            return new CombinationPipeline<MatchBase>(Collection, filter)
-                .AppendUpdate(c => c.UpdateMatchBaseScore(newScore)) //TODO Should I move this into the query or leave it here as always necessary?
-                .AppendPipeline(c => c.AppendStatus(versionProvider.NewStatus(Status.Updated, $"Score: {newScore.ToString()}")));
+            return base.Update(filter).AppendUpdate(c => c.UpdateMatchBaseScore(newScore)) //TODO Should I move this into the query or leave it here as always necessary?
+                                      .AppendPipeline(c => c.AppendStatus(VersionProvider.NewStatus(Status.Updated, $"Score: {newScore.ToString()}")));
         }
     }
 }

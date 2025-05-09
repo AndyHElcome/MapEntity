@@ -54,15 +54,15 @@ namespace MMIv8_Ktype.Core.Services.Mapping
         where TEntity : SourceEntity
         where TOther : SourceEntity
     {
-        public CombinationPipeline<MatchEntity> CombinationPipelineUpdateEntity(SourceEntity sourceEntity) //TODO check this is still updating properly
-        {
-            return typeof(TEntity) switch
-            {
-                Type t when t == typeof(MongoSourceTecDocPC) => MatchEntityService.UpdateEntity((MongoSourceTecDocPC)sourceEntity),
-                Type t when t == typeof(MongoSourceMMIv8) => MatchEntityService.UpdateEntity((MongoSourceMMIv8)sourceEntity),
-                _ => throw new NotImplementedException()
-            };
-        }
+        //public CombinationPipeline<MatchEntity> CombinationPipelineUpdateEntity(SourceEntity sourceEntity) //TODO check this is still updating properly
+        //{
+        //    return typeof(TEntity) switch
+        //    {
+        //        Type t when t == typeof(MongoSourceTecDocPC) => MatchEntityService.UpdateEntity((MongoSourceTecDocPC)sourceEntity),
+        //        Type t when t == typeof(MongoSourceMMIv8) => MatchEntityService.UpdateEntity((MongoSourceMMIv8)sourceEntity),
+        //        _ => throw new NotImplementedException()
+        //    };
+        //}
 
         public FilterDefinition<MatchEntity> SourceMatchEntityFilter(SourceEntity sourceEntity) //TODO check this is still updating properly
         {
@@ -100,11 +100,7 @@ namespace MMIv8_Ktype.Core.Services.Mapping
             }
             else
             {
-                string? differences = null;
-                var sourceEntityUpdate = SourceEntityService.UpdateSourceEntity(currentEntity)
-                                                            .AppendUpdate(c => c.UpdateDifferences(currentEntity, sourceEntity, out differences))
-                                                            .AppendPipeline(c => c.AppendStatus(versionProvider.NewStatus(Status.Updated, $"Entity Updated: '{differences}'")));
-                sourceEntity = await sourceEntityUpdate.FindAndUpdateDocument();
+                sourceEntity = await SourceEntityService.UpdateDifferences(currentEntity, sourceEntity);
             }
 
             var filter = SourceMatchEntityFilter(sourceEntity);
@@ -128,15 +124,15 @@ namespace MMIv8_Ktype.Core.Services.Mapping
                     }
                 }
 
-                var matchEntityUpdate = new CombinationPipeline<MatchEntity>(MatchEntityService.Collection, filter).AppendPipeline(c => c.AppendStatus(versionProvider.NewStatus(Status.Check, $"Updated {typeof(TEntity)} Entity")));
-                var matchEntityResult = await matchEntityUpdate.UpdateDocuments();
-                await MappingService.RecalculateMatchBase(matchEntityUpdate.Filter);
+                var matchEntityResult = MatchEntityService.UpdateStatus(filter, Status.Check, $"Updated {typeof(TEntity)} Entity");
+                await MappingService.RecalculateMatchBase(filter);
             }
             else
             {
-                var matchEntityUpdate = CombinationPipelineUpdateEntity(sourceEntity).AppendPipeline(c => c.AppendStatus(versionProvider.NewStatus(Status.Check, $"Updated {typeof(TEntity)} Entity")));
+                var matchEntityUpdate = MatchEntityService.Update(filter).AppendUpdate(c => c.UpdateEntity(sourceEntity)) //TODO check this is still updating properly
+                                                                         .AppendPipeline(c => c.AppendStatus(versionProvider.NewStatus(Status.Check, $"Updated {typeof(TEntity)} Entity")));
                 var matchEntityResult = await matchEntityUpdate.UpdateDocuments();
-                await MappingService.RecalculateMatchBase(matchEntityUpdate.Filter);
+                await MappingService.RecalculateMatchBase(filter);
             }
         }
 

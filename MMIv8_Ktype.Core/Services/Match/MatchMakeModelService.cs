@@ -10,7 +10,7 @@ using Serilog;
 
 namespace MMIv8_Ktype.Core.Services.Match
 {
-    public class MatchMakeModelService(MongoDBContext MMIv8_Ktype, IVersionProvider versionProvider) : BaseService<MatchMakeModel, ObjectId>(MMIv8_Ktype.Collections.MatchMakeModel)
+    public class MatchMakeModelService(MongoDBContext MMIv8_Ktype, IVersionProvider versionProvider) : BaseServiceWithVersion<MatchMakeModel, ObjectId>(MMIv8_Ktype.Collections.MatchMakeModel, versionProvider)
     {
         public async Task<IAsyncCursor<MatchMakeModel>> GetAllMatches(FilterDefinition<MatchMakeModel>? filter = null, int? batchSize = 1000)
         {
@@ -102,16 +102,7 @@ namespace MMIv8_Ktype.Core.Services.Match
 
             updateFilter &= tecdocFilter | mmiFilter;
 
-            var matchMakeModelUpdate = new CombinationPipeline<MatchMakeModel>(Collection, updateFilter).AppendPipeline(c => c.AppendStatus(versionProvider.NewStatus(Status.Check, detail)));
-            return await matchMakeModelUpdate.UpdateDocuments();
-        }
-
-        public async Task<UpdateResult?> UpdateMatchStatus(Status status, FilterDefinition<MatchMakeModel>? filter = null)
-        {
-            filter ??= Builders<MatchMakeModel>.Filter.Empty;
-
-            var matchMakeModelUpdate = new CombinationPipeline<MatchMakeModel>(Collection, filter).AppendPipeline(c => c.AppendStatus(versionProvider.NewStatus(status)));
-            return await matchMakeModelUpdate.UpdateDocuments();
+            return await base.UpdateStatus(updateFilter, Status.Check, detail);
         }
     }
 }

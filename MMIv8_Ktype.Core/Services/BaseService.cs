@@ -9,6 +9,11 @@ using Serilog;
 using System.Diagnostics;
 using Microsoft.AspNetCore.Authentication;
 using MongoDB.Driver.Linq;
+using System.Xml.Linq;
+using MMIv8_Ktype.Models.Status;
+using MMIv8_Ktype.Models;
+using MMIv8_Ktype.Core.Services.Source;
+using System.Net.NetworkInformation;
 
 namespace MMIv8_Ktype.Core.Services
 {
@@ -81,7 +86,7 @@ namespace MMIv8_Ktype.Core.Services
 
         public async Task<T> GetById(Tid documentId)
         {
-            return await this.GetSingleDocument( this.GetFilterById(documentId));
+            return await this.GetSingleDocument(this.GetFilterById(documentId));
         }
 
         public async Task<List<T>> GetMultipleDocuments(FilterDefinition<T>? filter = null, SortDefinition<T>? sort = null)
@@ -140,31 +145,47 @@ namespace MMIv8_Ktype.Core.Services
 
         #region Creation 
         //TODO Look into replace or upsert creations?
-        public async Task Create(T newEntity)
+        public async Task Create(T document)
         {
-            await Collection.InsertOneAsync(newEntity);
+            await Collection.InsertOneAsync(document);
             Log.Debug("Created {Count} {Type}", 1, typeof(T).Name);
         }
 
-        public async Task CreateAndValidate(T newEntity)
+        public async Task CreateAndValidate(T document)
         {
-            if (await this.GetById(newEntity.DocumentId) is not null)
+            if (await this.GetById(document.DocumentId) is not null)
             {
-                Log.Information("Document already exists {type} with Id of {DocumentId}", typeof(T), newEntity.DocumentId?.ToString());
+                Log.Information("Document already exists {type} with Id of {DocumentId}", typeof(T), document.DocumentId?.ToString());
                 return;
             }
 
-            await this.Create(newEntity);
+            await this.Create(document);
         }
 
-        public async Task Create(T[] newEntity)
+        public async Task Create(T[] documents)
         {
-            await Collection.InsertManyAsync(newEntity);
-            Log.Debug("Created {Count} {Type}", newEntity.Length, typeof(T).Name);
+            await Collection.InsertManyAsync(documents);
+            Log.Debug("Created {Count} {Type}", documents.Length, typeof(T).Name);
         }
         #endregion
 
         #region Update
+
+        public CombinationPipeline<TUpdate> Update<TUpdate>(FilterDefinition<TUpdate> filter)
+           where TUpdate : T
+        {
+            return new CombinationPipeline<TUpdate>((IMongoCollection<TUpdate>)Collection, filter);
+        }
+
+        public CombinationPipeline<TUpdate> Update<TUpdate>(TUpdate document)
+            where TUpdate : T
+        {
+            var filter = Builders<TUpdate>.Filter.Eq(c => c.DocumentId, document.DocumentId);
+
+            return this.Update(filter);
+        }
+
+
         [Obsolete("UseComboUpdate")]
         public async Task<UpdateResult> Update(FilterDefinition<T> filter, UpdateDefinition<T> update)
         {
@@ -221,5 +242,33 @@ namespace MMIv8_Ktype.Core.Services
             }
         }
         #endregion
+    }
+
+    public class BaseServiceWithVersion<T, Tid>(IMongoCollection<T> Collection, IVersionProvider versionProvider) : BaseService<T, Tid>(Collection)
+        where T : ICollectionEntity<Tid>, IStatusHistory
+    {
+        public IVersionProvider VersionProvider = versionProvider;
+
+        public async Task<UpdateResult?> UpdateStatus(T document, Status status, string? detail = null)
+        {
+            return await this.Update(document).AppendPipeline(c => c.AppendStatus(VersionProvider.NewStatus(status, detail))).UpdateDocuments();
+        }
+
+        public async Task<UpdateResult?> UpdateStatus(FilterDefinition<T> filter, Status status, string? detail = null)
+        {
+            return await this.Update(filter).AppendPipeline(c => c.AppendStatus(VersionProvider.NewStatus(status, detail))).UpdateDocuments();
+        }
+    }
+
+    public class BaseServiceWithDifferences<T, Tid>(IMongoCollection<T> Collection, IVersionProvider versionProvider) : BaseServiceWithVersion<T, Tid>(Collection, versionProvider)
+        where T : ICollectionEntity<Tid>, IStatusHistory, IUpdateDifferences
+    {
+        public async Task<T> UpdateDifferences(T document, T newDocument)
+        {
+            string? differences = null;
+            return await this.Update(document).AppendUpdate(c => c.UpdateDifferences(document, newDocument, out differences))
+                                              .AppendPipeline(c => c.AppendStatus(VersionProvider.NewStatus(Status.Updated, $"Entity Updated: '{differences}'")))
+                                              .FindAndUpdateDocument();
+        }
     }
 }

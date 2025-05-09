@@ -187,7 +187,7 @@ namespace MMIv8_Ktype.Core.Services.Mapping
                 }
                 else if (updateMatch.Status.Current.Status == Status.Check) //Move this into a update status call
                 {
-                    CombinationPipeline<MatchBase> matchBaseUpdate = MatchBaseService.UpdateMatchBase(updateMatch).AppendPipeline(c => c.AppendStatus(versionProvider.NewStatus(Status.Checked)));
+                    CombinationPipeline<MatchBase> matchBaseUpdate = MatchBaseService.Update(updateMatch).AppendPipeline(c => c.AppendStatus(versionProvider.NewStatus(Status.Checked)));
                     var matchBaseResult = await matchBaseUpdate.UpdateDocuments();
 
                     sw.Stop();
@@ -229,9 +229,9 @@ namespace MMIv8_Ktype.Core.Services.Mapping
             if (isMissing == isDeprecated)
                 return isDeprecated;
             else if (isMissing)
-                _ = await MatchBaseService.UpdateMatchBase(matchBase).AppendPipeline(c => c.AppendStatus(versionProvider.NewStatus(Status.Deprecated))).UpdateDocuments();
+                _ = await MatchBaseService.Update(matchBase).AppendPipeline(c => c.AppendStatus(versionProvider.NewStatus(Status.Deprecated))).UpdateDocuments();
             else
-                _ = await MatchBaseService.UpdateMatchBase(matchBase).AppendPipeline(c => c.RemoveStatus(Status.Deprecated)).UpdateDocuments();
+                _ = await MatchBaseService.Update(matchBase).AppendPipeline(c => c.RemoveStatus(Status.Deprecated)).UpdateDocuments();
 
             return isMissing;
         }
@@ -302,7 +302,7 @@ namespace MMIv8_Ktype.Core.Services.Mapping
                         var newMatchBase = existingMatchBase;
                         if (existingMatchBase.Status.Current.Status == Status.Deprecated)
                         {
-                            var matchBaseUpdate = MatchBaseService.UpdateMatchBase(existingMatchBase).AppendPipeline(c => c.RemoveStatus(Status.Deprecated));
+                            var matchBaseUpdate = MatchBaseService.Update(existingMatchBase).AppendPipeline(c => c.RemoveStatus(Status.Deprecated));
                             var matchBaseResult = await matchBaseUpdate.UpdateDocuments();
 
                             newMatchBase = await MatchBaseService.GetById(existingMatchBase.DocumentId) ?? existingMatchBase;

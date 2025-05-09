@@ -6,6 +6,7 @@ using System;
 using Serilog;
 using MongoDB.Bson;
 using MMIv8_Ktype.Models.Indexes;
+using MMIv8_Ktype.Models;
 
 namespace MMIv8_Ktype.Core.Services
 {
