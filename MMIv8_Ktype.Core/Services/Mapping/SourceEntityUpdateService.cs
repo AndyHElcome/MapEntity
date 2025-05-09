@@ -124,13 +124,13 @@ namespace MMIv8_Ktype.Core.Services.Mapping
                     }
                 }
 
-                var matchEntityResult = MatchEntityService.UpdateStatus(filter, Status.Check, $"Updated {typeof(TEntity)} Entity");
+                var matchEntityResult = MatchEntityService.UpdateStatus(filter, Status.Check, $"Updated {nameof(TEntity)} Entity");
                 await MappingService.RecalculateMatchBase(filter);
             }
             else
             {
                 var matchEntityUpdate = MatchEntityService.Update(filter).AppendUpdate(c => c.UpdateEntity(sourceEntity)) //TODO check this is still updating properly
-                                                                         .AppendPipeline(c => c.AppendStatus(versionProvider.NewStatus(Status.Check, $"Updated {typeof(TEntity)} Entity")));
+                                                                         .AppendPipeline(c => c.AppendStatus(versionProvider.NewStatus(Status.Check, $"Updated {nameof(TEntity)} Entity")));
                 var matchEntityResult = await matchEntityUpdate.UpdateDocuments();
                 await MappingService.RecalculateMatchBase(filter);
             }
