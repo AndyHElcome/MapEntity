@@ -21,7 +21,7 @@ namespace MMIv8_Ktype.Core.Services
         public async Task<ObjectId> GetCurrentVersionID()
         {
             var sort = Builders<Version>.Sort.Descending(m => m.VersionNumber);
-            var projection = Builders<Version>.Projection.Expression(c => c.VersionID);
+            var projection = Builders<Version>.Projection.Expression(c => c.DocumentId);
 
             return await base.GetSingleDocument(sort: sort, projection: projection);
         }
@@ -34,7 +34,7 @@ namespace MMIv8_Ktype.Core.Services
         public async Task<ObjectId> GetPreviousVersionID(int skip = 1)
         {
             var sort = Builders<Version>.Sort.Descending(m => m.VersionNumber);
-            var projection = Builders<Version>.Projection.Expression(c => c.VersionID);
+            var projection = Builders<Version>.Projection.Expression(c => c.DocumentId);
 
             return await base.GetSingleDocument(sort: sort, skip: skip, projection: projection);
         }

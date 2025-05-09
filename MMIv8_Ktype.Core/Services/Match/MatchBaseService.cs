@@ -30,14 +30,14 @@ namespace MMIv8_Ktype.Core.Services.Match
 
         public CombinationPipeline<MatchBase> UpdateMatchBase(MatchBase matchBase)
         {
-            var filter = Builders<MatchBase>.Filter.Eq(c => c.MatchHash, matchBase.MatchHash);
+            var filter = Builders<MatchBase>.Filter.Eq(c => c.DocumentId, matchBase.DocumentId);
 
             return new CombinationPipeline<MatchBase>(Collection, filter);
         }
 
         public CombinationPipeline<MatchBase> UpdateScore(MatchBase matchBase, decimal newScore)
         {
-            var filter = Builders<MatchBase>.Filter.Eq(c => c.MatchHash, matchBase.MatchHash);
+            var filter = Builders<MatchBase>.Filter.Eq(c => c.DocumentId, matchBase.DocumentId);
 
             return new CombinationPipeline<MatchBase>(Collection, filter)
                 .AppendUpdate(c => c.UpdateMatchBaseScore(newScore)) //TODO Should I move this into the query or leave it here as always necessary?

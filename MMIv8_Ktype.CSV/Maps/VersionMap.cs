@@ -7,7 +7,7 @@ namespace MMIv8_Ktype.CSV.Maps
     {
         public VersionMap()
         {
-            Map(m => m.VersionID).Ignore();
+            Map(m => m.DocumentId).Ignore();
             Map(m => m.VersionNumber);
             Map(m => m.TecDocEntityVersion);
             Map(m => m.MMIv8EntityVersion);

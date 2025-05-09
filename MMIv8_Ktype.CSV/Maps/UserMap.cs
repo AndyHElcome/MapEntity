@@ -7,7 +7,7 @@ namespace MMIv8_Ktype.CSV.Maps
     {
         public UserMap()
         {
-            Map(m => m.UserID).Ignore();
+            Map(m => m.DocumentId).Ignore();
             Map(m => m.Name);
         }
     }

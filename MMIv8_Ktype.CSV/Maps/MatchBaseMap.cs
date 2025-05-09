@@ -1,4 +1,5 @@
 using CsvHelper.Configuration;
+using MMIv8_Ktype.Api.Requests;
 using MMIv8_Ktype.Models.Collections;
 using System.Globalization;
 
@@ -14,12 +15,22 @@ namespace MMIv8_Ktype.CSV.Maps
             Map(m => m.MatchContexts).Ignore();
         }
     }
-    
+
     public sealed class MatchBaseScoreMap : ClassMap<MatchBase>
     {
         public MatchBaseScoreMap()
         {
             Map(m => m.Score);
+        }
+    }
+
+    public sealed class PutMatchBaseRequestMap : ClassMap<PutMatchBaseRequest>
+    {
+        public PutMatchBaseRequestMap()
+        {
+            Parameter(nameof(PutMatchBaseRequest.MatchBaseType));
+            Parameter(nameof(PutMatchBaseRequest.MatchHash));
+            Parameter(nameof(PutMatchBaseRequest.NewScore)).Name("Score");
         }
     }
 }

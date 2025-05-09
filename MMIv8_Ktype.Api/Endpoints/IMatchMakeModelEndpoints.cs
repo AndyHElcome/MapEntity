@@ -26,5 +26,8 @@ namespace MMIv8_Ktype.Api.Endpoints
 
         [Delete("/{MatchID}")]
         Task DeleteMakeModelMatch(ObjectId MatchID);
+
+        [Delete("/Debug/DeleteAll")]
+        Task DeleteAll();
     }
 }

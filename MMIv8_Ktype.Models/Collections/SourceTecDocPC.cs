@@ -2,13 +2,14 @@
 using MMIv8_Ktype.Models.Indexes;
 using MongoDB.Bson;
 using MongoDB.Bson.Serialization.Attributes;
+using System.Text.Json.Serialization;
 
 namespace MMIv8_Ktype.Models.Collections
 {
     [Serializable]
-    public class MongoSourceTecDocPC(int kTypNr, IVersionProvider versionProvider) : SourceEntity(SourceIndex.TecDocPC, kTypNr, versionProvider)
+    public class MongoSourceTecDocPC : SourceEntity
     {
-        public int KTypNr { get; set; } = kTypNr;
+        public int KTypNr { get; set; }
         public string Make { get; set; }
         public int KModNr { get; set; }
         public string Model { get; set; }
@@ -101,5 +102,14 @@ namespace MMIv8_Ktype.Models.Collections
             LinkedEngineCodes,
         });
 
+        public MongoSourceTecDocPC(int kTypNr, IVersionProvider versionProvider) : base(SourceIndex.TecDocPC, kTypNr, versionProvider)
+        {
+            KTypNr = kTypNr;
+        }
+
+        [JsonConstructor]
+        public MongoSourceTecDocPC() : base()
+        {
+        }
     }
 }

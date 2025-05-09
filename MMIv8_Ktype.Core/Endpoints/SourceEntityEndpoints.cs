@@ -1,6 +1,7 @@
 ﻿using MMIv8_Ktype.Api.Endpoints;
 using MMIv8_Ktype.Core.Services.Mapping;
 using MMIv8_Ktype.Core.Services.Source;
+using MMIv8_Ktype.Models;
 using MMIv8_Ktype.Models.Collections;
 using MMIv8_Ktype.Models.Indexes;
 using MongoDB.Bson;
@@ -39,6 +40,21 @@ namespace MMIv8_Ktype.Core.Endpoints
         public async Task UpdateEntity(T sourceEntity)
         {
             await updateService.UpdateEntity(sourceEntity);
+        }
+
+        public async Task Create(T sourceEntity)
+        {
+            await sourceEntityService.Create(sourceEntity);
+        }
+
+        public async Task Bulkload(T[] sourceEntities)
+        {
+            await sourceEntityService.Create(sourceEntities);
+        }
+
+        public async Task DeleteAll()
+        {
+            await sourceEntityService.DeleteAll();
         }
     }
 }

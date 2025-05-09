@@ -22,12 +22,12 @@ namespace MMIv8_Ktype.Models.Outputs
 
             BestScore = passedMatches.Max(c => c.ScoreSum);
 
-            BestMatches = passedMatches.Where(c => c.ScoreSum == BestScore).Select(c => c.MatchEntityID).ToArray();
+            BestMatches = passedMatches.Where(c => c.ScoreSum == BestScore).Select(c => c.DocumentId).ToArray();
             IsCheck = passedMatches.Select(c => c.Status.Current.Status).Contains(Status.Status.Check);
             PassCount = passedMatches.Count();
 
-            LastMatches = matchEntities.Where(c => c.MatchResult.PreviousMatch).Select(c => c.MatchEntityID).ToArray();
-            ChosenMatches = matchEntities.Where(c => c.Matched).Select(c => c.MatchEntityID).ToArray();
+            LastMatches = matchEntities.Where(c => c.MatchResult.PreviousMatch).Select(c => c.DocumentId).ToArray();
+            ChosenMatches = matchEntities.Where(c => c.Matched).Select(c => c.DocumentId).ToArray();
 
             Difference = !BestMatches.SequenceEqual(LastMatches);
         }

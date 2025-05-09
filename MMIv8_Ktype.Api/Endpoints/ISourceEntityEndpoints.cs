@@ -22,8 +22,17 @@ namespace MMIv8_Ktype.Api.Endpoints
         [Get("/GetEntityId/{EntityId}")]
         Task<T?> GetById(ObjectId EntityId);
 
-        [Put("")]
+        [Put("/Update")]
         Task UpdateEntity(T sourceEntity);
+
+        [Put("/Create")]
+        Task Create(T sourceEntities);
+
+        [Put("/Debug/Bulkload")]
+        Task Bulkload(T[] sourceEntities);
+
+        [Delete("/Debug/DeleteAll")]
+        Task DeleteAll();
     }
 
     [GroupName("SourceMMIv8Entity")]

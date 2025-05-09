@@ -2,13 +2,19 @@
 using MMIv8_Ktype.Models.Indexes;
 using MMIv8_Ktype.Models.DateIntersection;
 using MongoDB.Bson.Serialization.Attributes;
+using System.Text.Json.Serialization;
 
 namespace MMIv8_Ktype.Models.Collections
 {
     [Serializable]
-    public class MongoSourceMMIv8(int mmi_V8_Key, IVersionProvider versionProvider) : SourceEntity(SourceIndex.MMIv8, mmi_V8_Key, versionProvider)
+    public class MongoSourceMMIv8Generic<T>(int mmi_V8_Key, T versionProvider) : MongoSourceMMIv8(mmi_V8_Key, versionProvider) //TODO for the class map but didn't work
+        where T : IVersionProvider
+    {}
+
+    [Serializable]
+    public class MongoSourceMMIv8 : SourceEntity
     {
-        public int MMI_V8_Key { get; set; } = mmi_V8_Key;
+        public int MMI_V8_Key { get; set; }
         public string Manufacturer { get; set; }
         public string Model { get; set; }
 
@@ -83,5 +89,15 @@ namespace MMIv8_Ktype.Models.Collections
             KW,
             Engine_Code,
         });
+
+        public MongoSourceMMIv8(int mmi_V8_Key, IVersionProvider versionProvider) : base(SourceIndex.MMIv8, mmi_V8_Key, versionProvider)
+        {
+            MMI_V8_Key = mmi_V8_Key;
+        }
+
+        [JsonConstructor]
+        public MongoSourceMMIv8() : base()
+        {
+        }
     }
 }

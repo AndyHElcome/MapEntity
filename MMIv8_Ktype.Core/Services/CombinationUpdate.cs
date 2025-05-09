@@ -2,6 +2,7 @@
 using MongoDB.Bson.Serialization;
 using MongoDB.Driver;
 using Serilog;
+using System.Diagnostics;
 
 namespace MMIv8_Ktype.Core.Services
 {
@@ -65,13 +66,15 @@ namespace MMIv8_Ktype.Core.Services
 
         public async Task<UpdateResult?> UpdateDocuments()
         {
+            var sw = Stopwatch.StartNew();
             var result = await Collection.UpdateManyAsync(Filter, Update);
-            Log.Debug("Updated {Count} {Type}", result.ModifiedCount, typeof(T).Name);
+            Log.Debug("Updated {Count} {Type} in {time}", result.ModifiedCount, typeof(T).Name, sw);
             return result;
         }
 
         public async Task<T> FindAndUpdateDocument(bool afterUpdate = true)
         {
+            var sw = Stopwatch.StartNew();
             var updateOptions = UpdateOptions?.ConvertToFindOneAndUpdateOptions() ?? new FindOneAndUpdateOptions<T>();
 
             if (afterUpdate)
@@ -82,7 +85,7 @@ namespace MMIv8_Ktype.Core.Services
             if (result is null)
                 throw new Exception($"Error Updating {typeof(T).Name}: couldn't find and replace");
 
-            Log.Debug("Updated 1 {Type}", typeof(T).Name);
+            Log.Debug("Updated 1 {Type} in {time}", typeof(T).Name, sw);
             return result;
         }
 
@@ -140,11 +143,12 @@ namespace MMIv8_Ktype.Core.Services
 
         public async Task<ClientBulkWriteResult?> CommitBulkWrite()
         {
+            var sw = Stopwatch.StartNew();
             if (BulkWriteModels.Count == 0)
                 return new ClientBulkWriteResult();
 
             var results = await MMIv8_Ktype.Client.BulkWriteAsync(BulkWriteModels);
-            Log.Debug("Matched {Count} {Type} Inserted: {Inserted} Upserted: {Upserted} Modified: {Modified} Deleted: {Deleted}", results.MatchedCount, "typeof(T)", results.InsertedCount, results.UpsertedCount, results.ModifiedCount, results.DeletedCount);
+            Log.Debug("Matched {Count} {Type} Inserted: {Inserted} Upserted: {Upserted} Modified: {Modified} Deleted: {Deleted} in {time}", results.MatchedCount, "typeof(T)", results.InsertedCount, results.UpsertedCount, results.ModifiedCount, results.DeletedCount, sw);
             return results;
         }
 

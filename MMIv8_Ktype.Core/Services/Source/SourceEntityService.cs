@@ -33,7 +33,7 @@ namespace MMIv8_Ktype.Core.Services.Source
 
         public CombinationPipeline<T> UpdateSourceEntity(T entity)
         {
-            var filter = Builders<T>.Filter.Eq(c => c.SourceEntityID, entity.SourceEntityID);
+            var filter = Builders<T>.Filter.Eq(c => c.DocumentId, entity.DocumentId);
 
             return new CombinationPipeline<T>(Collection, filter);
         }

@@ -1,6 +1,6 @@
 ﻿using Microsoft.Extensions.Options;
+using MMIv8_Ktype.Api;
 using MMIv8_Ktype.Api.Requests;
-using MMIv8_Ktype.Api.Responses;
 using MMIv8_Ktype.Core.Contexts;
 using MMIv8_Ktype.Models;
 using MMIv8_Ktype.Models.Collections;
@@ -15,6 +15,7 @@ using System.Diagnostics;
 
 namespace MMIv8_Ktype.Core.Services.Match
 {
+
     public class MatchEntityService(MongoDBContext MMIv8_Ktype, IVersionProvider versionProvider) : BaseService<MatchEntity, ObjectId>(MMIv8_Ktype.Collections.MatchEntity) //TODO Move MatchEntityContext into here
     {
         public async Task<MatchEntity?> GetByExternalIds(int KtypNr, int MMI_V8_Key)
@@ -30,7 +31,7 @@ namespace MMIv8_Ktype.Core.Services.Match
             var filterBuilder = Builders<MatchEntity>.Filter;
             filter ??= filterBuilder.Empty;
             filter &= filterBuilder.Eq($"EntityComparison.{matchBase.MatchBaseType}.MatchBaseMethod", matchBase.MatchBaseMethod.ToString())
-                    & filterBuilder.Eq($"EntityComparison.{matchBase.MatchBaseType}._id", matchBase.MatchHash);
+                    & filterBuilder.Eq($"EntityComparison.{matchBase.MatchBaseType}._id", matchBase.DocumentId);
 
             if (scoreMatch != null && (bool)scoreMatch)
                 filter &= filterBuilder.Eq($"EntityComparison.{matchBase.MatchBaseType}.Score", matchBase.Score);
@@ -87,7 +88,7 @@ namespace MMIv8_Ktype.Core.Services.Match
 
         public CombinationPipeline<MatchEntity> UpdateMatchEntity(MatchEntity matchEntity)
         {
-            var filter = Builders<MatchEntity>.Filter.Eq(c => c.MatchEntityID, matchEntity.MatchEntityID);
+            var filter = Builders<MatchEntity>.Filter.Eq(c => c.DocumentId, matchEntity.DocumentId);
 
             return new CombinationPipeline<MatchEntity>(Collection, filter);
         }
@@ -97,7 +98,7 @@ namespace MMIv8_Ktype.Core.Services.Match
             var filterBuilder = Builders<MatchEntity>.Filter;
             filter ??= filterBuilder.Empty;
             filter &= filterBuilder.Eq($"EntityComparison.{matchBase.MatchBaseType}.MatchBaseMethod", matchBase.MatchBaseMethod.ToString())
-                    & filterBuilder.Eq($"EntityComparison.{matchBase.MatchBaseType}._id", matchBase.MatchHash)
+                    & filterBuilder.Eq($"EntityComparison.{matchBase.MatchBaseType}._id", matchBase.DocumentId)
                     & filterBuilder.Ne($"EntityComparison.{matchBase.MatchBaseType}.Score", matchBase.Score);
 
             return new CombinationPipeline<MatchEntity>(Collection, filter).AppendPipeline(c => c.UpdateMatchBase(matchBase));
@@ -108,7 +109,7 @@ namespace MMIv8_Ktype.Core.Services.Match
             var filterBuilder = Builders<MatchEntity>.Filter;
             filter ??= filterBuilder.Empty;
             filter &= filterBuilder.Eq($"EntityComparison.{matchBase.MatchBaseType}.MatchBaseMethod", matchBase.MatchBaseMethod.ToString())
-                    & filterBuilder.Eq($"EntityComparison.{matchBase.MatchBaseType}._id", matchBase.MatchHash);
+                    & filterBuilder.Eq($"EntityComparison.{matchBase.MatchBaseType}._id", matchBase.DocumentId);
 
             return new CombinationPipeline<MatchEntity>(Collection, filter).AppendPipeline(c => c.UpdateMatchBase(matchBase)
                                                                                                  .UpdateScoreMatchResult());
@@ -116,14 +117,14 @@ namespace MMIv8_Ktype.Core.Services.Match
 
         public CombinationPipeline<MatchEntity> UpdateEntity(MongoSourceTecDocPC sourceEntity) //TODO Move into Source Entity Updates 
         {
-            var filter = Builders<MatchEntity>.Filter.Eq(c => c.TecDocEntity.SourceEntityID, sourceEntity.SourceEntityID);
+            var filter = Builders<MatchEntity>.Filter.Eq(c => c.TecDocEntity.DocumentId, sourceEntity.DocumentId);
 
             return new CombinationPipeline<MatchEntity>(Collection, filter).AppendUpdate(c => c.UpdateEntity(sourceEntity));
         }
 
         public CombinationPipeline<MatchEntity> UpdateEntity(MongoSourceMMIv8 sourceEntity) //TODO Move into Source Entity Updates 
         {
-            var filter = Builders<MatchEntity>.Filter.Eq(c => c.MMIv8Entity.SourceEntityID, sourceEntity.SourceEntityID);
+            var filter = Builders<MatchEntity>.Filter.Eq(c => c.MMIv8Entity.DocumentId, sourceEntity.DocumentId);
 
             return new CombinationPipeline<MatchEntity>(Collection, filter).AppendUpdate(c => c.UpdateEntity(sourceEntity));
         }
@@ -140,7 +141,7 @@ namespace MMIv8_Ktype.Core.Services.Match
             filter ??= filterBuilder.Empty;
 
             sw.Restart();
-            var matchEntity = await base.GetSingleDocument(filter, Builders<MatchEntity>.Sort.Ascending(c => c.MatchEntityID));
+            var matchEntity = await base.GetSingleDocument(filter, Builders<MatchEntity>.Sort.Ascending(c => c.DocumentId));
 
             if (matchEntity is not null)
             {
@@ -227,7 +228,7 @@ namespace MMIv8_Ktype.Core.Services.Match
 
         public async Task<CombinationPipeline<MatchEntity>> CombinationUpdateMatchRefine(ObjectId mmiv8EntityId) //TODO Move into unique MatchRefine Class
         {
-            var entityFilter = Builders<MatchEntity>.Filter.Eq(c => c.MMIv8Entity.SourceEntityID, mmiv8EntityId);
+            var entityFilter = Builders<MatchEntity>.Filter.Eq(c => c.MMIv8Entity.DocumentId, mmiv8EntityId);
             var matchEntities = await base.GetMultipleDocuments(entityFilter);
 
             return new CombinationPipeline<MatchEntity>(Collection, entityFilter).AppendUpdate(c => c.UpdateMatchRefine( new(matchEntities.ToArray()) ));

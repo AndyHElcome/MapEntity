@@ -10,7 +10,7 @@ namespace MMIv8_Ktype.CSV.Maps
         public MongoSourceTecDocPCMap()
         {
             AutoMap(CultureInfo.InvariantCulture);
-            Map(m => m.SourceEntityID).TypeConverter<ObjectIdConverter>();
+            Map(m => m.DocumentId).TypeConverter<ObjectIdConverter>();
             Map(m => m.DFrom).Name("dFrom").TypeConverter<NAtoIntConverter>();
             Map(m => m.DTo).Name("dTo").TypeConverter<NAtoIntConverter>();
             Map(m => m.KW).TypeConverter<NAtoIntConverter>();
@@ -24,7 +24,7 @@ namespace MMIv8_Ktype.CSV.Maps
             Map(m => m.Valves).TypeConverter<NAtoIntConverter>();
             Map(m => m.Door).TypeConverter<NAtoIntConverter>();
 
-            Map(m => m.SourceEntityID).Ignore();
+            Map(m => m.DocumentId).Ignore();
             Map(m => m.SourceIndex).Ignore();
             Map(m => m.Status).Ignore();
             Map(m => m.EntityHash).Ignore();
@@ -35,12 +35,12 @@ namespace MMIv8_Ktype.CSV.Maps
         public TecDocAutoMap()
         {
             AutoMap(CultureInfo.InvariantCulture);
-            Map(m => m.SourceEntityID).TypeConverter<ObjectIdConverter>();
+            Map(m => m.DocumentId).TypeConverter<ObjectIdConverter>();
 
             Map(m => m.DateRange.Start).Name("TD_Start");
             Map(m => m.DateRange.End).Name("TD_End");
 
-            Map(m => m.SourceEntityID).Ignore();
+            Map(m => m.DocumentId).Ignore();
             Map(m => m.SourceIndex).Ignore();
             Map(m => m.Status).Ignore();
             Map(m => m.EntityHash).Ignore();

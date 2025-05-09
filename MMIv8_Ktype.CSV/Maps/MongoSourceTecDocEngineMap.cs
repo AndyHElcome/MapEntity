@@ -10,7 +10,7 @@ namespace MMIv8_Ktype.CSV.Maps
         public MongoSourceTecDocEngineMap()
         {
             AutoMap(CultureInfo.InvariantCulture);
-            Map(m => m.SourceEntityID).TypeConverter<ObjectIdConverter>();
+            Map(m => m.DocumentId).TypeConverter<ObjectIdConverter>();
             Map(m => m.DFrom).Name("dFrom").TypeConverter<NAtoIntConverter>();
             Map(m => m.DTo).Name("dTo").TypeConverter<NAtoIntConverter>();
             Map(m => m.Valves).TypeConverter<NAtoIntConverter>();
@@ -19,7 +19,7 @@ namespace MMIv8_Ktype.CSV.Maps
             Map(m => m.Bore).TypeConverter<NAtoDecimalConverter>();
             Map(m => m.Stroke).TypeConverter<NAtoDecimalConverter>();
 
-            Map(m => m.SourceEntityID).Ignore();
+            Map(m => m.DocumentId).Ignore();
             Map(m => m.SourceIndex).Ignore();
             Map(m => m.Status).Ignore();
             Map(m => m.EntityHash).Ignore();

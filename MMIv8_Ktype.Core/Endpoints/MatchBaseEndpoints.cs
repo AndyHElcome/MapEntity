@@ -1,5 +1,6 @@
 ﻿using MMIv8_Ktype.Api.Endpoints;
 using MMIv8_Ktype.Api.Requests;
+using MMIv8_Ktype.Core.Services;
 using MMIv8_Ktype.Core.Services.Mapping;
 using MMIv8_Ktype.Core.Services.Match;
 using MMIv8_Ktype.Models.Collections;
@@ -23,6 +24,13 @@ namespace MMIv8_Ktype.Core.Endpoints
             return await response.ToListAsync();
         }
 
+        public async Task<List<dynamic>>  GetCSVObject(MatchBaseType MatchBaseType) //TODO change to stream call
+        {
+            var response = await matchBaseService.GetByType(MatchBaseType);
+            var responseList = await response.ToListAsync();
+            return responseList.Select(m => m.BuildCsvObject()).ToList();
+        }
+
         public async Task<MatchBase?> GetById(string MatchHash)
         {
             return await matchBaseService.GetById(MatchHash);
@@ -41,6 +49,11 @@ namespace MMIv8_Ktype.Core.Endpoints
         public async Task RemovePartialMatchBase(MatchBaseType MatchBaseType, string MatchHash)
         {
             await mappingService.RemovePartialMatchBase(MatchBaseType, MatchHash);
+        }
+
+        public async Task DeleteAll()
+        {
+            await matchBaseService.DeleteAll();
         }
     }
 }

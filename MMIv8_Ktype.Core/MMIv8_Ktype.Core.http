@@ -18,3 +18,8 @@ GET {{MMIv8_Ktype.Core_HostAddress}}/Version
 PATCH {{MMIv8_Ktype.Core_HostAddress}}/Version/{{VersionNumber}}?TecDocEntityVersion=2001_01
 
 ###
+
+@MatchBaseType=Drive
+GET {{MMIv8_Ktype.Core_HostAddress}}/MatchBase/GetByType/{{MatchBaseType}}
+
+###
