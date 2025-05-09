@@ -324,11 +324,10 @@ namespace MMIv8_Ktype.CSV.Operations
                 entityRelations = csvReader.GetRecords<PutEntityRelationRequest>().ToList();
             }
 
-            foreach( var mmi in entityRelations.GroupBy(c => c.MMI_V8_Key).ToDictionary(g => g.Key, g => g.ToList()))
+            foreach (var mmi in entityRelations.GroupBy(c => c.MMI_V8_Key).ToDictionary(g => g.Key, g => g.ToList()))
             {
                 await entityRelationEndpoints.CreateEntityRelation(VersionNumber, mmi.Value); //TODO Create return types
             }
-             
 
             log.Information("Loaded {count} Previous Matches for Version {vesionNumber}", entityRelations.Count, VersionNumber);
         }

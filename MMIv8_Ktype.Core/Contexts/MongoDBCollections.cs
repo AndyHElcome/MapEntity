@@ -175,9 +175,9 @@ namespace MMIv8_Ktype.Core.Contexts
                 new (matchEntityIndexBuilder.Ascending(c => c.TecDocEntity.DocumentId),
                      new() { Name = "TecDocEntity.SourceEntityID", Unique = false, Background = true }
                 ),
-                new (matchEntityIndexBuilder.Ascending(c => c.MMIv8Entity.MMI_V8_Key)
-                                            .Ascending(c => c.TecDocEntity.KTypNr),
-                     new() { Name = "MMIv8Entity.MMI_V8_Key_TecDocEntity.KTypNr", Unique = true, Background = true }
+                new (matchEntityIndexBuilder.Ascending(c => c.MMIv8Entity.ExternalId)
+                                            .Ascending(c => c.TecDocEntity.ExternalId),
+                     new() { Name = "MMIv8Entity.ExternalId_TecDocEntity.ExternalId", Unique = true, Background = true }
                 ),
                 new (matchEntityIndexBuilder.Ascending(c => c.MatchMakeModelMatchID),
                      new() { Name = "MatchMakeModelMatchID", Unique = false, Background = true }

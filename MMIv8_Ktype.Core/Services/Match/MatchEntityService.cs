@@ -171,10 +171,8 @@ namespace MMIv8_Ktype.Core.Services.Match
 
         public CombinationPipeline<MatchEntity> CombinationUpdatePreviousMatchedFlag(int KTypNr, int MMI_V8_Key, bool matchFlag)
         {
-            //    var matchEntityFilter = Builders<MatchEntity>.Filter.Eq(c => c.TecDocEntity.ExternalId, KTypNr)
-            //                          & Builders<MatchEntity>.Filter.Eq(c => c.MMIv8Entity.ExternalId, MMI_V8_Key);
-            var matchEntityFilter = Builders<MatchEntity>.Filter.Eq(c => c.TecDocEntity.KTypNr, KTypNr) //REPLACE
-                                  & Builders<MatchEntity>.Filter.Eq(c => c.MMIv8Entity.MMI_V8_Key, MMI_V8_Key);
+            var matchEntityFilter = Builders<MatchEntity>.Filter.Eq(c => c.TecDocEntity.ExternalId, KTypNr)
+                                  & Builders<MatchEntity>.Filter.Eq(c => c.MMIv8Entity.ExternalId, MMI_V8_Key);
 
             return CombinationUpdatePreviousMatchedFlag(matchEntityFilter, matchFlag);
         }
@@ -193,8 +191,10 @@ namespace MMIv8_Ktype.Core.Services.Match
 
         public async Task<BulkCombinationUpdate> BulkCombinationUpdateMatchRefine(IEnumerable<int> mmi_V8_Keys) //TODO Move into unique MatchRefine Class
         {
-            var filter = Builders<MatchEntity>.Filter.In(c => c.MMIv8Entity.ExternalId, mmi_V8_Keys);
-            return await BulkCombinationUpdateMatchRefine(filter);
+            var tasks = mmi_V8_Keys.Select(c => CombinationUpdateMatchRefine(c)).ToArray();
+
+            return new BulkCombinationUpdate(MMIv8_Ktype).AddCombinationUpdate( await Task.WhenAll(tasks) );
+
         }
 
         public async Task<BulkCombinationUpdate> BulkCombinationUpdateMatchRefine(FilterDefinition<MatchEntity> filter) //TODO Move into unique MatchRefine Class
@@ -214,7 +214,7 @@ namespace MMIv8_Ktype.Core.Services.Match
 
         public async IAsyncEnumerable<CombinationPipeline<MatchEntity>> CombinationUpdateMatchRefines(FilterDefinition<MatchEntity> filter) //TODO Move into unique MatchRefine Class
         {
-            using var mmiv8Entities = await base.GetDistinctCursor<ObjectId>("MMIv8Entity._id", filter);
+            using var mmiv8Entities = await base.GetDistinctCursor<int>("MMIv8Entity.ExternalId", filter);
             {
                 while (await mmiv8Entities.MoveNextAsync())
                 {
@@ -226,12 +226,12 @@ namespace MMIv8_Ktype.Core.Services.Match
             }
         }
 
-        public async Task<CombinationPipeline<MatchEntity>> CombinationUpdateMatchRefine(ObjectId mmiv8EntityId) //TODO Move into unique MatchRefine Class
+        public async Task<CombinationPipeline<MatchEntity>> CombinationUpdateMatchRefine(int mmi_V8_Key) //TODO Move into unique MatchRefine Class
         {
-            var entityFilter = Builders<MatchEntity>.Filter.Eq(c => c.MMIv8Entity.DocumentId, mmiv8EntityId);
+            var entityFilter = Builders<MatchEntity>.Filter.Eq(c => c.MMIv8Entity.ExternalId, mmi_V8_Key);
             var matchEntities = await base.GetMultipleDocuments(entityFilter);
 
-            return new CombinationPipeline<MatchEntity>(Collection, entityFilter).AppendUpdate(c => c.UpdateMatchRefine( new(matchEntities.ToArray()) ));
+            return new CombinationPipeline<MatchEntity>(Collection, entityFilter).AppendUpdate(c => c.UpdateMatchRefine(new(matchEntities.ToArray())));
         }
 
         public async Task<DeleteResult?> DeleteInvalidDates() 

@@ -34,7 +34,7 @@ namespace MMIv8_Ktype.Core.Endpoints
                        | filterBuilder.Eq(c => c.Status.Current.Status, Models.Status.Status.Check)
                        | filterBuilder.Eq(c => c.Status.Current.Status, Models.Status.Status.Checked);
 
-            var sort = Builders<MatchEntity>.Sort.Ascending(c => c.MMIv8Entity.MMI_V8_Key).Ascending(c => c.TecDocEntity.KTypNr);
+            var sort = Builders<MatchEntity>.Sort.Ascending(c => c.MMIv8Entity.ExternalId).Ascending(c => c.TecDocEntity.ExternalId);
             var projection = Builders<MatchEntity>.Projection.Expression(c 
                 => new MatchEntityBackup(c.MMIv8Entity.MMI_V8_Key, 
                                          c.TecDocEntity.KTypNr, 

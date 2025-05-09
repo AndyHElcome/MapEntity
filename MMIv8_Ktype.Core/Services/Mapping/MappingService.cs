@@ -683,30 +683,26 @@ namespace MMIv8_Ktype.Core.Services.Mapping
         #endregion
 
         #region EntityRelation
-        public async Task CreateEntityRelation(int versionNumber, List<PutEntityRelationRequest> entityRelationsRequest) // This could be an endpoint
+        public async Task CreateEntityRelation(int versionNumber, List<PutEntityRelationRequest> entityRelationsRequest) //TODO Change this to allow not updating the Matchentities if not last version // This could be an endpoint
         {
             var sw = Stopwatch.StartNew();
 
             Version? version = await VersionService.GetByVersion(versionNumber);
             var entityRelations = entityRelationsRequest.ConvertAll(c => new EntityRelation(version.DocumentId, c.MMI_V8_Key, c.KTypNr, c.Comment, c.VersionNumber));
-            Log.Debug("Converted in {time}", sw);
 
             await EntityRelationService.Create([ .. entityRelations ]);
-            Log.Debug("Created in {time}", sw);
 
             var bulkPreviousFlagUpdate = MatchEntityService.BulkCombinationUpdatePreviousMatchedFlag(entityRelations);
             var bulkPreviousFlagResult = await bulkPreviousFlagUpdate.CommitBulkWrite();
-            Log.Debug("PrevFlag in {time}", sw);
 
             var bulkMatchRefineUpdate = await MatchEntityService.BulkCombinationUpdateMatchRefine(entityRelations.Select(c => c.MMI_V8_Key).Distinct());
             var bulkMatchRefineResult = await bulkMatchRefineUpdate.CommitBulkWrite();
-            Log.Debug("MatchRefine in {time}", sw);
 
             sw.Stop();
             Log.Information("Created {entityRelationCount} EntityRelations; Updated MatchEntities: {previousFlagCount} Previous Flags; {count} MatchRefines in {time}", entityRelations.Count, bulkPreviousFlagResult.Acknowledged ? bulkPreviousFlagResult.ModifiedCount : "notAcknowledged", bulkMatchRefineResult.Acknowledged ? bulkMatchRefineResult.ModifiedCount : "notAcknowledged", sw);
         }
 
-        public async Task DeleteEntityRelation(List<EntityRelation> entityRelations) // This could be an endpoint
+        public async Task DeleteEntityRelation(List<EntityRelation> entityRelations) //TODO Change this to allow not updating the Matchentities if not last version // This could be an endpoint
         {
             var sw = Stopwatch.StartNew();
 
