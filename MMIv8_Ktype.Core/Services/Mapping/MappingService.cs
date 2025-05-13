@@ -1,4 +1,5 @@
 ﻿using Microsoft.AspNetCore.Authentication;
+using Microsoft.AspNetCore.Rewrite;
 using MMIv8_Ktype.Api.Endpoints;
 using MMIv8_Ktype.Api.Requests;
 using MMIv8_Ktype.Core.Contexts;
@@ -202,7 +203,7 @@ namespace MMIv8_Ktype.Core.Services.Mapping
 
         public async Task CheckMatchBaseDeprecated()//TODO Utilise Deprecate Match Base
         {
-            var currentMatch = await MatchBaseService.GetCursor(batchSize: 1000);
+            var currentMatch = await MatchBaseService.GetFindFluent(batchSize: 1000).ToCursorAsync();
 
             while (await currentMatch.MoveNextAsync())
             {
@@ -272,7 +273,7 @@ namespace MMIv8_Ktype.Core.Services.Mapping
             {
                 var matchEntityManual = await MatchEntityService.GetMatchBaseByType(matchBaseType, [ MatchBaseMethod.Manual ], null, false);
                 var matchBasePartial = await MatchBaseService.GetByTypeAndMethod(matchBaseType, MatchBaseMethod.Partial, Builders<MatchBase>.Filter.Ne(x => x.Status.Current.Status, Status.Deprecated));
-                matchBaseDict.Add(matchBaseType, [ .. matchEntityManual.ToList(), .. matchBasePartial.ToList() ]);
+                matchBaseDict.Add(matchBaseType, [ .. matchEntityManual.ToList(), .. matchBasePartial ]);
 
                 Log.Debug("Retrived {Count} for {MatchBaseType}", matchBaseDict[ matchBaseType ].Count(), matchBaseType);
             }
@@ -289,7 +290,7 @@ namespace MMIv8_Ktype.Core.Services.Mapping
             {
                 Log.Debug("Starting {MatchBaseType} {time}", groupedMatchBase.Key, sw);
 
-                var existingMatchBases = (await MatchBaseService.GetByType(groupedMatchBase.Key)).ToList();
+                var existingMatchBases = (await MatchBaseService.GetByMatchBaseType(groupedMatchBase.Key)).ToList();
 
                 existingMatchBases = existingMatchBases.IntersectBy(groupedMatchBase.Value.Select(c => c.DocumentId), c => c.DocumentId).ToList();
                 var newMatchBases = groupedMatchBase.Value.Where(c => c.MatchBaseMethod == MatchBaseMethod.Manual).ExceptBy(existingMatchBases.Select(c => c.DocumentId), c => c.DocumentId);
@@ -337,7 +338,7 @@ namespace MMIv8_Ktype.Core.Services.Mapping
             BulkCombinationUpdate bulkMatchRefineUpdate = await MatchEntityService.BulkCombinationUpdateMatchRefine(filter);
             var bulkMatchRefineResult = await bulkMatchRefineUpdate.CommitBulkWrite();
 
-            Log.Information("Updated Match Refine for {count} matches {time}", bulkMatchRefineResult.ModifiedCount, sw);
+            Log.Information("Updated Match Refine for {count} matches {time}", bulkMatchRefineResult.Acknowledged ? bulkMatchRefineResult.ModifiedCount : "notAcknowledged", sw);
         }
 
         //public async Task CalculateMatchBase(Dictionary<MatchBaseType, IEnumerable<MatchBase>> matchBaseDict, FilterDefinition<MatchEntity>? filter = null)
@@ -463,17 +464,22 @@ namespace MMIv8_Ktype.Core.Services.Mapping
             var sw = Stopwatch.StartNew();
 
             var newMatchesList = newMatches.Select(c => (c.TecDocEntity.KTypNr, c.MMIv8Entity.MMI_V8_Key)).ToList();
-            Task<List<EntityRelation>> checkTask = CheckPreviousMatchedFlag(newMatchesList);
+            Task<List<EntityRelation>?> checkTask = CheckPreviousMatchedFlag(newMatchesList);
 
             await MatchEntityService.Create([ .. newMatches ]);
 
             var checkedEntityRelations = await checkTask;
+            if (checkedEntityRelations is not null)
+            { 
+                var bulk = MatchEntityService.BulkCombinationUpdatePreviousMatchedFlag(checkedEntityRelations);
+                var bulkresult = await bulk.CommitBulkWrite();
 
-            var bulk = MatchEntityService.BulkCombinationUpdatePreviousMatchedFlag(checkedEntityRelations);
-            var bulkresult = await bulk.CommitBulkWrite();
+                sw.Stop();
+                Log.Information("Bulk Created {created} with {count} from Previous Match in {time}", newMatches.Count, bulkresult.Acknowledged ? bulkresult.MatchedCount : "0", sw);
+            }
 
             sw.Stop();
-            Log.Information("Bulk Created {created} with {count} from Previous Match in {time}", newMatches.Count, bulkresult.Acknowledged ? bulkresult.MatchedCount : "0", sw);
+            Log.Information("Bulk Created {created} in {time} (no previous match found)", newMatches.Count, sw);
         }
 
         public async Task StoreEntityMatch(MatchMakeModel makeModelMatch) // memory heavy
@@ -499,7 +505,7 @@ namespace MMIv8_Ktype.Core.Services.Mapping
             await this.RecalculateMatchBase(filter);
         }
 
-        public async IAsyncEnumerable<IEnumerable<MatchEntity>> GenerateEntityMatch(IEnumerable<MongoSourceTecDocPC> tecdocEntities, IEnumerable<MongoSourceMMIv8> mmiEntities, ObjectId MakeModelMatchID)
+        public async IAsyncEnumerable<IEnumerable<MatchEntity>> GenerateEntityMatch(IEnumerable<SourceTecDocPC> tecdocEntities, IEnumerable<SourceMMIv8> mmiEntities, ObjectId MakeModelMatchID)
         {
             foreach (var tecdocEntity in tecdocEntities) //TODO Create previous match collection and then keep these updated
             {
@@ -728,24 +734,25 @@ namespace MMIv8_Ktype.Core.Services.Mapping
 
         public async Task<Version> GetPreviousVersionIDWithEntityRelations()
         {
-            var entityRelationVersionIDs = await EntityRelationService.GetQuery().Select(c => c.VersionID).Distinct().ToListAsync();
+            var entityRelationVersionIDs = await EntityRelationService.GetQueryable().Select(c => c.VersionID).Distinct().ToListAsync();
 
             ObjectId currentVersionID = await VersionService.GetCurrentVersionID();
-            Version version = await VersionService.GetQuery()
+            Version version = await VersionService.GetQueryable()
                                                   .Where(c => entityRelationVersionIDs.Contains(c.DocumentId) && c.DocumentId != currentVersionID)
                                                   .OrderByDescending(c => c.VersionNumber)
                                                   .FirstOrDefaultAsync();
             return version;
         }
 
-        public async Task<List<EntityRelation>> CheckPreviousMatchedFlag(List<(int KTypNr, int MMI_V8_Key)> entityRelations)
+        public async Task<List<EntityRelation>?> CheckPreviousMatchedFlag(List<(int KTypNr, int MMI_V8_Key)> entityRelations)
         {
             var previousVersion = await GetPreviousVersionIDWithEntityRelations();
 
             if (previousVersion is null)
-                throw new Exception("Exception with CheckPreviousMatchedFlag previousVersion is null");
+                return null;
+                //throw new Exception("Exception with CheckPreviousMatchedFlag previousVersion is null");
 
-            var query = EntityRelationService.GetQuery().Where(c => c.VersionID == previousVersion.DocumentId && entityRelations.Contains(new(c.KTypNr, c.MMI_V8_Key)));
+            var query = EntityRelationService.GetQueryable().Where(c => c.VersionID == previousVersion.DocumentId && entityRelations.Contains(new(c.KTypNr, c.MMI_V8_Key)));
 
             return await query.ToListAsync();
         }
@@ -763,7 +770,7 @@ namespace MMIv8_Ktype.Core.Services.Mapping
             }
 
             var versions = await VersionService.GetByUser(userName);
-            if ((await versions.ToListAsync()).Count > 0)
+            if (versions.Count > 0)
             {
                 Log.Error("Cannot Delete user as it's in use");
                 return;

@@ -25,9 +25,9 @@ namespace MMIv8_Ktype.Core.Services.Mapping
     {
         #region Match Make Model
 
-        public async Task<List<MatchMakeModel>> GenerateMakeModelMatch()// could be endpoint
+        public async Task<List<MatchMakeModel>> GenerateMakeModelMatch()//TODO Use Linq query builder could be endpoint
         {
-            List<MatchMakeModel> currentMatch = (await MatchMakeModelService.GetCursor()).ToList();
+            List<MatchMakeModel> currentMatch = await MatchMakeModelService.GetFindFluent().ToListAsync();
 
             var MMIv8Models = await SourceMMIv8EntityModelService.GetByNotId(currentMatch.Select(m => m.MMIv8Model.DocumentId).ToArray());
 

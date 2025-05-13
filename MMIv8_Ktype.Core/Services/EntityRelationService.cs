@@ -16,7 +16,7 @@ namespace MMIv8_Ktype.Core.Services
         {
             var filter = Builders<EntityRelation>.Filter.Eq(e => e.VersionID, versionID);
 
-            return await base.GetCursor(filter: filter);
+            return await base.GetFindFluent(filter: filter).ToCursorAsync();
         }
 
         public async Task<IAsyncCursor<EntityRelation>> GetByExternalID(ObjectId versionID, SourceIndex sourceIndex, int externalID)
@@ -30,7 +30,7 @@ namespace MMIv8_Ktype.Core.Services
             if (sourceIndex == SourceIndex.TecDocPC)
                 filter &= filterBuilder.Eq(e => e.KTypNr, externalID);
 
-            return await base.GetCursor(filter: filter);
+            return await base.GetFindFluent(filter: filter).ToCursorAsync();
         }
 
         public async Task<EntityRelation?> GetByExternalIDs(ObjectId versionID, int mmi_V8_Key, int kTypNr)
@@ -40,7 +40,7 @@ namespace MMIv8_Ktype.Core.Services
                        & filterBuilder.Eq(e => e.MMI_V8_Key, mmi_V8_Key)
                        & filterBuilder.Eq(e => e.KTypNr, kTypNr);
 
-            return await base.GetSingleDocument(filter: filter);
+            return await base.GetFindFluent(filter: filter).FirstOrDefaultAsync();
         }
 
         public async Task<DeleteResult> DeleteAllByVersion(ObjectId versionID)

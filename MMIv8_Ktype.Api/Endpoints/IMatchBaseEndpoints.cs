@@ -1,4 +1,5 @@
 ﻿using MMIv8_Ktype.Api.Requests;
+using MMIv8_Ktype.Api.Responses;
 using MMIv8_Ktype.Models.Attributes;
 using MMIv8_Ktype.Models.Collections;
 using MMIv8_Ktype.Models.Util;
@@ -26,9 +27,6 @@ namespace MMIv8_Ktype.Api.Endpoints
 
         [Delete("/Partial/{MatchBaseType}/{MatchHash}")]
         Task RemovePartialMatchBase(MatchBaseType MatchBaseType, string MatchHash);
-
-        [Get("/Debug/GetCSVObject/{MatchBaseType}")]
-        Task<List<dynamic>> GetCSVObject(MatchBaseType MatchBaseType);
 
         [Delete("/Debug/DeleteAll")]
         Task DeleteAll();

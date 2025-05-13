@@ -18,14 +18,14 @@ namespace MMIv8_Ktype.Core.Endpoints
     {
         public async Task<List<EntityRelation>> GetAll() //TODO change to stream call
         {
-            return await entityRelationService.GetMultipleDocuments();
+            return await entityRelationService.GetFindFluent().ToListAsync();
         }
 
         public async Task<List<EntityRelation>> GetByVersion(ObjectId versionID)
         {
             var filter = Builders<EntityRelation>.Filter.Eq(e => e.VersionID, versionID);
 
-            return await entityRelationService.GetMultipleDocuments(filter: filter);
+            return await entityRelationService.GetFindFluent(filter: filter).ToListAsync();
         }
 
         public async Task<List<EntityRelation>> GetCurrentEntityRelations() //TODO change to stream call

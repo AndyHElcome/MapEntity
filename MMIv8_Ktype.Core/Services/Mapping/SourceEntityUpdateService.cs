@@ -16,7 +16,7 @@ namespace MMIv8_Ktype.Core.Services.Mapping
                                           SourceTecDocPCService SourceTecDocPCService,
                                           IVersionProvider versionProvider)
 
-        : SourceEntityUpdateService<MongoSourceMMIv8, MongoSourceTecDocPC>(MatchMakeModelService,
+        : SourceEntityUpdateService<SourceMMIv8, SourceTecDocPC>(MatchMakeModelService,
                                                                            MatchEntityService,
                                                                            MappingService,
                                                                            SourceMMIv8Service,
@@ -31,7 +31,7 @@ namespace MMIv8_Ktype.Core.Services.Mapping
                                              SourceTecDocPCService SourceTecDocPCService,
                                              IVersionProvider versionProvider)
 
-        : SourceEntityUpdateService<MongoSourceTecDocPC, MongoSourceMMIv8>(MatchMakeModelService,
+        : SourceEntityUpdateService<SourceTecDocPC, SourceMMIv8>(MatchMakeModelService,
                                                                            MatchEntityService,
                                                                            MappingService,
                                                                            SourceTecDocPCService,
@@ -69,8 +69,8 @@ namespace MMIv8_Ktype.Core.Services.Mapping
             var filterBuilder = Builders<MatchEntity>.Filter;
             return typeof(TEntity) switch
             {
-                Type t when t == typeof(MongoSourceTecDocPC) => filterBuilder.Eq(e => e.TecDocEntity.DocumentId, sourceEntity.DocumentId),
-                Type t when t == typeof(MongoSourceMMIv8) => filterBuilder.Eq(e => e.MMIv8Entity.DocumentId, sourceEntity.DocumentId),
+                Type t when t == typeof(SourceTecDocPC) => filterBuilder.Eq(e => e.TecDocEntity.DocumentId, sourceEntity.DocumentId),
+                Type t when t == typeof(SourceMMIv8) => filterBuilder.Eq(e => e.MMIv8Entity.DocumentId, sourceEntity.DocumentId),
                 _ => throw new NotImplementedException()
             };
         }
@@ -114,8 +114,8 @@ namespace MMIv8_Ktype.Core.Services.Mapping
                 {
                     foreach (var makeModelMatch in makeModelMatches.Current)
                     {
-                        var tecdocEntities = await GetEntities<MongoSourceTecDocPC>(makeModelMatch.TecDocModel.DocumentId);
-                        var mmiEntities = await GetEntities<MongoSourceMMIv8>(makeModelMatch.MMIv8Model.DocumentId);
+                        var tecdocEntities = await GetEntities<SourceTecDocPC>(makeModelMatch.TecDocModel.DocumentId);
+                        var mmiEntities = await GetEntities<SourceMMIv8>(makeModelMatch.MMIv8Model.DocumentId);
 
                         await foreach (var newMatch in MappingService.GenerateEntityMatch(tecdocEntities, mmiEntities, makeModelMatch.DocumentId))
                         {
@@ -124,13 +124,13 @@ namespace MMIv8_Ktype.Core.Services.Mapping
                     }
                 }
 
-                var matchEntityResult = MatchEntityService.UpdateStatus(filter, Status.Check, $"Updated {nameof(TEntity)} Entity");
+                var matchEntityResult = MatchEntityService.UpdateStatus(filter, Status.Check, $"Updated {typeof(TEntity).Name} Entity");
                 await MappingService.RecalculateMatchBase(filter);
             }
             else
             {
                 var matchEntityUpdate = MatchEntityService.Update(filter).AppendUpdate(c => c.UpdateEntity(sourceEntity)) //TODO check this is still updating properly
-                                                                         .AppendPipeline(c => c.AppendStatus(versionProvider.NewStatus(Status.Check, $"Updated {nameof(TEntity)} Entity")));
+                                                                         .AppendPipeline(c => c.AppendStatus(versionProvider.NewStatus(Status.Check, $"Updated {typeof(TEntity).Name} Entity")));
                 var matchEntityResult = await matchEntityUpdate.UpdateDocuments();
                 await MappingService.RecalculateMatchBase(filter);
             }

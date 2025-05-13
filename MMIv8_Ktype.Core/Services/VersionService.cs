@@ -16,7 +16,7 @@ namespace MMIv8_Ktype.Core.Services
         {
             var sort = Builders<Version>.Sort.Descending(m => m.VersionNumber);
 
-            return await base.GetSingleDocument(sort: sort);
+            return await base.GetFindFluent(sort: sort).FirstOrDefaultAsync();
         }
 
         public async Task<ObjectId> GetCurrentVersionID()
@@ -24,7 +24,7 @@ namespace MMIv8_Ktype.Core.Services
             var sort = Builders<Version>.Sort.Descending(m => m.VersionNumber);
             var projection = Builders<Version>.Projection.Expression(c => c.DocumentId);
 
-            return await base.GetSingleDocument(sort: sort, projection: projection);
+            return await base.GetFindFluent(sort: sort).Project(projection).FirstOrDefaultAsync();
         }
 
         /// <summary>
@@ -37,21 +37,21 @@ namespace MMIv8_Ktype.Core.Services
             var sort = Builders<Version>.Sort.Descending(m => m.VersionNumber);
             var projection = Builders<Version>.Projection.Expression(c => c.DocumentId);
 
-            return await base.GetSingleDocument(sort: sort, skip: skip, projection: projection);
+            return await base.GetFindFluent(sort: sort, skip: skip).Project(projection).FirstOrDefaultAsync();
         }
 
         public async Task<Version> GetByVersion(int version)
         {
             var filter = Builders<Version>.Filter.Eq(e => e.VersionNumber, version);
 
-            return await base.GetSingleDocument(filter: filter);
+            return await base.GetFindFluent(filter: filter).FirstOrDefaultAsync();
         }
 
-        public async Task<IAsyncCursor<Version>> GetByUser(string userName)
+        public async Task<List<Version>> GetByUser(string userName)
         {
             var filter = Builders<Version>.Filter.Eq(e => e.User.Name, userName);
 
-            return await base.GetCursor(filter: filter);
+            return await base.GetFindFluent(filter: filter).ToListAsync();
         }
 
         public async Task<Version> Create(string tecdocEntityVersion, string mmiv8EntityVersion, User user)

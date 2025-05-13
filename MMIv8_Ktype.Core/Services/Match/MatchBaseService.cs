@@ -11,21 +11,23 @@ namespace MMIv8_Ktype.Core.Services.Match
 {
     public class MatchBaseService(MongoDBContext MMIv8_Ktype, IVersionProvider versionProvider) : BaseServiceWithVersion<MatchBase, string>(MMIv8_Ktype.Collections.MatchBase, versionProvider)
     {
-        public async Task<IAsyncCursor<MatchBase>> GetByType(MatchBaseType matchBaseType, FilterDefinition<MatchBase>? filter = null, int? batchSize = null) //TODO Rename or remove
+        public async Task<List<MatchBase>> GetByMatchBaseType(MatchBaseType matchBaseType, FilterDefinition<MatchBase>? filter = null) //TODO could be endpoint but then how does mapping work?
         {
             var builder = Builders<MatchBase>.Filter;
             filter ??= builder.Empty;
-            filter &= builder.Eq(c => c.MatchBaseType, matchBaseType);
-            return await base.GetCursor(filter: filter, batchSize: batchSize);
+            filter   = builder.Eq(c => c.MatchBaseType, matchBaseType);
+
+            return await base.GetFindFluent(filter).ToListAsync();
         }
 
-        public async Task<IAsyncCursor<MatchBase>> GetByTypeAndMethod(MatchBaseType matchBaseType, MatchBaseMethod method, FilterDefinition<MatchBase>? filter = null, int? batchSize = null) //TODO Rename or remove
+        public async Task<List<MatchBase>> GetByTypeAndMethod(MatchBaseType matchBaseType, MatchBaseMethod method, FilterDefinition<MatchBase>? filter = null) //TODO Rename or remove
         {
             var builder = Builders<MatchBase>.Filter;
             filter ??= builder.Empty;
-            filter &= builder.Eq(c => c.MatchBaseType, matchBaseType)
-                    & builder.Eq(c => c.MatchBaseMethod, method);
-            return await base.GetCursor(filter: filter, batchSize: batchSize);
+            filter   = builder.Eq(c => c.MatchBaseType, matchBaseType)
+                     & builder.Eq(c => c.MatchBaseMethod, method);
+
+            return await base.GetFindFluent(filter).ToListAsync();
         }
 
         public CombinationPipeline<MatchBase> UpdateScore(MatchBase matchBase, decimal newScore)

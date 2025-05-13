@@ -14,9 +14,7 @@ namespace MMIv8_Ktype.Core.Endpoints
     {
         public async Task<List<MatchMakeModel>> GetAllMakeModelMatch() //TODO Fix large gets
         {
-            var response = await matchMakeModelService.GetCursor();
-
-            return await response.ToListAsync();
+            return await matchMakeModelService.GetFindFluent().ToListAsync();
         }
 
         public async Task<List<MatchMakeModel>> GenerateMakeModelMatch()

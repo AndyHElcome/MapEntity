@@ -1,5 +1,8 @@
 ﻿using MMIv8_Ktype.Api.Endpoints;
+using MMIv8_Ktype.Api.Requests;
+using MMIv8_Ktype.Api.Responses;
 using MMIv8_Ktype.Core.Services.Mapping;
+using MMIv8_Ktype.Core.Services.Match;
 using MMIv8_Ktype.Core.Services.Source;
 using MMIv8_Ktype.Models;
 using MMIv8_Ktype.Models.Collections;
@@ -10,21 +13,20 @@ using MongoDB.Driver;
 namespace MMIv8_Ktype.Core.Endpoints
 {
     public class SourceMMIv8Endpoints(SourceMMIv8Service sourceEntityService,
-                                      SourceMMIv8UpdateService updateService) : SourceEntityEndpoints<MongoSourceMMIv8>(sourceEntityService, updateService), ISourceMMIv8Endpoints
-    { }
+                                      SourceMMIv8UpdateService updateService) : SourceEntityEndpoints<SourceMMIv8>(sourceEntityService, updateService), ISourceMMIv8Endpoints;
+    
 
     public class SourceTecDocPCEndpoints(SourceTecDocPCService sourceEntityService,
-                                         SourceTecDocPCUpdateService updateService) : SourceEntityEndpoints<MongoSourceTecDocPC>(sourceEntityService, updateService), ISourceTecDocPCEndpoints
-    { }
+                                         SourceTecDocPCUpdateService updateService) : SourceEntityEndpoints<SourceTecDocPC>(sourceEntityService, updateService), ISourceTecDocPCEndpoints;
+    
 
     public class SourceEntityEndpoints<T>(SourceEntityService<T> sourceEntityService,
                                           ISourceEntityUpdateService<T> updateService) : ISourceEntityEndpoints<T>
         where T : SourceEntity
     {
-        public async Task<List<T>> GetAll() //TODO change to stream call
+        public async Task<PagedResponse<T>> GetAll(int Page, int PageSize)
         {
-            var response = await sourceEntityService.GetCursor(batchSize: 100);
-            return await response.ToListAsync();
+            return await sourceEntityService.PaginateDocuments<T>(page: Page, pageSize: PageSize);
         }
 
         public async Task<T?> GetById(ObjectId EntityId)

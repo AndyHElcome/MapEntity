@@ -7,7 +7,7 @@ using System.Text.Json.Serialization;
 namespace MMIv8_Ktype.Models.Collections
 {
     [Serializable]
-    public class MongoSourceTecDocPC : SourceEntity
+    public class SourceTecDocPC : SourceEntity
     {
         public int KTypNr { get; set; }
         public string Make { get; set; }
@@ -102,13 +102,12 @@ namespace MMIv8_Ktype.Models.Collections
             LinkedEngineCodes,
         });
 
-        public MongoSourceTecDocPC(int kTypNr, IVersionProvider versionProvider) : base(SourceIndex.TecDocPC, kTypNr, versionProvider)
+        public SourceTecDocPC(int externalId, IVersionProvider versionProvider) : base(SourceIndex.TecDocPC, externalId, versionProvider)
         {
-            KTypNr = kTypNr;
         }
 
         [JsonConstructor]
-        public MongoSourceTecDocPC() : base()
+        public SourceTecDocPC() : base()
         {
         }
     }

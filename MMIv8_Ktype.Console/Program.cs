@@ -28,33 +28,29 @@ internal class Program
     {
         var Log = Logger.Log;
 
-        //args = [ "MMIv8_Ktype.AccessMdb", "TestAccessDBOperation", @"C:\Users\andy.hargreaves\OneDrive - Elcome Ltd\Desktop\NEW MMI TO KTYPE\MMIv8_Ktype2.accdb", "API_StorePartialMatchBase", "ApiResponse" ];
-
         //args = [ "MMIv8_Ktype.AccessMdb", "StorePartialMatchBase", @"C:\Users\andy.hargreaves\OneDrive - Elcome Ltd\Desktop\NEW MMI TO KTYPE\MMIv8_Ktype2.accdb", "API_StorePartialMatchBase", "ApiResponse" ];
 
         //args = [ "MMIv8_Ktype.AccessMdb", "GenerateMakeModelMatch", @"C:\Users\andy.hargreaves\OneDrive - Elcome Ltd\Desktop\NEW MMI TO KTYPE\MMIv8_Ktype2.accdb", "MatchMakeModel" ];
 
         //args = [ "MMIv8_Ktype.AccessMdb", "LoadPreviousMatches", @"C:\Users\andy.hargreaves\OneDrive - Elcome Ltd\Desktop\NEW MMI TO KTYPE\MMIv8_Ktype2.accdb", "LegacyMasterlist", "1" ];
 
-        //args = [ "MMIv8_Ktype.CSV", "TestCsvReadOperation", @"C:\Users\andy.hargreaves\OneDrive - Elcome Ltd\Desktop\NEW MMI TO KTYPE\Output\MakeModelMatch.csv" ];
-
-        //args = [ "MMIv8_Ktype.CSV", "TestCsvWriteOperation", @"C:\Users\andy.hargreaves\OneDrive - Elcome Ltd\Desktop\NEW MMI TO KTYPE\Output\MakeModelMatch.csv" ];
-
         //args = [ "MMIv8_Ktype.CSV", "GenerateModelMatchCSV", @"C:\Users\andy.hargreaves\OneDrive - Elcome Ltd\Desktop\NEW MMI TO KTYPE\Output\MakeModelMatch.csv" ];
 
         //args = [ "MMIv8_Ktype.CSV", "CSVBackupOperation", @"C:\Users\andy.hargreaves\OneDrive - Elcome Ltd\Desktop\NEW MMI TO KTYPE\Backup" ];
 
-        args = [ "MMIv8_Ktype.CSV", "CSVBackupInitialise", @"C:\Users\andy.hargreaves\OneDrive - Elcome Ltd\Desktop\NEW MMI TO KTYPE\Backup", @"C:\Users\andy.hargreaves\OneDrive - Elcome Ltd\Desktop\NEW MMI TO KTYPE\Source_MMIv8.txt", @"C:\Users\andy.hargreaves\OneDrive - Elcome Ltd\Desktop\NEW MMI TO KTYPE\Source_TD_PC.txt", "PreviousRelations.csv" ];
+        //args = [ "MMIv8_Ktype.CSV", "CSVBackupInitialise", @"C:\Users\andy.hargreaves\OneDrive - Elcome Ltd\Desktop\NEW MMI TO KTYPE\Backup", @"C:\Users\andy.hargreaves\OneDrive - Elcome Ltd\Desktop\NEW MMI TO KTYPE\Source_MMIv8.txt", @"C:\Users\andy.hargreaves\OneDrive - Elcome Ltd\Desktop\NEW MMI TO KTYPE\Source_TD_PC.txt", "PreviousRelations.csv" ];
 
         //args = [ "MMIv8_Ktype.CSV", "ImportMakeModelMatch", @"C:\Users\andy.hargreaves\OneDrive - Elcome Ltd\Desktop\NEW MMI TO KTYPE\Backup\MatchMakeModel.csv" ];
 
-        args = [ "MMIv8_Ktype.CSV", "UpdateMatchBaseScore", @"C:\Users\andy.hargreaves\OneDrive - Elcome Ltd\Desktop\NEW MMI TO KTYPE\Backup\MatchDrive.csv" ];
+        //args = [ "MMIv8_Ktype.CSV", "UpdateMatchBaseScore", @"C:\Users\andy.hargreaves\OneDrive - Elcome Ltd\Desktop\NEW MMI TO KTYPE\Backup\MatchDrive.csv" ];
 
         //args = [ "MMIv8_Ktype.CSV", "StorePartialMatchBase", @"C:\Users\andy.hargreaves\OneDrive - Elcome Ltd\Desktop\NEW MMI TO KTYPE\Backup\MatchIdentifier.csv" ];
 
         //args = [ "MMIv8_Ktype.CSV", "LoadEntityRelation", @"C:\Users\andy.hargreaves\OneDrive - Elcome Ltd\Desktop\NEW MMI TO KTYPE\Backup\PreviousRelations.csv", "1" ];
 
-        args = [ "MMIv8_Ktype.CSV", "UpdateTecDocEntity", @"C:\Users\andy.hargreaves\OneDrive - Elcome Ltd\Desktop\NEW MMI TO KTYPE\Source_TD_PC-124.txt"];
+        //args = [ "MMIv8_Ktype.CSV", "UpdateTecDocEntity", @"C:\Users\andy.hargreaves\OneDrive - Elcome Ltd\Desktop\NEW MMI TO KTYPE\Source_TD_PC-124.txt" ];
+
+        args = [ "MMIv8_Ktype.CSV", "UpdateMMIv8Entity", @"C:\Users\andy.hargreaves\OneDrive - Elcome Ltd\Desktop\NEW MMI TO KTYPE\Source_MMIv8-100051.txt" ];
 
         if (args.Length < 2)
         {
@@ -65,8 +61,6 @@ internal class Program
         string library = args[ 0 ];
         string className = args[ 1 ];
         string[] constructorArgs = args.Skip(2).ToArray();
-
-
 
         try
         {

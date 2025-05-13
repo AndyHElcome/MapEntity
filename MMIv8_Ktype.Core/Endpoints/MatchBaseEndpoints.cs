@@ -19,21 +19,12 @@ namespace MMIv8_Ktype.Core.Endpoints
     {
         public async Task<List<MatchBase>> GetAll() //TODO change to stream call
         {
-            var response = await matchBaseService.GetCursor();
-            return await response.ToListAsync();
+            return await matchBaseService.GetFindFluent().ToListAsync();
         }
 
         public async Task<List<MatchBase>> GetByMatchBaseType(MatchBaseType MatchBaseType) //TODO change to stream call
         {
-            var response = await matchBaseService.GetByType(MatchBaseType);
-            return await response.ToListAsync();
-        }
-
-        public async Task<List<dynamic>>  GetCSVObject(MatchBaseType MatchBaseType) //TODO change to stream call
-        {
-            var response = await matchBaseService.GetByType(MatchBaseType);
-            var responseList = await response.ToListAsync();
-            return responseList.Select(m => m.BuildCsvObject()).ToList();
+            return await matchBaseService.GetByMatchBaseType(MatchBaseType);
         }
 
         public async Task<MatchBase?> GetById(string MatchHash)
@@ -44,11 +35,6 @@ namespace MMIv8_Ktype.Core.Endpoints
         public async Task UpdateStatus(MatchBase request, Status status, string? detail = null)
         {
             await matchBaseService.Update(request).AppendPipeline(c => c.AppendStatus(versionProvider.NewStatus(status, detail))).UpdateDocuments();
-
-
-            await matchBaseService.Update(request).AppendPipeline(c => c.AppendStatus(versionProvider.NewStatus(status, detail))).UpdateDocuments();
-
-
         }
 
         public async Task UpdateMatchBaseScore(PutMatchBaseRequest request)

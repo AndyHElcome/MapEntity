@@ -6,6 +6,7 @@ using MMIv8_Ktype.Models.Status;
 using MongoDB.Bson;
 using MongoDB.Bson.Serialization;
 using MongoDB.Driver;
+using Serilog;
 
 namespace MMIv8_Ktype.Core.Services
 {
@@ -20,7 +21,7 @@ namespace MMIv8_Ktype.Core.Services
                     new BsonDocument("Status.History",
                         new BsonDocument("$cond",
                             new BsonArray {
-                                new BsonDocument("$and",
+                                new BsonDocument("$or",
                                     new BsonArray {
                                         new BsonDocument( "$ne", new BsonArray { "$Status.Current.Status", newStatus.Status.ToString() } ),
                                         new BsonDocument( "$ne", new BsonArray { new BsonDocument("$ifNull", new BsonArray {"$Status.Current.Detail",""}), newStatus.Detail ?? "" } )

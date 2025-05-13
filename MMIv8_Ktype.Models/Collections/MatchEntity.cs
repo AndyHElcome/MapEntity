@@ -12,8 +12,8 @@ namespace MMIv8_Ktype.Models.Collections
     {
         [BsonId]
         public ObjectId DocumentId { get; set; }
-        public MongoSourceTecDocPC TecDocEntity { get; set; }
-        public MongoSourceMMIv8 MMIv8Entity { get; set; }
+        public SourceTecDocPC TecDocEntity { get; set; }
+        public SourceMMIv8 MMIv8Entity { get; set; }
         public ObjectId MatchMakeModelMatchID { get; set; }
         [BsonElement]
         public string RelationKey => $"{MMIv8Entity.MMI_V8_Key}-{TecDocEntity.KTypNr}";
@@ -34,7 +34,7 @@ namespace MMIv8_Ktype.Models.Collections
         public bool Matched { get; set; } = false;
         public string? MatchDetail { get; set; }
 
-        public MatchEntity(IVersionProvider versionProvider, MongoSourceTecDocPC tecdoc, MongoSourceMMIv8 mmiv8, ObjectId matchMakeModelMatchID)
+        public MatchEntity(IVersionProvider versionProvider, SourceTecDocPC tecdoc, SourceMMIv8 mmiv8, ObjectId matchMakeModelMatchID)
         {
             Status = new(versionProvider);
             TecDocEntity = tecdoc;
@@ -44,7 +44,7 @@ namespace MMIv8_Ktype.Models.Collections
             CalculateMatchBases(versionProvider);
         }
 
-        public MatchEntity(IVersionProvider versionProvider, MongoSourceTecDocPC tecdoc, MongoSourceMMIv8 mmiv8, ObjectId matchMakeModelMatchID, bool previous = false)
+        public MatchEntity(IVersionProvider versionProvider, SourceTecDocPC tecdoc, SourceMMIv8 mmiv8, ObjectId matchMakeModelMatchID, bool previous = false)
         {
             Status = new(versionProvider);
             TecDocEntity = tecdoc;
@@ -57,7 +57,7 @@ namespace MMIv8_Ktype.Models.Collections
         }
 
         [Obsolete("Version Required")]
-        public MatchEntity(MongoSourceTecDocPC tecdoc, MongoSourceMMIv8 mmiv8, ObjectId matchMakeModelMatchID)
+        public MatchEntity(SourceTecDocPC tecdoc, SourceMMIv8 mmiv8, ObjectId matchMakeModelMatchID)
         {
            throw new NotImplementedException("Version is now required");
         }

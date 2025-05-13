@@ -15,9 +15,7 @@ namespace MMIv8_Ktype.Core.Endpoints
     {
         public async Task<List<Version>> GetAll() //TODO change results to stream
         {
-            var response = await versionService.GetCursor();
-
-            return await response.ToListAsync();
+            return await versionService.GetFindFluent().ToListAsync();
         }
 
         public async Task<ObjectId?> GetCurrentVersionID()

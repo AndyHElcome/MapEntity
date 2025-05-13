@@ -111,8 +111,8 @@ namespace MMIv8_Ktype.CSV.Operations
 
                 do
                 {
-                    response = await matchEntity.GetMatchEntityBackup(new PagedRequest(page, 10000));
-                    csvWriter.WriteRecords(response.Items);
+                    response = await matchEntity.GetMatchEntityBackup(page, 10000);
+                    csvWriter.WriteRecords(response.Documents);
                     page++;
                 }
                 while (response.HasNextPage);
@@ -211,47 +211,46 @@ namespace MMIv8_Ktype.CSV.Operations
             int count = 0;
             using (var csvReader = CsvStream.CsvReader)
             {
-                var NAtoIntConverter = new NAtoIntConverter();
-                var NAtoDecimalConverter = new NAtoDecimalConverter();
+                csvReader.Context.RegisterClassMap<PutSourceMMIv8RequestMap>();
 
                 csvReader.Read();
                 csvReader.ReadHeader();
                 while (csvReader.Read())
                 {
-                    var record = new MongoSourceMMIv8(csvReader.GetField<int>("MMI V8 Key"), client.VersionProvider)
-                    {
-                        Manufacturer = csvReader.GetField("Manufacturer"),
-                        Model = csvReader.GetField("Model"),
-                        SubModel = csvReader.GetField("SubModel"),
-                        Mark_or_Series = csvReader.GetField("Mark or Series"),
-                        Identifier = csvReader.GetField("Identifier"),
-                        Engine_Size = csvReader.GetConverted<decimal>("Engine Size", NAtoDecimalConverter),
-                        Cylinders = csvReader.GetConverted<int>("Cylinders", NAtoIntConverter),
-                        Cylinder_Layout = csvReader.GetField("Cylinder Layout"),
-                        Cam = csvReader.GetField("Cam"),
-                        Valve = csvReader.GetConverted<int>("Valve", NAtoIntConverter),
-                        Start_Month = csvReader.GetConverted<int>("Start Month", NAtoIntConverter),
-                        Start_Year = csvReader.GetConverted<int>("Start Year", NAtoIntConverter),
-                        End_Month = csvReader.GetConverted<int>("End Month", NAtoIntConverter),
-                        End_Year = csvReader.GetConverted<int>("End Year", NAtoIntConverter),
-                        Body = csvReader.GetField("Body"),
-                        Doors = csvReader.GetConverted<int>("Doors", NAtoIntConverter),
-                        Transmission = csvReader.GetField("Transmission"),
-                        Gears = csvReader.GetConverted<int>("Gears", NAtoIntConverter),
-                        Exact_CC = csvReader.GetConverted<int>("Exact CC", NAtoIntConverter),
-                        Drive = csvReader.GetField("Drive"),
-                        Fuel = csvReader.GetField("Fuel"),
-                        BHP = csvReader.GetConverted<int>("BHP", NAtoIntConverter),
-                        KW = csvReader.GetConverted<int>("kW", NAtoIntConverter),
-                        Engine_Code = csvReader.GetField("Engine Code"),
-                    };
+                    var record = csvReader.GetRecord<PutSourceMMIv8Request>();
 
-                    await sourceEntity.Create(record);
+                    await sourceEntity.Create(record.ToSourceMMIv8(client.VersionProvider));
                     count++;
                 }
             }
 
             log.Information("Deleted All Entities and reloaded: {CSVPath} ({count} records)", CSVPath, count);
+        }
+    }
+
+    public sealed class UpdateMMIv8Entity(string csvPath) : CSVReadOperation(csvPath)
+    {
+        public async override Task ExecuteOperation(ILogger log)
+        {
+            var client = new RefitClient(log);
+            var sourceEntity = client.CreateService<ISourceMMIv8Endpoints>();
+
+            int count = 0;
+            using (var csvReader = CsvStream.CsvReader)
+            {
+                csvReader.Context.RegisterClassMap<PutSourceMMIv8RequestMap>();
+
+                csvReader.Read();
+                csvReader.ReadHeader();
+                while (csvReader.Read())
+                {
+                    var record = csvReader.GetRecord<PutSourceMMIv8Request>();
+                    await sourceEntity.UpdateEntity(record.ToSourceMMIv8(client.VersionProvider));
+                    count++;
+                }
+            }
+
+            log.Information("Updated {count} Entities: {CSVPath}", count, CSVPath);
         }
     }
 
@@ -267,40 +266,15 @@ namespace MMIv8_Ktype.CSV.Operations
             int count = 0;
             using (var csvReader = CsvStream.CsvReader)
             {
-                var NAtoIntConverter = new NAtoIntConverter();
-                var NAtoDecimalConverter = new NAtoDecimalConverter();
+                csvReader.Context.RegisterClassMap<PutSourceTecDocPCRequestMap>();
 
                 csvReader.Read();
                 csvReader.ReadHeader();
                 while (csvReader.Read())
                 {
-                    var record = new MongoSourceTecDocPC(csvReader.GetField<int>("KTypNr"), client.VersionProvider)
-                    {
-                        Make = csvReader.GetField("Make") ?? string.Empty,
-                        KModNr = csvReader.GetField<int>("KModNr"),
-                        Model = csvReader.GetField("Model") ?? string.Empty,
-                        Type = csvReader.GetField("Type") ?? string.Empty,
-                        DFrom = csvReader.GetConverted<int>("dFrom", NAtoIntConverter),
-                        DTo = csvReader.GetConverted<int>("dTo", NAtoIntConverter),
-                        KW = csvReader.GetConverted<int>("KW", NAtoIntConverter),
-                        PS = csvReader.GetConverted<int>("PS", NAtoIntConverter),
-                        Litre = csvReader.GetConverted<decimal>("Litre", NAtoDecimalConverter),
-                        Valves = csvReader.GetConverted<int>("Valves", NAtoIntConverter),
-                        Cyl = csvReader.GetConverted<int>("Cyl", NAtoIntConverter),
-                        Drive = csvReader.GetField("4WD") ?? string.Empty,
-                        FuelType = csvReader.GetField("Fuel Type") ?? string.Empty,
-                        BodyType = csvReader.GetField("Body Type") ?? string.Empty,
-                        CCTech = csvReader.GetConverted<int>("ccTech", NAtoIntConverter),
-                        SalesDesc = csvReader.GetField("SalesDesc") ?? string.Empty,
-                        ModelGeneration = csvReader.GetField("ModelGeneration") ?? string.Empty,
-                        TypeDesc = csvReader.GetField("TypeDesc") ?? string.Empty,
-                        Exclude = csvReader.GetField<bool>("Exclude"),
-                        Door = csvReader.GetConverted<int>("Door", NAtoIntConverter),
-                        Region = csvReader.GetField("Region") ?? string.Empty,
-                        LinkedEngineCodes = csvReader.GetField("LinkedEngineCodes") ?? string.Empty,
-                    };
+                    var record = csvReader.GetRecord<PutSourceTecDocPCRequest>();
 
-                    await sourceEntity.Create(record);
+                    await sourceEntity.Create(record.ToSourceTecDocPC(client.VersionProvider));
                     count++;
                 }
             }
@@ -319,40 +293,14 @@ namespace MMIv8_Ktype.CSV.Operations
             int count = 0;
             using (var csvReader = CsvStream.CsvReader)
             {
-                var NAtoIntConverter = new NAtoIntConverter();
-                var NAtoDecimalConverter = new NAtoDecimalConverter();
+                csvReader.Context.RegisterClassMap<PutSourceTecDocPCRequestMap>();
 
                 csvReader.Read();
                 csvReader.ReadHeader();
                 while (csvReader.Read())
                 {
-                    var record = new MongoSourceTecDocPC(csvReader.GetField<int>("KTypNr"), client.VersionProvider)
-                    {
-                        Make = csvReader.GetField("Make") ?? string.Empty,
-                        KModNr = csvReader.GetField<int>("KModNr"),
-                        Model = csvReader.GetField("Model") ?? string.Empty,
-                        Type = csvReader.GetField("Type") ?? string.Empty,
-                        DFrom = csvReader.GetConverted<int>("dFrom", NAtoIntConverter),
-                        DTo = csvReader.GetConverted<int>("dTo", NAtoIntConverter),
-                        KW = csvReader.GetConverted<int>("KW", NAtoIntConverter),
-                        PS = csvReader.GetConverted<int>("PS", NAtoIntConverter),
-                        Litre = csvReader.GetConverted<decimal>("Litre", NAtoDecimalConverter),
-                        Valves = csvReader.GetConverted<int>("Valves", NAtoIntConverter),
-                        Cyl = csvReader.GetConverted<int>("Cyl", NAtoIntConverter),
-                        Drive = csvReader.GetField("4WD") ?? string.Empty,
-                        FuelType = csvReader.GetField("Fuel Type") ?? string.Empty,
-                        BodyType = csvReader.GetField("Body Type") ?? string.Empty,
-                        CCTech = csvReader.GetConverted<int>("ccTech", NAtoIntConverter),
-                        SalesDesc = csvReader.GetField("SalesDesc") ?? string.Empty,
-                        ModelGeneration = csvReader.GetField("ModelGeneration") ?? string.Empty,
-                        TypeDesc = csvReader.GetField("TypeDesc") ?? string.Empty,
-                        Exclude = csvReader.GetField<bool>("Exclude"),
-                        Door = csvReader.GetConverted<int>("Door", NAtoIntConverter),
-                        Region = csvReader.GetField("Region") ?? string.Empty,
-                        LinkedEngineCodes = csvReader.GetField("LinkedEngineCodes") ?? string.Empty,
-                    };
-
-                    await sourceEntity.UpdateEntity(record);
+                    var record = csvReader.GetRecord<PutSourceTecDocPCRequest>();
+                    await sourceEntity.UpdateEntity(record.ToSourceTecDocPC(client.VersionProvider));
                     count++;
                 }
             }
@@ -460,47 +408,6 @@ namespace MMIv8_Ktype.CSV.Operations
             }
 
             log.Information("Loaded file: {CSVPath} ({count} records)", CSVPath, count);
-        }
-    }
-
-    public sealed class TestCsvReadOperation : CSVReadOperation
-    {
-        public TestCsvReadOperation(string csvPath) : base(csvPath) { }
-
-        public async override Task ExecuteOperation(ILogger log)
-        {
-            List<PutMatchBaseRequest> updatedMatches = new();
-            using (var csvReader = CsvStream.CsvReader)
-            {
-                updatedMatches = csvReader.GetRecords<PutMatchBaseRequest>().ToList();
-            }
-
-            log.Information("Read file: {CSVPath} ({count} records)", CSVPath, updatedMatches.Count);
-
-            var matchBaseEndpoints = new RefitClient(log).CreateService<IMatchBaseEndpoints>();
-            foreach (var match in updatedMatches)
-            {
-                await matchBaseEndpoints.UpdateMatchBaseScore(match);
-            }
-        }
-    }
-
-    public sealed class TestCsvWriteOperation : CSVWriteOperation
-    {
-        public TestCsvWriteOperation(string csvPath, bool append) : base(csvPath, append) { }
-        public TestCsvWriteOperation(string csvPath) : base(csvPath) { }
-
-        public async override Task ExecuteOperation(ILogger log)
-        {
-            var matchMakeModels = await new RefitClient(log).CreateService<IMatchMakeModelEndpoints>().GenerateMakeModelMatch();
-
-            using (var csvWriter = CsvStream.CsvWriter)
-            {
-                csvWriter.Context.RegisterClassMap<MatchMakeModelMap>();
-                csvWriter.WriteRecords(matchMakeModels);
-            }
-
-            log.Information("Created file: {CSVPath} ({count} records)", CSVPath, matchMakeModels.Count);
         }
     }
 

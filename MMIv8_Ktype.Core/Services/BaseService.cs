@@ -14,20 +14,50 @@ using MMIv8_Ktype.Models.Status;
 using MMIv8_Ktype.Models;
 using MMIv8_Ktype.Core.Services.Source;
 using System.Net.NetworkInformation;
+using Microsoft.AspNetCore.Mvc.RazorPages;
+using MMIv8_Ktype.Core.Services;
 
 namespace MMIv8_Ktype.Core.Services
 {
+    //public static class QueryCollections
+    //{
+    //    public static async Task<List<T>> GetMultipleDocuments<T>(this IFindFluent<T, T> query)
+    //    {
+    //        return await query.ToListAsync();
+    //    }
+
+    //    public static async Task<T> GetSingleDocument<T>(this IFindFluent<T, T> query, ProjectionDefinition<T, T>? projection = null)
+    //    {
+    //        return await query.Project(projection).FirstOrDefaultAsync();
+    //    }
+    //}
+
     public class BaseService<T, Tid>(IMongoCollection<T> Collection)
         where T : ICollectionEntity<Tid>
     {
         public IMongoCollection<T> Collection = Collection;
 
-        public SortDefinition<T> GetSortById() => Builders<T>.Sort.Ascending(c => c.DocumentId);
+        public SortDefinition<T> SortByDocumentId() => Builders<T>.Sort.Ascending(c => c.DocumentId);
 
-        public FilterDefinition<T> GetFilterById(Tid documentId) => Builders<T>.Filter.Eq(c => c.DocumentId, documentId);
+        public FilterDefinition<T> FilterByDocumentId(Tid documentId) => Builders<T>.Filter.Eq(c => c.DocumentId, documentId);
 
         #region Query
-        public IQueryable<T> GetQuery()
+        public IFindFluent<T, T> GetFindFluent(FilterDefinition<T>? filter = null, SortDefinition<T>? sort = null, int? skip = null, int? take = null, int? batchSize = null)
+        {
+            filter ??= Builders<T>.Filter.Empty;
+            var options = new FindOptions { BatchSize = batchSize };
+
+            var query = Collection.Find(filter, options);
+
+            if (sort is not null)
+                query = query.Sort(sort);
+            else
+                query = query.Sort(this.SortByDocumentId());
+
+            return query.Skip(skip).Limit(take);
+        }
+
+        public IQueryable<T> GetQueryable()
         {
             return Collection.AsQueryable();
         }
@@ -35,111 +65,69 @@ namespace MMIv8_Ktype.Core.Services
         public async Task<long> CountByFilter(FilterDefinition<T>? filter = null)
         {
             filter ??= Builders<T>.Filter.Empty;
-            return await Collection.Find(filter).Sort(this.GetSortById()).CountDocumentsAsync();
+            return await Collection.Find(filter).Sort(this.SortByDocumentId()).CountDocumentsAsync();
+        }
+
+        public async Task<long> CountByQuery(IFindFluent<T, T> query)
+        {
+            return await query.CountDocumentsAsync();
         }
         #endregion
 
         #region Get Documents
-        public async Task<IAsyncCursor<TOut>> GetCursor<TOut>(FilterDefinition<T>? filter = null, SortDefinition<T>? sort = null, int? skip = null, int? take = null, int? batchSize = null, ProjectionDefinition<T, TOut>? projection = null)
-        {
-            filter ??= Builders<T>.Filter.Empty;
-
-            FindOptions<T, TOut> options = new()
-            {
-                BatchSize = batchSize,
-                Skip = skip,
-                Limit = take,
-                Sort = this.GetSortById(), //TODO Check this is slowing down queries
-            };
-
-            if (sort is not null)
-                options.Sort = sort;
-
-            if (projection is not null)
-                options.Projection = projection;
-
-            return await Collection.FindAsync(filter, options);
-        }
-
-        public async Task<IAsyncCursor<T>> GetCursor(FilterDefinition<T>? filter = null, SortDefinition<T>? sort = null, int? skip = null, int? take = null, int? batchSize = null, ProjectionDefinition<T, T>? projection = null)
-        {
-            return await this.GetCursor<T>(filter, sort, skip, take, batchSize, projection);
-        }
 
         public async Task<IAsyncCursor<TOut>> GetDistinctCursor<TOut>(string fieldName, FilterDefinition<T>? filter = null)
         {
             filter ??= Builders<T>.Filter.Empty;
+
             return await Collection.DistinctAsync<TOut>(fieldName, filter);
-        }
-
-        public async Task<TOut> GetSingleDocument<TOut>(FilterDefinition<T>? filter = null, SortDefinition<T>? sort = null, int? skip = null, ProjectionDefinition<T, TOut>? projection = null)
-        {
-            var result = await this.GetCursor(filter, sort, skip, take: 1, projection: projection);
-
-            return await result.FirstOrDefaultAsync();
-        }
-
-        public async Task<T> GetSingleDocument(FilterDefinition<T>? filter = null, SortDefinition<T>? sort = null, int? skip = null, ProjectionDefinition<T, T>? projection = null)
-        {
-            return await this.GetSingleDocument<T>(filter, sort, skip, projection: projection);
         }
 
         public async Task<T> GetById(Tid documentId)
         {
-            return await this.GetSingleDocument(this.GetFilterById(documentId));
-        }
-
-        public async Task<List<T>> GetMultipleDocuments(FilterDefinition<T>? filter = null, SortDefinition<T>? sort = null)
-        {
-            var result = await this.GetCursor<T>(filter, sort);
-
-            return await result.ToListAsync();
+            return await this.GetFindFluent(this.FilterByDocumentId(documentId)).FirstOrDefaultAsync();
         }
 
         public async Task<PagedResponse<TOut>> PaginateDocuments<TOut>(FilterDefinition<T>? filter = null, SortDefinition<T>? sort = null, int page = 1, int pageSize = 100, ProjectionDefinition<T, TOut>? projection = null)
         {
+            Log.Debug("Paging {Type} Page: {page}", typeof(T).Name, page);
             var sw = Stopwatch.StartNew();
 
-            var count = await this.CountByFilter(filter);
+            sort = sort is null ? this.SortByDocumentId() : sort.Ascending(c => c.DocumentId);
+            var query = this.GetFindFluent(filter, sort, (page - 1) * pageSize, pageSize);
 
-            Log.Debug("Starting Enumerate {Type} count took {Time}", typeof(T).Name, sw);
+            var count = query.CountDocumentsAsync();
+            var results = query.Project(projection).ToListAsync();
 
-            Log.Information("Paging {Type} page: {page}", typeof(T).Name, page - 1);
-
-            sort = sort is null ? this.GetSortById() : sort.Ascending(c => c.DocumentId);
-            var result = await this.GetCursor<TOut>(filter, sort, (page - 1) * pageSize, pageSize, projection: projection);
-
-            var items = await result.ToListAsync();
+            var pagedResults = new PagedResponse<TOut>(await results, Convert.ToInt32(await count), page, pageSize);
 
             sw.Stop();
-            Log.Debug("Completed Enumerate of {count} {Type} in {Time}", items.Count, typeof(T).Name, sw);
 
-            return new PagedResponse<TOut>(items, Convert.ToInt32(count), page, pageSize);
+            Log.Debug("Paged {Type} {@page} in {Time}", typeof(T).Name, pagedResults.PageDetails(), sw);
+
+            return pagedResults;
         }
 
         public async IAsyncEnumerable<IEnumerable<TOut>> EnumerateDocuments<TOut>(FilterDefinition<T> filter, int batchSize = 10000, ProjectionDefinition<T, TOut>? projection = null)
         {
+            Log.Debug("Starting Enumerate {Type}", typeof(T).Name);
             var sw = Stopwatch.StartNew();
 
-            Log.Debug("Starting Enumerate {Type}", typeof(T).Name);
+            var query = this.GetFindFluent(filter: filter, batchSize: batchSize);
 
-            var count = await this.CountByFilter(filter);
-
-            Log.Information("Enumerating {Count} {Type} {Time}", count, typeof(T).Name, sw);
-
+            var count = await query.CountDocumentsAsync();
             int i = 0;
-
-            using var cursor = await this.GetCursor<TOut>(filter: filter, batchSize: batchSize);
+            using var cursor = await query.Project(projection).ToCursorAsync();
             while (await cursor.MoveNextAsync())
             {
                 yield return cursor.Current;
 
                 i += cursor.Current.Count();
-                Log.Information("Processed {Current} of {Total} {Time}", i, count, sw);
+                Log.Debug("Enumerating {Type} {Current} of {Total} {Time}", typeof(T).Name, i, count, sw);
             }
 
             sw.Stop();
-            Log.Debug("Completed Enumerate {Type} {Time}", typeof(T).Name, sw);
+            Log.Information("Completed Enumerate {Type} {Time}", typeof(T).Name, sw);
         }
         #endregion
 
@@ -226,7 +214,7 @@ namespace MMIv8_Ktype.Core.Services
 
         public async Task<T> DeleteById(Tid documentId)
         {
-            return await this.FindOneAndDelete(this.GetFilterById(documentId));
+            return await this.FindOneAndDelete(this.FilterByDocumentId(documentId));
         }
 
         public async Task<T> Delete(T document)

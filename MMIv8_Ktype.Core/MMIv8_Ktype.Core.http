@@ -23,3 +23,9 @@ PATCH {{MMIv8_Ktype.Core_HostAddress}}/Version/{{VersionNumber}}?TecDocEntityVer
 GET {{MMIv8_Ktype.Core_HostAddress}}/MatchBase/GetByType/{{MatchBaseType}}
 
 ###
+
+@Page=1
+@PageSize=2
+GET {{MMIv8_Ktype.Core_HostAddress}}/MatchEntity/GetAll?Page={{Page}}&PageSize={{PageSize}}
+
+###
