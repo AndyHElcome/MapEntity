@@ -1,6 +1,9 @@
-﻿using MMIv8_Ktype.Api.Requests;
+﻿using Microsoft.AspNetCore.Mvc;
+using MMIv8_Ktype.Api.Requests;
+using MMIv8_Ktype.Api.Responses;
 using MMIv8_Ktype.Models.Attributes;
 using MMIv8_Ktype.Models.Collections;
+using MMIv8_Ktype.Models.Util;
 using Refit;
 using System;
 using System.Collections.Generic;
@@ -14,10 +17,10 @@ namespace MMIv8_Ktype.Api.Endpoints
     public interface IEntityRelationEndpoints : IEndpoint
     {
         [Get("/GetCurrentEntityRelations")]
-        Task<List<EntityRelation>> GetCurrentEntityRelations();
+        Task<PagedResponse<EntityRelation>> GetCurrentEntityRelations([FromQuery] int Page, [FromQuery] int PageSize);
 
         [Get("/GetPreviousEntityRelations")]
-        Task<List<EntityRelation>> GetPreviousEntityRelations();
+        Task<PagedResponse<EntityRelation>> GetPreviousEntityRelations([FromQuery] int Page, [FromQuery] int PageSize);
 
         [Post("/CreateEntityRelation")]
         Task CreateEntityRelation(int versionNumber, List<PutEntityRelationRequest> entityRelationsRequest);

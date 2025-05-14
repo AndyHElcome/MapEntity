@@ -1,4 +1,5 @@
 ﻿using MMIv8_Ktype.Core.Contexts;
+using MMIv8_Ktype.Models;
 using MMIv8_Ktype.Models.Collections;
 using MongoDB.Driver;
 
@@ -10,10 +11,10 @@ namespace MMIv8_Ktype.Core.Services.Source
 
     public abstract class SourceEntityModelService(IMongoCollection<MongoSourceEntityModel> Collection) : BaseService<MongoSourceEntityModel, string>(Collection)
     {
-        public async Task<IAsyncCursor<MongoSourceEntityModel>> GetByNotId(string[] id, int? batchSize = null)
+        public async Task<List<MongoSourceEntityModel>> GetByNotId(string[] id, int? batchSize = null)
         {
             var filter = Builders<MongoSourceEntityModel>.Filter.Nin(e => e.DocumentId, id);
-            return await base.GetCursor(filter: filter, batchSize: batchSize);
+            return await base.GetFindFluent(filter: filter).ToListAsync();
         }
 
         public async Task<MongoSourceEntityModel?> GetByMakeModel(string make, string model)
@@ -25,7 +26,7 @@ namespace MMIv8_Ktype.Core.Services.Source
             var filter = filterBuilder.Eq(e => e.Make, make)
                        & filterBuilder.Eq(e => e.Model, model);
 
-            return await base.GetSingleDocument(filter: filter);
+            return await base.GetFindFluent(filter: filter).FirstOrDefaultAsync();
         }
     }
 }

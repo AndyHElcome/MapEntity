@@ -1,4 +1,5 @@
-﻿using MMIv8_Ktype.Models.Attributes;
+﻿using MMIv8_Ktype.Api.Responses;
+using MMIv8_Ktype.Models.Attributes;
 using MMIv8_Ktype.Models.Collections;
 using MMIv8_Ktype.Models.Indexes;
 using MongoDB.Bson;
@@ -14,7 +15,7 @@ namespace MMIv8_Ktype.Api.Endpoints
     public interface ISourceEntityEndpoints<T>
     {
         [Get("")]
-        Task<List<T>> GetAll();
+        Task<PagedResponse<T>> GetAll(int Page, int PageSize);
 
         [Get("/GetByExternalId/{ExternalId}")]
         Task<T?> GetByExternalId(int ExternalId);
@@ -36,12 +37,12 @@ namespace MMIv8_Ktype.Api.Endpoints
     }
 
     [GroupName("SourceMMIv8Entity")]
-    public interface ISourceMMIv8Endpoints : ISourceEntityEndpoints<MongoSourceMMIv8>, IEndpoint
+    public interface ISourceMMIv8Endpoints : ISourceEntityEndpoints<SourceMMIv8>, IEndpoint
     {
     }
 
     [GroupName("SourceTecDocPCEntity")]
-    public interface ISourceTecDocPCEndpoints : ISourceEntityEndpoints<MongoSourceTecDocPC>, IEndpoint
+    public interface ISourceTecDocPCEndpoints : ISourceEntityEndpoints<SourceTecDocPC>, IEndpoint
     {
     }
 }

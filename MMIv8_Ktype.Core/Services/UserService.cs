@@ -1,4 +1,5 @@
 ﻿using MMIv8_Ktype.Core.Contexts;
+using MMIv8_Ktype.Models;
 using MMIv8_Ktype.Models.Collections;
 using MongoDB.Bson;
 using MongoDB.Driver;
@@ -11,7 +12,7 @@ namespace MMIv8_Ktype.Core.Services
         public async Task<User> GetByName(string userName)
         {
             var filter = Builders<User>.Filter.Eq(e => e.Name, userName);
-            return await base.GetSingleDocument(filter);
+            return await base.GetFindFluent(filter).FirstOrDefaultAsync();
         }
 
         public async Task Create(string newUserName)

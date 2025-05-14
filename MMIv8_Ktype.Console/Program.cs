@@ -3,6 +3,7 @@ using Serilog;
 using System.Reflection;
 using MMIv8_Ktype.Api;
 using MMIv8_Ktype.Models;
+using System.Diagnostics;
 
 internal class Program
 {    
@@ -28,17 +29,11 @@ internal class Program
     {
         var Log = Logger.Log;
 
-        //args = [ "MMIv8_Ktype.AccessMdb", "TestAccessDBOperation", @"C:\Users\andy.hargreaves\OneDrive - Elcome Ltd\Desktop\NEW MMI TO KTYPE\MMIv8_Ktype2.accdb", "API_StorePartialMatchBase", "ApiResponse" ];
-
         //args = [ "MMIv8_Ktype.AccessMdb", "StorePartialMatchBase", @"C:\Users\andy.hargreaves\OneDrive - Elcome Ltd\Desktop\NEW MMI TO KTYPE\MMIv8_Ktype2.accdb", "API_StorePartialMatchBase", "ApiResponse" ];
 
         //args = [ "MMIv8_Ktype.AccessMdb", "GenerateMakeModelMatch", @"C:\Users\andy.hargreaves\OneDrive - Elcome Ltd\Desktop\NEW MMI TO KTYPE\MMIv8_Ktype2.accdb", "MatchMakeModel" ];
 
         //args = [ "MMIv8_Ktype.AccessMdb", "LoadPreviousMatches", @"C:\Users\andy.hargreaves\OneDrive - Elcome Ltd\Desktop\NEW MMI TO KTYPE\MMIv8_Ktype2.accdb", "LegacyMasterlist", "1" ];
-
-        //args = [ "MMIv8_Ktype.CSV", "TestCsvReadOperation", @"C:\Users\andy.hargreaves\OneDrive - Elcome Ltd\Desktop\NEW MMI TO KTYPE\Output\MakeModelMatch.csv" ];
-
-        //args = [ "MMIv8_Ktype.CSV", "TestCsvWriteOperation", @"C:\Users\andy.hargreaves\OneDrive - Elcome Ltd\Desktop\NEW MMI TO KTYPE\Output\MakeModelMatch.csv" ];
 
         //args = [ "MMIv8_Ktype.CSV", "GenerateModelMatchCSV", @"C:\Users\andy.hargreaves\OneDrive - Elcome Ltd\Desktop\NEW MMI TO KTYPE\Output\MakeModelMatch.csv" ];
 
@@ -48,11 +43,15 @@ internal class Program
 
         //args = [ "MMIv8_Ktype.CSV", "ImportMakeModelMatch", @"C:\Users\andy.hargreaves\OneDrive - Elcome Ltd\Desktop\NEW MMI TO KTYPE\Backup\MatchMakeModel.csv" ];
 
-        args = [ "MMIv8_Ktype.CSV", "UpdateMatchBaseScore", @"C:\Users\andy.hargreaves\OneDrive - Elcome Ltd\Desktop\NEW MMI TO KTYPE\Backup\MatchDrive.csv" ];
+        //args = [ "MMIv8_Ktype.CSV", "UpdateMatchBaseScore", @"C:\Users\andy.hargreaves\OneDrive - Elcome Ltd\Desktop\NEW MMI TO KTYPE\Backup\MatchDrive.csv" ];
 
         //args = [ "MMIv8_Ktype.CSV", "StorePartialMatchBase", @"C:\Users\andy.hargreaves\OneDrive - Elcome Ltd\Desktop\NEW MMI TO KTYPE\Backup\MatchIdentifier.csv" ];
 
         //args = [ "MMIv8_Ktype.CSV", "LoadEntityRelation", @"C:\Users\andy.hargreaves\OneDrive - Elcome Ltd\Desktop\NEW MMI TO KTYPE\Backup\PreviousRelations.csv", "1" ];
+
+        //args = [ "MMIv8_Ktype.CSV", "UpdateTecDocEntity", @"C:\Users\andy.hargreaves\OneDrive - Elcome Ltd\Desktop\NEW MMI TO KTYPE\Source_TD_PC-124.txt" ];
+
+        //args = [ "MMIv8_Ktype.CSV", "UpdateMMIv8Entity", @"C:\Users\andy.hargreaves\OneDrive - Elcome Ltd\Desktop\NEW MMI TO KTYPE\Source_MMIv8-100051.txt" ];
 
         if (args.Length < 2)
         {
@@ -60,11 +59,11 @@ internal class Program
             return;
         }
 
+        var sw = Stopwatch.StartNew();
+
         string library = args[ 0 ];
         string className = args[ 1 ];
         string[] constructorArgs = args.Skip(2).ToArray();
-
-
 
         try
         {
@@ -83,15 +82,15 @@ internal class Program
 
             IOperation instance = type.StringToObject<IOperation>(constructorArgs);
 
-            Log.Information("Instance of {className} created successfully.", className);
+            Log.Information("Instance of {className} created successfully. {time}", className, sw);
 
             await instance.ExecuteOperation(Log);
 
-            Log.Information("Instance of {className} completed.", className);
+            Log.Information("Instance of {className} completed. {time}", className, sw);
         }
         catch (Exception ex)
         {
-            Log.Error(ex, "Error running command: {@args}", args);
+            Log.Error(ex, "Error running command: {@args} {time}", args, sw);
         }
     }
 }

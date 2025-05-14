@@ -10,7 +10,7 @@ using Serilog;
 
 namespace MMIv8_Ktype.Core.Services.Match
 {
-    public class MatchMakeModelService(MongoDBContext MMIv8_Ktype, IVersionProvider versionProvider) : BaseService<MatchMakeModel, ObjectId>(MMIv8_Ktype.Collections.MatchMakeModel)
+    public class MatchMakeModelService(MongoDBContext MMIv8_Ktype, IVersionProvider versionProvider) : BaseServiceWithVersion<MatchMakeModel, ObjectId>(MMIv8_Ktype.Collections.MatchMakeModel, versionProvider)
     {
         public async Task<IAsyncCursor<MatchMakeModel>> GetAllMatches(FilterDefinition<MatchMakeModel>? filter = null, int? batchSize = 1000)
         {
@@ -20,7 +20,7 @@ namespace MMIv8_Ktype.Core.Services.Match
                     & filterBuilder.Exists(m => m.MMIv8Model.DocumentId)
                     & filterBuilder.Ne(x => x.Status.Current.Status, Status.Deprecated);
 
-            return await base.GetCursor(filter, batchSize: batchSize);
+            return await base.GetFindFluent(filter, batchSize: batchSize).ToCursorAsync();
         }
 
         public async Task<IAsyncCursor<MatchMakeModel>> GetByModelId(SourceIndex sourceIndex, string SourceEntityModelHash)
@@ -34,7 +34,7 @@ namespace MMIv8_Ktype.Core.Services.Match
             if (sourceIndex == SourceIndex.MMIv8)
                 filter = builder.Eq(e => e.MMIv8Model.DocumentId, SourceEntityModelHash);
 
-            return await base.GetCursor(filter);
+            return await base.GetFindFluent(filter).ToCursorAsync();
         }
 
         public async Task<MatchMakeModel?> GetByModelIds(MatchMakeModelRequest request)
@@ -60,7 +60,7 @@ namespace MMIv8_Ktype.Core.Services.Match
                 filter &= builder.Exists(e => e.MMIv8Model.DocumentId, false);
             }
 
-            return await base.GetSingleDocument(filter);
+            return await base.GetFindFluent(filter).FirstOrDefaultAsync();
         }
 
         public async Task<bool> CheckValid(MongoSourceEntityModel tecdoc, MongoSourceEntityModel mmiv8)
@@ -70,7 +70,7 @@ namespace MMIv8_Ktype.Core.Services.Match
                        & builder.Eq(m => m.MMIv8Model.DocumentId, mmiv8.DocumentId)
                        & builder.Ne(x => x.Status.Current.Status, Status.Deprecated);
 
-            bool match = await base.GetSingleDocument(filter) is not null;
+            bool match = await base.GetFindFluent(filter).FirstOrDefaultAsync() is not null;
 
             return match;
         }
@@ -102,16 +102,7 @@ namespace MMIv8_Ktype.Core.Services.Match
 
             updateFilter &= tecdocFilter | mmiFilter;
 
-            var matchMakeModelUpdate = new CombinationPipeline<MatchMakeModel>(Collection, updateFilter).AppendPipeline(c => c.AppendStatus(versionProvider.NewStatus(Status.Check, detail)));
-            return await matchMakeModelUpdate.UpdateDocuments();
-        }
-
-        public async Task<UpdateResult?> UpdateMatchStatus(Status status, FilterDefinition<MatchMakeModel>? filter = null)
-        {
-            filter ??= Builders<MatchMakeModel>.Filter.Empty;
-
-            var matchMakeModelUpdate = new CombinationPipeline<MatchMakeModel>(Collection, filter).AppendPipeline(c => c.AppendStatus(versionProvider.NewStatus(status)));
-            return await matchMakeModelUpdate.UpdateDocuments();
+            return await base.UpdateStatus(updateFilter, Status.Check, detail);
         }
     }
 }

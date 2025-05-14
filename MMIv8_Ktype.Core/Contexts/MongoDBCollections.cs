@@ -14,8 +14,8 @@ namespace MMIv8_Ktype.Core.Contexts
             EntityRelation = GetCollection<EntityRelation>(mongoDatabase);
             User = GetCollection<User>(mongoDatabase);
 
-            SourceTecDocPC = GetCollection<MongoSourceTecDocPC>(mongoDatabase, "SourceTecDocPC");
-            SourceMMIv8 = GetCollection<MongoSourceMMIv8>(mongoDatabase, "SourceMMIv8");
+            SourceTecDocPC = GetCollection<SourceTecDocPC>(mongoDatabase, "SourceTecDocPC");
+            SourceMMIv8 = GetCollection<SourceMMIv8>(mongoDatabase, "SourceMMIv8");
 
             MatchEntity = GetCollection<MatchEntity>(mongoDatabase);
             MatchMakeModel = GetCollection<MatchMakeModel>(mongoDatabase);
@@ -34,8 +34,8 @@ namespace MMIv8_Ktype.Core.Contexts
         public readonly IMongoCollection<EntityRelation> EntityRelation;
         public readonly IMongoCollection<User> User;
 
-        public readonly IMongoCollection<MongoSourceTecDocPC> SourceTecDocPC;
-        public readonly IMongoCollection<MongoSourceMMIv8> SourceMMIv8;
+        public readonly IMongoCollection<SourceTecDocPC> SourceTecDocPC;
+        public readonly IMongoCollection<SourceMMIv8> SourceMMIv8;
 
         public readonly IMongoCollection<MatchEntity> MatchEntity;
         public readonly IMongoCollection<MatchMakeModel> MatchMakeModel;
@@ -108,7 +108,7 @@ namespace MMIv8_Ktype.Core.Contexts
                         { "Popularity", "$Popularity" }
                     }
                 );
-            var sourceTDModelPipeline = PipelineDefinition<MongoSourceTecDocPC, MongoSourceEntityModel>.Create(sourceTDModelAggregate.Stages);
+            var sourceTDModelPipeline = PipelineDefinition<SourceTecDocPC, MongoSourceEntityModel>.Create(sourceTDModelAggregate.Stages);
             await mongoDatabase.CreateViewAsync("SourceTecDocPCModel", "SourceTecDocPC", sourceTDModelPipeline);
 
             if (regenerate)
@@ -155,7 +155,7 @@ namespace MMIv8_Ktype.Core.Contexts
                                     { "Popularity", "$Popularity" }
                     }
                 );
-            var sourceMMIv8ModelPipeline = PipelineDefinition<MongoSourceMMIv8, MongoSourceEntityModel>.Create(sourceMMIv8ModelAggregate.Stages);
+            var sourceMMIv8ModelPipeline = PipelineDefinition<SourceMMIv8, MongoSourceEntityModel>.Create(sourceMMIv8ModelAggregate.Stages);
             await mongoDatabase.CreateViewAsync("SourceMMIv8Model", "SourceMMIv8", sourceMMIv8ModelPipeline);
         }
 
@@ -269,11 +269,14 @@ namespace MMIv8_Ktype.Core.Contexts
             #endregion
 
             #region Source TecDoc PC
-            var sourceTecDocPCIndexBuilder = Builders<MongoSourceTecDocPC>.IndexKeys;
-            var sourceTecDocPCIndexModels = new List<CreateIndexModel<MongoSourceTecDocPC>>
+            var sourceTecDocPCIndexBuilder = Builders<SourceTecDocPC>.IndexKeys;
+            var sourceTecDocPCIndexModels = new List<CreateIndexModel<SourceTecDocPC>>
             {
                 new (sourceTecDocPCIndexBuilder.Ascending(c => c.KTypNr),
                      new() { Name = "KTypNr", Unique = true, Background = true }
+                ),
+                new (sourceTecDocPCIndexBuilder.Ascending(c => c.ExternalId),
+                     new() { Name = "ExternalId", Unique = true, Background = true }
                 ),
                 new (sourceTecDocPCIndexBuilder.Ascending(c => c.SourceEntityModelHash),
                      new() { Name = "SourceEntityModelHash", Unique = false, Background = true }
@@ -293,11 +296,14 @@ namespace MMIv8_Ktype.Core.Contexts
             #endregion
 
             #region Source MMIv8
-            var sourceMMIv8IndexBuilder = Builders<MongoSourceMMIv8>.IndexKeys;
-            var sourceMMIv8IndexModels = new List<CreateIndexModel<MongoSourceMMIv8>>
+            var sourceMMIv8IndexBuilder = Builders<SourceMMIv8>.IndexKeys;
+            var sourceMMIv8IndexModels = new List<CreateIndexModel<SourceMMIv8>>
             {
                 new (sourceMMIv8IndexBuilder.Ascending(c => c.MMI_V8_Key),
                      new() { Name = "MMI_V8_Key", Unique = true, Background = true }
+                ),
+                new (sourceMMIv8IndexBuilder.Ascending(c => c.ExternalId),
+                     new() { Name = "ExternalId", Unique = true, Background = true }
                 ),
                 new (sourceMMIv8IndexBuilder.Ascending(c => c.SourceEntityModelHash),
                      new() { Name = "SourceEntityModelHash", Unique = false, Background = true }

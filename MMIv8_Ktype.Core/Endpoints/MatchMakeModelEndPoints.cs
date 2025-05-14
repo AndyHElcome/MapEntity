@@ -1,5 +1,7 @@
 using MMIv8_Ktype.Api.Endpoints;
 using MMIv8_Ktype.Api.Requests;
+using MMIv8_Ktype.Api.Responses;
+using MMIv8_Ktype.Core.Services;
 using MMIv8_Ktype.Core.Services.Mapping;
 using MMIv8_Ktype.Core.Services.Match;
 using MMIv8_Ktype.Models.Collections;
@@ -12,11 +14,9 @@ namespace MMIv8_Ktype.Core.Endpoints
                                          MappingService mappingService,
                                          BulkMappingService bulkMappingService) : IMatchMakeModelEndpoints
     {
-        public async Task<List<MatchMakeModel>> GetAllMakeModelMatch() //TODO Fix large gets
+        public async Task<PagedResponse<MatchMakeModel>> GetAll(int Page = 1, int PageSize = 100) //TODO Fix large gets
         {
-            var response = await matchMakeModelService.GetCursor();
-
-            return await response.ToListAsync();
+            return await matchMakeModelService.PaginateDocuments<MatchMakeModel>(page: Page, pageSize: PageSize);
         }
 
         public async Task<List<MatchMakeModel>> GenerateMakeModelMatch()
