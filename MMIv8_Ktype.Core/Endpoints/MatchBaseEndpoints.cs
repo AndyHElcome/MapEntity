@@ -23,11 +23,11 @@ namespace MMIv8_Ktype.Core.Endpoints
             return await matchBaseService.PaginateDocuments<MatchBase>(page: Page, pageSize: PageSize);
         }
 
-        public async Task<PagedResponse<MatchBase>> GetByMatchBaseType(MatchBaseType MatchBaseType, int Page = 1, int PageSize = 100, PageCount PageCount = PageCount.Count) //TODO change to stream call
+        public async Task<PagedResponse<MatchBase>> GetByMatchBaseType(MatchBaseType MatchBaseType, int Page = 1, int PageSize = 100) //TODO change to stream call
         {
             var filter = Builders<MatchBase>.Filter.Eq(c => c.MatchBaseType, MatchBaseType);
 
-            return await matchBaseService.PaginateDocuments<MatchBase>(filter, page: Page, pageSize: PageSize, pageCount: PageCount);
+            return await matchBaseService.PaginateDocuments<MatchBase>(filter, page: Page, pageSize: PageSize);
         }
 
         public async Task<MatchBase?> GetById(string MatchHash)

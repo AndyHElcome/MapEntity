@@ -477,9 +477,11 @@ namespace MMIv8_Ktype.Core.Services.Mapping
                 sw.Stop();
                 Log.Information("Bulk Created {created} with {count} from Previous Match in {time}", newMatches.Count, bulkresult.Acknowledged ? bulkresult.MatchedCount : "0", sw);
             }
-
-            sw.Stop();
-            Log.Information("Bulk Created {created} in {time} (no previous match found)", newMatches.Count, sw);
+            else
+            {
+                sw.Stop();
+                Log.Information("Bulk Created {created} in {time} (no previous match found)", newMatches.Count, sw);
+            }
         }
 
         public async Task StoreEntityMatch(MatchMakeModel makeModelMatch) // memory heavy
@@ -515,155 +517,7 @@ namespace MMIv8_Ktype.Core.Services.Mapping
             }
         }
 
-        [Obsolete("No longer required", true)]
-        public async Task UpdatePreviousMatchedFlag(IEnumerable<EntityRelation> entityRelations) // TODO Change to single MMI_V8_Key
-        {
-            var sw = Stopwatch.StartNew();
-            var filter = Builders<MatchEntity>.Filter.Empty;
-            CombinationPipeline<MatchEntity> combinationUpdateClearFlag = new(MatchEntityService.Collection, filter);
-            Task<UpdateResult?> clearTask = combinationUpdateClearFlag.AppendUpdate(c => c.SetPreviousMatchedFlag(false)).UpdateDocuments();
-
-            //List<Func<Task<UpdateResult?>>> updateTasks = entityRelations
-            //    .Select(c => (Func<Task<UpdateResult?>>)(() => UpdatePreviousMatchedFlag(c.KTypNr, c.MMI_V8_Key, true)))
-            //    .ToList();
-
-
-            var clearResult = await clearTask;
-            Log.Information("Cleared Previous Match Flag for {count} in {time}", clearResult.ModifiedCount, sw);
-
-            BulkCombinationUpdate bulkCombinationUpdate = new(MMIv8_Ktype);
-            foreach (var entityRelation in entityRelations)
-            {
-                bulkCombinationUpdate.AddCombinationUpdate( MatchEntityService.CombinationUpdatePreviousMatchedFlag(entityRelation.KTypNr, entityRelation.MMI_V8_Key, true));
-            }
-
-
-            //var updateResults = await Task.WhenAll(updateTasks.Select(f => f()));
-            var updateResults = await bulkCombinationUpdate.CommitBulkWrite();
-            Log.Information("Updated Match Flag for {sum} over {count} matches in {time}", updateResults.ModifiedCount, bulkCombinationUpdate.Count(), sw);
-
-            sw.Stop();
-        }
-
-        [Obsolete("No longer required", true)]
-        public async Task UpdatePreviousMatchedFlag(IEnumerable<UpdateFlagRequest> input) // TODO Change to single MMI_V8_Key
-        {
-            var filterBuilder = Builders<MatchEntity>.Filter;
-            var filter = filterBuilder.Empty;
-
-            List<Task<BulkCombinationUpdate>> tasks = new();
-
-            var mmiUpdates = input.GroupBy(c => c.MMI_V8_Key).ToDictionary(c => c.Key, c => c.ToList());
-
-            foreach (var batch in mmiUpdates.Chunk(1000))
-            {
-                BulkCombinationUpdate bulkCombinationUpdate = new(MMIv8_Ktype);
-
-                foreach (var mmi_Entity in batch)
-                {
-                    foreach (var match in mmi_Entity.Value)
-                    {
-                        filter = filterBuilder.Eq(c => c.TecDocEntity.ExternalId, match.KTypNr)
-                               & filterBuilder.Eq(c => c.MMIv8Entity.ExternalId, match.MMI_V8_Key);
-
-                        CombinationPipeline<MatchEntity> combinationUpdate = new(MatchEntityService.Collection, filter);
-                        combinationUpdate.AppendUpdate(c => c.SetPreviousMatchedFlag(match.Flag))
-                                         .AppendPipeline(c => c.AppendStatus(versionProvider.NewStatus(Status.Updated, $"Updated Previous Match Flag {match.Detail}")));
-
-                        bulkCombinationUpdate.AddCombinationUpdate(combinationUpdate);
-                    }
-                }
-
-                ClientBulkWriteResult? bulkResult = await bulkCombinationUpdate.CommitBulkWrite();
-                Log.Information("Updated Previous Match Flag for {count} matches", bulkResult.ModifiedCount);
-
-                tasks.Add(MatchEntityService.BulkCombinationUpdateMatchRefine(batch.Select(c => c.Key)));
-            }
-
-            var matchRefineUpdates = await Task.WhenAll(tasks);
-
-            await Task.Run(() => matchRefineUpdates.ToList().ForEach(c => c.CommitBulkWrite()));
-
-            Log.Information("Updated Previous Matched Flags");
-        }
-
-        public async Task UpdateMatchedFlag(IEnumerable<UpdateFlagRequest> input) // TODO Update to reflect UpdatePreviousMatchedFlag
-        {
-            var filterBuilder = Builders<MatchEntity>.Filter;
-            var filter = filterBuilder.Empty;
-
-            List<Task<IEnumerable<CombinationPipeline<MatchEntity>>>> tasks = new();
-
-            foreach (var inputBatch in input.ToDictionary(c => c.MMI_V8_Key, c => c).Chunk(1000))
-            {
-                BulkCombinationUpdate bulkCombinationUpdate = new(MMIv8_Ktype);
-
-                foreach (var matches in inputBatch.Select(c => c.Value))
-                {
-                    filter = filterBuilder.Eq(c => c.TecDocEntity.ExternalId, matches.KTypNr)
-                                    & filterBuilder.Eq(c => c.MMIv8Entity.ExternalId, matches.MMI_V8_Key);
-
-                    CombinationPipeline<MatchEntity> combinationPipeline = new(MatchEntityService.Collection, filter);
-                    combinationPipeline.AppendUpdate(c => c.SetMatchedFlag(matches.Flag))
-                                       .AppendPipeline(c => c.AppendStatus(versionProvider.NewStatus(Status.Checked, $"Updated Matched Flag {matches.Detail}")));
-
-                    bulkCombinationUpdate.AddCombinationUpdate(combinationPipeline);
-                }
-
-                var bulkResult = await bulkCombinationUpdate.CommitBulkWrite();
-                Log.Information("Updated Matched Flag for {count} matches", bulkResult.ModifiedCount);
-
-                var updateMatchRefineFilter = filterBuilder.In(c => c.MMIv8Entity.ExternalId, inputBatch.Select(c => c.Key).Distinct());
-
-                tasks.Add(MatchEntityService.CombinationUpdateMatchRefinesList(filter));
-            }
-
-            var matchRefineCombinationUpdate = await Task.WhenAll(tasks);
-            BulkCombinationUpdate bulkMatchRefineUpdate = new BulkCombinationUpdate(MMIv8_Ktype).AddCombinationUpdate((CombinationPipeline<MatchEntity>)matchRefineCombinationUpdate.SelectMany(c => c));
-
-            var bulkMatchRefineResult = await bulkMatchRefineUpdate.CommitBulkWrite();
-            Log.Information("Updated Match Refine for {count} matches", bulkMatchRefineResult.ModifiedCount);
-        }
-
-        public async Task UpdateFailedFlag(IEnumerable<UpdateFlagRequest> input) // TODO Update to reflect UpdatePreviousMatchedFlag
-        {
-            var filterBuilder = Builders<MatchEntity>.Filter;
-            var filter = filterBuilder.Empty;
-
-            List<Task<IEnumerable<CombinationPipeline<MatchEntity>>>> tasks = new();
-
-            foreach (var inputBatch in input.ToDictionary(c => c.MMI_V8_Key, c => c).Chunk(1000))
-            {
-                BulkCombinationUpdate bulkCombinationUpdate = new(MMIv8_Ktype);
-
-                foreach (var matches in inputBatch.Select(c => c.Value))
-                {
-                    filter = filterBuilder.Eq(c => c.TecDocEntity.ExternalId, matches.KTypNr)
-                                    & filterBuilder.Eq(c => c.MMIv8Entity.ExternalId, matches.MMI_V8_Key);
-
-                    CombinationPipeline<MatchEntity> combinationUpdate = new(MatchEntityService.Collection, filter);
-                    combinationUpdate.AppendUpdate(c => c.SetFailedFlag(matches.Flag))
-                                     .AppendPipeline(c => c.AppendStatus(versionProvider.NewStatus(Status.Checked, $"Updated Failed Flag {matches.Detail}")));
-
-                    bulkCombinationUpdate.AddCombinationUpdate(combinationUpdate);
-                }
-
-                var bulkResult = await bulkCombinationUpdate.CommitBulkWrite();
-                Log.Information("Updated Failed Flag for {count} matches", bulkResult.ModifiedCount);
-
-                var updateMatchRefineFilter = filterBuilder.In(c => c.MMIv8Entity.ExternalId, inputBatch.Select(c => c.Key).Distinct());
-
-                tasks.Add(MatchEntityService.CombinationUpdateMatchRefinesList(filter));
-            }
-
-            var matchRefineCombinationUpdate = await Task.WhenAll(tasks);
-            BulkCombinationUpdate bulkMatchRefineUpdate = new BulkCombinationUpdate(MMIv8_Ktype).AddCombinationUpdate((CombinationPipeline<MatchEntity>)matchRefineCombinationUpdate.SelectMany(c => c));
-
-            var bulkMatchRefineResult = await bulkMatchRefineUpdate.CommitBulkWrite();
-            Log.Information("Updated Match Refine for {count} matches", bulkMatchRefineResult.ModifiedCount);
-        }
-
-        public async Task UpdateFailedFlag(UpdateFlagRequest request) // TODO Update to reflect UpdatePreviousMatchedFlag
+        public async Task UpdateFailedFlag(UpdateFlagRequest request)
         {
             var sw = Stopwatch.StartNew();
 
@@ -671,7 +525,7 @@ namespace MMIv8_Ktype.Core.Services.Mapping
             var filter = filterBuilder.Eq(c => c.TecDocEntity.ExternalId, request.KTypNr)
                        & filterBuilder.Eq(c => c.MMIv8Entity.ExternalId, request.MMI_V8_Key);
 
-            var combinationFlagUpdate = 
+            var combinationFlagUpdate =
                 new CombinationPipeline<MatchEntity>(MatchEntityService.Collection, filter).AppendUpdate(c => c.SetFailedFlag(request.Flag))
                                                                                            .AppendPipeline(c => c.AppendStatus(versionProvider.NewStatus(Status.Checked, $"Updated Failed Flag {request.Detail}")));
             var combinationFlagResult = await combinationFlagUpdate.UpdateDocuments();
@@ -683,24 +537,40 @@ namespace MMIv8_Ktype.Core.Services.Mapping
             Log.Information("Updated Failed Flag {flagUpdate}; {count} MatchRefines in {time}", combinationFlagResult.IsAcknowledged ? combinationFlagResult.ModifiedCount : "notAcknowledged", bulkMatchRefineResult.Acknowledged ? bulkMatchRefineResult.ModifiedCount : "notAcknowledged", sw);
         }
 
-        public async Task UpdateMatchRefineStatus(IEnumerable<int> mmi_V8_Keys)
+        public async Task UpdateMatchedFlag(UpdateFlagRequest request)
         {
-            List<Task<ClientBulkWriteResult>> tasks = new();
-            foreach (var mmiEntityID in mmi_V8_Keys.Chunk(1000))
-            { 
-                var filter = Builders<MatchEntity>.Filter.In(c => c.MMIv8Entity.ExternalId, mmiEntityID);
-                var matchEntityUpdate = new CombinationPipeline<MatchEntity>(MatchEntityService.Collection, filter).AppendPipeline(c => c.AppendStatus(versionProvider.NewStatus(Status.Checked, $"Checked Match Refine")));
-                var matchEntityResult = await matchEntityUpdate.UpdateDocuments();
-                Log.Information("Updated Status for {count} matches", matchEntityResult?.ModifiedCount);
+            var sw = Stopwatch.StartNew();
+            var filterBuilder = Builders<MatchEntity>.Filter;
+            var filter = filterBuilder.Eq(c => c.TecDocEntity.ExternalId, request.KTypNr)
+                       & filterBuilder.Eq(c => c.MMIv8Entity.ExternalId, request.MMI_V8_Key);
 
-                var matchRefineUpdate = await MatchEntityService.BulkCombinationUpdateMatchRefine(mmi_V8_Keys);
-                tasks.Add(matchRefineUpdate.CommitBulkWrite());
-            }
+            var combinationFlagUpdate =
+                new CombinationPipeline<MatchEntity>(MatchEntityService.Collection, filter).AppendUpdate(c => c.SetMatchedFlag(request.Flag))
+                                                                                           .AppendPipeline(c => c.AppendStatus(versionProvider.NewStatus(Status.Checked, $"Updated Match Flag {request.Detail}")));
+            var combinationFlagResult = await combinationFlagUpdate.UpdateDocuments();
 
-            foreach(var matchRefineResult in tasks)
-                Log.Information("Updated Match Refine for {count} matches", (await matchRefineResult).ModifiedCount);
+            var bulkMatchRefineUpdate = await MatchEntityService.BulkCombinationUpdateMatchRefine([request.MMI_V8_Key]);
+            var bulkMatchRefineResult = await bulkMatchRefineUpdate.CommitBulkWrite();
+
+            sw.Stop();
+            Log.Information("Updated Match Flag {flagUpdate}; {count} MatchRefines in {time}", combinationFlagResult.IsAcknowledged ? combinationFlagResult.ModifiedCount : "notAcknowledged", bulkMatchRefineResult.Acknowledged ? bulkMatchRefineResult.ModifiedCount : "notAcknowledged", sw);
         }
 
+        public async Task UpdateMatchRefineStatus(int mmi_V8_Key)
+        {
+            var sw = Stopwatch.StartNew();
+            var filter = Builders<MatchEntity>.Filter.Eq(c => c.MMIv8Entity.ExternalId, mmi_V8_Key)
+                       & Builders<MatchEntity>.Filter.Eq(c => c.Status.Current.Status, Status.Check);
+
+            var matchEntityUpdate = new CombinationPipeline<MatchEntity>(MatchEntityService.Collection, filter).AppendPipeline(c => c.AppendStatus(versionProvider.NewStatus(Status.Checked, $"Checked Match Refine")));
+            var matchEntityResult = await matchEntityUpdate.UpdateDocuments();
+
+            var bulkMatchRefineUpdate = await MatchEntityService.BulkCombinationUpdateMatchRefine([ mmi_V8_Key ]);
+            var bulkMatchRefineResult = await bulkMatchRefineUpdate.CommitBulkWrite();
+
+            sw.Stop();
+            Log.Information("Updated Checked Status {matchEntityCount} MatchEntities; {matchRefineCount} MatchRefines in {time}", matchEntityResult.IsAcknowledged ? matchEntityResult.ModifiedCount : "notAcknowledged", bulkMatchRefineResult.Acknowledged ? bulkMatchRefineResult.ModifiedCount : "notAcknowledged", sw);
+        }
         #endregion
 
 

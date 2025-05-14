@@ -3,6 +3,7 @@ using Serilog;
 using System.Reflection;
 using MMIv8_Ktype.Api;
 using MMIv8_Ktype.Models;
+using System.Diagnostics;
 
 internal class Program
 {    
@@ -38,7 +39,7 @@ internal class Program
 
         //args = [ "MMIv8_Ktype.CSV", "CSVBackupOperation", @"C:\Users\andy.hargreaves\OneDrive - Elcome Ltd\Desktop\NEW MMI TO KTYPE\Backup" ];
 
-        //args = [ "MMIv8_Ktype.CSV", "CSVBackupInitialise", @"C:\Users\andy.hargreaves\OneDrive - Elcome Ltd\Desktop\NEW MMI TO KTYPE\Backup", @"C:\Users\andy.hargreaves\OneDrive - Elcome Ltd\Desktop\NEW MMI TO KTYPE\Source_MMIv8.txt", @"C:\Users\andy.hargreaves\OneDrive - Elcome Ltd\Desktop\NEW MMI TO KTYPE\Source_TD_PC.txt", "PreviousRelations.csv" ];
+        args = [ "MMIv8_Ktype.CSV", "CSVBackupInitialise", @"C:\Users\andy.hargreaves\OneDrive - Elcome Ltd\Desktop\NEW MMI TO KTYPE\Backup", @"C:\Users\andy.hargreaves\OneDrive - Elcome Ltd\Desktop\NEW MMI TO KTYPE\Source_MMIv8.txt", @"C:\Users\andy.hargreaves\OneDrive - Elcome Ltd\Desktop\NEW MMI TO KTYPE\Source_TD_PC.txt", "PreviousRelations.csv" ];
 
         //args = [ "MMIv8_Ktype.CSV", "ImportMakeModelMatch", @"C:\Users\andy.hargreaves\OneDrive - Elcome Ltd\Desktop\NEW MMI TO KTYPE\Backup\MatchMakeModel.csv" ];
 
@@ -50,13 +51,15 @@ internal class Program
 
         //args = [ "MMIv8_Ktype.CSV", "UpdateTecDocEntity", @"C:\Users\andy.hargreaves\OneDrive - Elcome Ltd\Desktop\NEW MMI TO KTYPE\Source_TD_PC-124.txt" ];
 
-        args = [ "MMIv8_Ktype.CSV", "UpdateMMIv8Entity", @"C:\Users\andy.hargreaves\OneDrive - Elcome Ltd\Desktop\NEW MMI TO KTYPE\Source_MMIv8-100051.txt" ];
+        //args = [ "MMIv8_Ktype.CSV", "UpdateMMIv8Entity", @"C:\Users\andy.hargreaves\OneDrive - Elcome Ltd\Desktop\NEW MMI TO KTYPE\Source_MMIv8-100051.txt" ];
 
         if (args.Length < 2)
         {
             Log.Error("No args parsed. Usage: <Library> <ClassName> <ConstructorArgs...>");
             return;
         }
+
+        var sw = Stopwatch.StartNew();
 
         string library = args[ 0 ];
         string className = args[ 1 ];
@@ -79,15 +82,15 @@ internal class Program
 
             IOperation instance = type.StringToObject<IOperation>(constructorArgs);
 
-            Log.Information("Instance of {className} created successfully.", className);
+            Log.Information("Instance of {className} created successfully. {time}", className, sw);
 
             await instance.ExecuteOperation(Log);
 
-            Log.Information("Instance of {className} completed.", className);
+            Log.Information("Instance of {className} completed. {time}", className, sw);
         }
         catch (Exception ex)
         {
-            Log.Error(ex, "Error running command: {@args}", args);
+            Log.Error(ex, "Error running command: {@args} {time}", args, sw);
         }
     }
 }

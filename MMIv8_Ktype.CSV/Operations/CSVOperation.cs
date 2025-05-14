@@ -17,6 +17,7 @@ using SharpCompress.Writers;
 using System.Formats.Asn1;
 using System.Globalization;
 using System.Text;
+using System.Threading.Tasks;
 
 namespace MMIv8_Ktype.CSV.Operations
 {
@@ -91,11 +92,11 @@ namespace MMIv8_Ktype.CSV.Operations
             foreach (var matchBaseType in (MatchBaseType[])Enum.GetValues(typeof(MatchBaseType)))
             {
                 filepath = Path.Combine(path, $"Match{matchBaseType.ToString()}.csv");
-                var matchBases = await matchBase.GetByMatchBaseType(matchBaseType);
+                var matchBases = await matchBase.GetByMatchBaseType(matchBaseType, 1, 0);
 
                 using (var csvWriter = new CsvWritingStream(filepath).CsvWriter)
                 {
-                    csvWriter.WriteRecords(matchBases.Select(c => c.BuildCsvObject()));
+                    csvWriter.WriteRecords(matchBases.Documents.Select(c => c.BuildCsvObject()));
                 }
 
                 log.Information("Created file for Match {matchBaseType} {path}", matchBaseType.ToString(), filepath);
@@ -124,16 +125,16 @@ namespace MMIv8_Ktype.CSV.Operations
             filepath = Path.Combine(path, "CurrentRelations.csv");
             using (var csvWriter = new CsvWritingStream(filepath).CsvWriter)
             {
-                var response = await entityRelation.GetCurrentEntityRelations();
-                csvWriter.WriteRecords(response);
+                var response = await entityRelation.GetCurrentEntityRelations(1, 0);
+                csvWriter.WriteRecords(response.Documents);
             }
             log.Information("Created file for Current Relations {path}", filepath);
 
             filepath = Path.Combine(path, "PreviousRelations.csv");
             using (var csvWriter = new CsvWritingStream(filepath).CsvWriter)
             {
-                var response = await entityRelation.GetPreviousEntityRelations();
-                csvWriter.WriteRecords(response);
+                var response = await entityRelation.GetPreviousEntityRelations(1, 0);
+                csvWriter.WriteRecords(response.Documents);
             }
             log.Information("Created file for Previous Relations {path}", filepath);
         }
@@ -145,7 +146,7 @@ namespace MMIv8_Ktype.CSV.Operations
 
         public async Task ExecuteOperation(ILogger log)
         {
-            var client = new RefitClient(log);
+            var client = new RefitClient(log, 5);
 
             Task deleteMatchEntityTask = client.CreateService<IMatchEntityEndpoints>().DeleteAll();
             Task deleteMatchMakeModelTask = client.CreateService<IMatchMakeModelEndpoints>().DeleteAll();
@@ -194,8 +195,6 @@ namespace MMIv8_Ktype.CSV.Operations
 
             //TODO Add Read for checked EntityMatches
             //TODO Add Read for checked EntityMatches
-
-
         }
     }
 
@@ -208,7 +207,7 @@ namespace MMIv8_Ktype.CSV.Operations
 
             await sourceEntity.DeleteAll();
 
-            int count = 0;
+            List<SourceMMIv8> entities = [];
             using (var csvReader = CsvStream.CsvReader)
             {
                 csvReader.Context.RegisterClassMap<PutSourceMMIv8RequestMap>();
@@ -218,13 +217,16 @@ namespace MMIv8_Ktype.CSV.Operations
                 while (csvReader.Read())
                 {
                     var record = csvReader.GetRecord<PutSourceMMIv8Request>();
-
-                    await sourceEntity.Create(record.ToSourceMMIv8(client.VersionProvider));
-                    count++;
+                    entities.Add(record.ToSourceMMIv8(client.VersionProvider));
                 }
             }
 
-            log.Information("Deleted All Entities and reloaded: {CSVPath} ({count} records)", CSVPath, count);
+            foreach (var batch in entities.Chunk(1000))
+            {
+                await sourceEntity.Bulkload(batch); //TODO Create return types
+            }
+
+            log.Information("Deleted All Entities and reloaded: {CSVPath} ({count} records)", CSVPath, entities.Count);
         }
     }
 
@@ -263,7 +265,7 @@ namespace MMIv8_Ktype.CSV.Operations
 
             await sourceEntity.DeleteAll();
 
-            int count = 0;
+            List<SourceTecDocPC> entities = [];
             using (var csvReader = CsvStream.CsvReader)
             {
                 csvReader.Context.RegisterClassMap<PutSourceTecDocPCRequestMap>();
@@ -273,13 +275,16 @@ namespace MMIv8_Ktype.CSV.Operations
                 while (csvReader.Read())
                 {
                     var record = csvReader.GetRecord<PutSourceTecDocPCRequest>();
-
-                    await sourceEntity.Create(record.ToSourceTecDocPC(client.VersionProvider));
-                    count++;
+                    entities.Add(record.ToSourceTecDocPC(client.VersionProvider));
                 }
             }
 
-            log.Information("Deleted All Entities and reloaded: {CSVPath} ({count} records)", CSVPath, count);
+            foreach (var batch in entities.Chunk(1000))
+            {
+                await sourceEntity.Bulkload(batch); //TODO Create return types
+            }
+
+            log.Information("Deleted All Entities and reloaded: {CSVPath} ({count} records)", CSVPath, entities.Count);
         }
     }
 
@@ -324,9 +329,9 @@ namespace MMIv8_Ktype.CSV.Operations
                 entityRelations = csvReader.GetRecords<PutEntityRelationRequest>().ToList();
             }
 
-            foreach (var mmi in entityRelations.GroupBy(c => c.MMI_V8_Key).ToDictionary(g => g.Key, g => g.ToList()))
+            foreach (var batch in entityRelations.Chunk(1000))
             {
-                await entityRelationEndpoints.CreateEntityRelation(VersionNumber, mmi.Value); //TODO Create return types
+                await entityRelationEndpoints.CreateEntityRelation(VersionNumber, batch.ToList()); //TODO Create return types
             }
 
             log.Information("Loaded {count} Previous Matches for Version {vesionNumber}", entityRelations.Count, VersionNumber);
@@ -389,9 +394,10 @@ namespace MMIv8_Ktype.CSV.Operations
     {
         public async override Task ExecuteOperation(ILogger log)
         {
-            var matchMakeModelEndpoints = new RefitClient(log).CreateService<IMatchMakeModelEndpoints>();
+            var matchMakeModelEndpoints = new RefitClient(log, 5).CreateService<IMatchMakeModelEndpoints>();
             int count = 0;
 
+            //List<Task> tasks = new();
             using (var csvReader = CsvStream.CsvReader)
             {
                 csvReader.Context.RegisterClassMap<MatchMakeModelRequestMap>();
@@ -401,11 +407,13 @@ namespace MMIv8_Ktype.CSV.Operations
                 while (csvReader.Read())
                 {
                     var record = csvReader.GetRecord<MatchMakeModelRequest>();
-
                     await matchMakeModelEndpoints.CreateMakeModelMatch(record);
+                    //tasks.Add( matchMakeModelEndpoints.CreateMakeModelMatch(record));
                     count++;
                 }
             }
+
+            //await Task.WhenAll( tasks );
 
             log.Information("Loaded file: {CSVPath} ({count} records)", CSVPath, count);
         }

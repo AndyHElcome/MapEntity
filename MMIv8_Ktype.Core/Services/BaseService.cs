@@ -25,7 +25,7 @@ namespace MMIv8_Ktype.Core.Services
     {
         public IMongoCollection<T> Collection = Collection;
 
-        public SortDefinition<T> SortByDocumentId() => Builders<T>.Sort.Ascending(c => c.DocumentId);
+        public SortDefinition<T> SortByDocumentId(SortDefinition<T>? sort = null) => sort is null ? Builders<T>.Sort.Ascending(c => c.DocumentId) : sort.Ascending(c => c.DocumentId);
 
         public FilterDefinition<T> FilterByDocumentId(Tid documentId) => Builders<T>.Filter.Eq(c => c.DocumentId, documentId);
 
@@ -52,8 +52,17 @@ namespace MMIv8_Ktype.Core.Services
 
         public async Task<long> CountByFilter(FilterDefinition<T>? filter = null)
         {
-            filter ??= Builders<T>.Filter.Empty;
-            return await Collection.Find(filter).Sort(this.SortByDocumentId()).CountDocumentsAsync();
+            if (filter is null || filter == Builders<T>.Filter.Empty)
+            {
+                var opt = new CountOptions() { Hint = "_id_" };
+                filter = Builders<T>.Filter.Empty;
+                return await Collection.CountDocumentsAsync(filter, opt);
+            }
+            else
+            {
+                var projection = Builders<T>.Projection.Include(c => c.DocumentId);
+                return await Collection.Find(filter).Sort(this.SortByDocumentId()).Project(projection).CountDocumentsAsync();
+            }
         }
 
         #endregion
@@ -72,27 +81,22 @@ namespace MMIv8_Ktype.Core.Services
             return await this.GetFindFluent(this.FilterByDocumentId(documentId)).FirstOrDefaultAsync();
         }
 
-        public async Task<PagedResponse<TOut>> PaginateDocuments<TOut>(FilterDefinition<T>? filter = null, SortDefinition<T>? sort = null, int page = 1, int pageSize = 100, ProjectionDefinition<T, TOut>? projection = null, PageCount pageCount = PageCount.EstimatedCount)
+        public async Task<PagedResponse<TOut>> PaginateDocuments<TOut>(FilterDefinition<T>? filter = null, SortDefinition<T>? sort = null, int page = 1, int pageSize = 100, ProjectionDefinition<T, TOut>? projection = null)
         {
             Log.Debug("Paging {Type} Page: {page}", typeof(T).Name, page);
             var sw = Stopwatch.StartNew();
 
-            sort = sort is null ? this.SortByDocumentId() : sort.Ascending(c => c.DocumentId);
-            var query = this.GetFindFluent(filter, sort);
+            var count = this.CountByFilter(filter);
 
-            Task<long> count = pageCount switch
-            {
-                PageCount.EstimatedCount => Collection.EstimatedDocumentCountAsync(),
-                PageCount.Count => query.CountDocumentsAsync(),
-                _ => Task.Run(() => (long)0),
-            };
-
-            var results = query.Skip((page - 1) * pageSize).Limit(pageSize).Project(projection).ToListAsync();
+            var results = this.GetFindFluent(filter, this.SortByDocumentId(sort))
+                              .Skip((page - 1) * pageSize)
+                              .Limit(pageSize)
+                              .Project(projection)
+                              .ToListAsync();
 
             var pagedResults = new PagedResponse<TOut>(await results, Convert.ToInt32(await count), page, pageSize);
 
             sw.Stop();
-
             Log.Information("Paged {Type} {@page} in {Time}", typeof(T).Name, pagedResults.PageDetails(), sw);
 
             return pagedResults;

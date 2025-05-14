@@ -160,8 +160,7 @@ namespace MMIv8_Ktype.Core.Services.Match
 
         public CombinationPipeline<MatchEntity> CombinationUpdatePreviousMatchedFlag(FilterDefinition<MatchEntity> filter, bool matchFlag)
         {
-            return base.Update(filter).AppendUpdate(c => c.SetPreviousMatchedFlag(matchFlag))
-                                      .AppendPipeline(c => c.AppendStatus(VersionProvider.NewStatus(Status.Updated, $"Updated Previous Match Flag")));
+            return base.Update(filter).AppendUpdate(c => c.SetPreviousMatchedFlag(matchFlag));
         }
 
         public CombinationPipeline<MatchEntity> CombinationUpdatePreviousMatchedFlag(int KTypNr, int MMI_V8_Key, bool matchFlag)

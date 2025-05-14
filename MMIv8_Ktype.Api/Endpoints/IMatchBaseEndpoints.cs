@@ -15,7 +15,7 @@ namespace MMIv8_Ktype.Api.Endpoints
         Task<PagedResponse<MatchBase>> GetAll([FromQuery] int Page, [FromQuery] int PageSize);
 
         [Get("/GetByType/{MatchBaseType}")]
-        Task<PagedResponse<MatchBase>> GetByMatchBaseType([FromQuery] MatchBaseType MatchBaseType, [FromQuery] int Page, [FromQuery] int PageSize, [FromQuery] PageCount pageCount);
+        Task<PagedResponse<MatchBase>> GetByMatchBaseType([FromQuery] MatchBaseType MatchBaseType, [FromQuery] int Page, [FromQuery] int PageSize);
 
         [Get("/GetById/{MatchHash}")]
         Task<MatchBase?> GetById(string MatchHash);

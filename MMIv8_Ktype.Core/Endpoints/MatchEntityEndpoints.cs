@@ -19,14 +19,14 @@ namespace MMIv8_Ktype.Core.Endpoints
             return await matchEntityService.PaginateDocuments<MatchEntity>(page: Page, pageSize: PageSize);
         }
 
-        public async Task<PagedResponse<MatchEntity>> GetAllMatchRefine(int Page = 1, int PageSize = 100, PageCount pageCount = PageCount.Count)
+        public async Task<PagedResponse<MatchEntity>> GetAllMatchRefine(int Page = 1, int PageSize = 100)
         {
             var filterBuilder = Builders<MatchEntity>.Filter;
             var filter = filterBuilder.Eq(c => c.MatchResult.Failed, false)
                        & (filterBuilder.Eq(c => c.MatchRefine.IsCheck, true) | filterBuilder.Size(c => c.MatchRefine.ChosenMatches, 0));
 
 
-            return await matchEntityService.PaginateDocuments<MatchEntity>(filter: filter, page: Page, pageSize: PageSize, pageCount: pageCount);
+            return await matchEntityService.PaginateDocuments<MatchEntity>(filter: filter, page: Page, pageSize: PageSize);
         }
 
         public async Task<PagedResponse<MatchEntityBackup>> GetMatchEntityBackup(int Page = 1, int PageSize = 100)
@@ -56,17 +56,17 @@ namespace MMIv8_Ktype.Core.Endpoints
 
         public async Task UpdateMatchedFlag(UpdateFlagRequest request)
         {
-            await mappingService.UpdateMatchedFlag([ request ]); // TODO Change to single MMI_V8_Key
+            await mappingService.UpdateMatchedFlag(request);
         }
 
         public async Task UpdateFailedFlag(UpdateFlagRequest request)
         {
-            await mappingService.UpdateFailedFlag([ request ]); // TODO Change to single MMI_V8_Key
+            await mappingService.UpdateFailedFlag(request);
         }
 
-        public async Task UpdateMatchRefineStatus(int[] MMI_V8_Keys) // TODO Change to single MMI_V8_Key
+        public async Task UpdateMatchRefineStatus(int MMI_V8_Key)
         {
-            await mappingService.UpdateMatchRefineStatus(MMI_V8_Keys);
+            await mappingService.UpdateMatchRefineStatus(MMI_V8_Key);
         }
 
         public async Task<MatchEntity?> CheckEntityMatch(MatchEntityByExternalRequest request)

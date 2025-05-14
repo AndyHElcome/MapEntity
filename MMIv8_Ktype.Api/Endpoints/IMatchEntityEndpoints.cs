@@ -23,7 +23,7 @@ namespace MMIv8_Ktype.Api.Endpoints
         Task<PagedResponse<MatchEntity>> GetAll([FromQuery] int Page, [FromQuery] int PageSize);
 
         [Post("/MatchRefine/GetAll")]
-        Task<PagedResponse<MatchEntity>> GetAllMatchRefine([FromQuery] int Page, [FromQuery] int PageSize, [FromQuery] PageCount pageCount);
+        Task<PagedResponse<MatchEntity>> GetAllMatchRefine([FromQuery] int Page, [FromQuery] int PageSize);
 
         [Put("/UpdateFailedFlag")]
         Task UpdateFailedFlag(UpdateFlagRequest request);
@@ -32,7 +32,7 @@ namespace MMIv8_Ktype.Api.Endpoints
         Task UpdateMatchedFlag(UpdateFlagRequest request);
 
         [Put("/UpdateMatchRefineStatus")]
-        Task UpdateMatchRefineStatus([FromBody] int[] MMI_V8_Keys);
+        Task UpdateMatchRefineStatus([FromQuery] int MMI_V8_Key);
 
         [Post("/Debug/GetMatchEntityBackup")]
         Task<PagedResponse<MatchEntityBackup>> GetMatchEntityBackup([FromQuery] int Page, [FromQuery] int PageSize);

@@ -37,21 +37,11 @@ namespace MMIv8_Ktype.Models.Collections
         public MatchEntity(IVersionProvider versionProvider, SourceTecDocPC tecdoc, SourceMMIv8 mmiv8, ObjectId matchMakeModelMatchID)
         {
             Status = new(versionProvider);
+            Status.History.Push(versionProvider.NewStatus(Models.Status.Status.Check));
+
             TecDocEntity = tecdoc;
             MMIv8Entity = mmiv8;
             MatchMakeModelMatchID = matchMakeModelMatchID;
-
-            CalculateMatchBases(versionProvider);
-        }
-
-        public MatchEntity(IVersionProvider versionProvider, SourceTecDocPC tecdoc, SourceMMIv8 mmiv8, ObjectId matchMakeModelMatchID, bool previous = false)
-        {
-            Status = new(versionProvider);
-            TecDocEntity = tecdoc;
-            MMIv8Entity = mmiv8;
-            MatchMakeModelMatchID = matchMakeModelMatchID;
-
-            MatchResult.PreviousMatch = previous;
 
             CalculateMatchBases(versionProvider);
         }

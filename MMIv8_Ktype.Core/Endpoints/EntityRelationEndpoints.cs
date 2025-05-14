@@ -24,23 +24,23 @@ namespace MMIv8_Ktype.Core.Endpoints
             return await entityRelationService.PaginateDocuments<EntityRelation>(page: Page, pageSize: PageSize);
         }
 
-        public async Task<PagedResponse<EntityRelation>> GetByVersion(ObjectId versionID, int Page = 1, int PageSize = 100, PageCount PageCount = PageCount.Count)
+        public async Task<PagedResponse<EntityRelation>> GetByVersion(ObjectId versionID, int Page = 1, int PageSize = 100)
         {
             var filter = Builders<EntityRelation>.Filter.Eq(e => e.VersionID, versionID);
 
-            return await entityRelationService.PaginateDocuments<EntityRelation>(filter: filter, page: Page, pageSize: PageSize, pageCount: PageCount);
+            return await entityRelationService.PaginateDocuments<EntityRelation>(filter: filter, page: Page, pageSize: PageSize);
         }
 
-        public async Task<PagedResponse<EntityRelation>> GetCurrentEntityRelations(int Page = 1, int PageSize = 100, PageCount PageCount = PageCount.Count) //TODO change to stream call
+        public async Task<PagedResponse<EntityRelation>> GetCurrentEntityRelations(int Page = 1, int PageSize = 100) //TODO change to stream call
         {
             var version = await versionService.GetCurrentVersion();
-            return await this.GetByVersion(version.DocumentId, Page, PageSize, PageCount);
+            return await this.GetByVersion(version.DocumentId, Page, PageSize);
         }
 
-        public async Task<PagedResponse<EntityRelation>> GetPreviousEntityRelations(int Page = 1, int PageSize = 100, PageCount PageCount = PageCount.Count) //TODO change to stream call
+        public async Task<PagedResponse<EntityRelation>> GetPreviousEntityRelations(int Page = 1, int PageSize = 100) //TODO change to stream call
         {
             var version = await mappingService.GetPreviousVersionIDWithEntityRelations();
-            return await this.GetByVersion(version.DocumentId, Page, PageSize, PageCount);
+            return await this.GetByVersion(version.DocumentId, Page, PageSize);
         }
 
         public async Task CreateEntityRelation(int versionNumber, List<PutEntityRelationRequest> entityRelationsRequest)
