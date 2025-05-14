@@ -1,4 +1,6 @@
-﻿using MMIv8_Ktype.Api.Requests;
+﻿using Microsoft.AspNetCore.Mvc;
+using MMIv8_Ktype.Api.Requests;
+using MMIv8_Ktype.Api.Responses;
 using MMIv8_Ktype.Models.Attributes;
 using MMIv8_Ktype.Models.Collections;
 using MongoDB.Bson;
@@ -10,7 +12,7 @@ namespace MMIv8_Ktype.Api.Endpoints
     public interface IMatchMakeModelEndpoints : IEndpoint
     {
         [Get("")]
-        Task<List<MatchMakeModel>> GetAllMakeModelMatch();
+        Task<PagedResponse<MatchMakeModel>> GetAll([FromQuery] int Page, [FromQuery] int PageSize);
 
         [Get("/{MatchID}")]
         Task<MatchMakeModel?> GetMakeModelMatchById(ObjectId MatchID);

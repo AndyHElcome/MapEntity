@@ -16,22 +16,10 @@ using MMIv8_Ktype.Core.Services.Source;
 using System.Net.NetworkInformation;
 using Microsoft.AspNetCore.Mvc.RazorPages;
 using MMIv8_Ktype.Core.Services;
+using MMIv8_Ktype.Models.Util;
 
 namespace MMIv8_Ktype.Core.Services
 {
-    //public static class QueryCollections
-    //{
-    //    public static async Task<List<T>> GetMultipleDocuments<T>(this IFindFluent<T, T> query)
-    //    {
-    //        return await query.ToListAsync();
-    //    }
-
-    //    public static async Task<T> GetSingleDocument<T>(this IFindFluent<T, T> query, ProjectionDefinition<T, T>? projection = null)
-    //    {
-    //        return await query.Project(projection).FirstOrDefaultAsync();
-    //    }
-    //}
-
     public class BaseService<T, Tid>(IMongoCollection<T> Collection)
         where T : ICollectionEntity<Tid>
     {
@@ -42,7 +30,7 @@ namespace MMIv8_Ktype.Core.Services
         public FilterDefinition<T> FilterByDocumentId(Tid documentId) => Builders<T>.Filter.Eq(c => c.DocumentId, documentId);
 
         #region Query
-        public IFindFluent<T, T> GetFindFluent(FilterDefinition<T>? filter = null, SortDefinition<T>? sort = null, int? skip = null, int? take = null, int? batchSize = null)
+        public IFindFluent<T, T> GetFindFluent(FilterDefinition<T>? filter = null, SortDefinition<T>? sort = null, int? batchSize = null)
         {
             filter ??= Builders<T>.Filter.Empty;
             var options = new FindOptions { BatchSize = batchSize };
@@ -54,7 +42,7 @@ namespace MMIv8_Ktype.Core.Services
             else
                 query = query.Sort(this.SortByDocumentId());
 
-            return query.Skip(skip).Limit(take);
+            return query;
         }
 
         public IQueryable<T> GetQueryable()
@@ -68,10 +56,6 @@ namespace MMIv8_Ktype.Core.Services
             return await Collection.Find(filter).Sort(this.SortByDocumentId()).CountDocumentsAsync();
         }
 
-        public async Task<long> CountByQuery(IFindFluent<T, T> query)
-        {
-            return await query.CountDocumentsAsync();
-        }
         #endregion
 
         #region Get Documents
@@ -88,22 +72,28 @@ namespace MMIv8_Ktype.Core.Services
             return await this.GetFindFluent(this.FilterByDocumentId(documentId)).FirstOrDefaultAsync();
         }
 
-        public async Task<PagedResponse<TOut>> PaginateDocuments<TOut>(FilterDefinition<T>? filter = null, SortDefinition<T>? sort = null, int page = 1, int pageSize = 100, ProjectionDefinition<T, TOut>? projection = null)
+        public async Task<PagedResponse<TOut>> PaginateDocuments<TOut>(FilterDefinition<T>? filter = null, SortDefinition<T>? sort = null, int page = 1, int pageSize = 100, ProjectionDefinition<T, TOut>? projection = null, PageCount pageCount = PageCount.EstimatedCount)
         {
             Log.Debug("Paging {Type} Page: {page}", typeof(T).Name, page);
             var sw = Stopwatch.StartNew();
 
             sort = sort is null ? this.SortByDocumentId() : sort.Ascending(c => c.DocumentId);
-            var query = this.GetFindFluent(filter, sort, (page - 1) * pageSize, pageSize);
+            var query = this.GetFindFluent(filter, sort);
 
-            var count = query.CountDocumentsAsync();
-            var results = query.Project(projection).ToListAsync();
+            Task<long> count = pageCount switch
+            {
+                PageCount.EstimatedCount => Collection.EstimatedDocumentCountAsync(),
+                PageCount.Count => query.CountDocumentsAsync(),
+                _ => Task.Run(() => (long)0),
+            };
+
+            var results = query.Skip((page - 1) * pageSize).Limit(pageSize).Project(projection).ToListAsync();
 
             var pagedResults = new PagedResponse<TOut>(await results, Convert.ToInt32(await count), page, pageSize);
 
             sw.Stop();
 
-            Log.Debug("Paged {Type} {@page} in {Time}", typeof(T).Name, pagedResults.PageDetails(), sw);
+            Log.Information("Paged {Type} {@page} in {Time}", typeof(T).Name, pagedResults.PageDetails(), sw);
 
             return pagedResults;
         }

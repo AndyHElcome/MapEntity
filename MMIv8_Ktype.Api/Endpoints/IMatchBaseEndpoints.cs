@@ -1,4 +1,5 @@
-﻿using MMIv8_Ktype.Api.Requests;
+﻿using Microsoft.AspNetCore.Mvc;
+using MMIv8_Ktype.Api.Requests;
 using MMIv8_Ktype.Api.Responses;
 using MMIv8_Ktype.Models.Attributes;
 using MMIv8_Ktype.Models.Collections;
@@ -11,10 +12,10 @@ namespace MMIv8_Ktype.Api.Endpoints
     public interface IMatchBaseEndpoints : IEndpoint
     {
         [Get("")]
-        Task<List<MatchBase>> GetAll();
+        Task<PagedResponse<MatchBase>> GetAll([FromQuery] int Page, [FromQuery] int PageSize);
 
         [Get("/GetByType/{MatchBaseType}")]
-        Task<List<MatchBase>> GetByMatchBaseType(MatchBaseType MatchBaseType);
+        Task<PagedResponse<MatchBase>> GetByMatchBaseType([FromQuery] MatchBaseType MatchBaseType, [FromQuery] int Page, [FromQuery] int PageSize, [FromQuery] PageCount pageCount);
 
         [Get("/GetById/{MatchHash}")]
         Task<MatchBase?> GetById(string MatchHash);

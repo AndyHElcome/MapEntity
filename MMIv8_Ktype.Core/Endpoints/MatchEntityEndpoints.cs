@@ -6,6 +6,7 @@ using MMIv8_Ktype.Api.Responses;
 using MMIv8_Ktype.Core.Services.Mapping;
 using MMIv8_Ktype.Core.Services.Match;
 using MMIv8_Ktype.Models.Collections;
+using MMIv8_Ktype.Models.Util;
 using MongoDB.Driver;
 
 namespace MMIv8_Ktype.Core.Endpoints
@@ -13,22 +14,22 @@ namespace MMIv8_Ktype.Core.Endpoints
     public class MatchEntityEndpoints(MatchEntityService matchEntityService,
                                       MappingService mappingService) : IMatchEntityEndpoints
     {
-        public async Task<PagedResponse<MatchEntity>> GetAll(int Page, int PageSize) //TODO change to stream call
+        public async Task<PagedResponse<MatchEntity>> GetAll(int Page = 1, int PageSize = 100)
         {
             return await matchEntityService.PaginateDocuments<MatchEntity>(page: Page, pageSize: PageSize);
         }
 
-        public async Task<PagedResponse<MatchEntity>> GetAllMatchRefine(int Page, int PageSize) //TODO change to stream call
+        public async Task<PagedResponse<MatchEntity>> GetAllMatchRefine(int Page = 1, int PageSize = 100, PageCount pageCount = PageCount.Count)
         {
             var filterBuilder = Builders<MatchEntity>.Filter;
             var filter = filterBuilder.Eq(c => c.MatchResult.Failed, false)
                        & (filterBuilder.Eq(c => c.MatchRefine.IsCheck, true) | filterBuilder.Size(c => c.MatchRefine.ChosenMatches, 0));
 
 
-            return await matchEntityService.PaginateDocuments<MatchEntity>(filter: filter, page: Page, pageSize: PageSize);
+            return await matchEntityService.PaginateDocuments<MatchEntity>(filter: filter, page: Page, pageSize: PageSize, pageCount: pageCount);
         }
 
-        public async Task<PagedResponse<MatchEntityBackup>> GetMatchEntityBackup(int Page, int PageSize) //TODO change to stream call
+        public async Task<PagedResponse<MatchEntityBackup>> GetMatchEntityBackup(int Page = 1, int PageSize = 100)
         {
             var filterBuilder = Builders<MatchEntity>.Filter;
             var filter = filterBuilder.Eq(c => c.Matched, true)

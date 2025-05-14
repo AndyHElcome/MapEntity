@@ -1,5 +1,7 @@
-﻿using MMIv8_Ktype.Api.Endpoints;
+﻿using Microsoft.AspNetCore.Mvc.RazorPages;
+using MMIv8_Ktype.Api.Endpoints;
 using MMIv8_Ktype.Api.Requests;
+using MMIv8_Ktype.Api.Responses;
 using MMIv8_Ktype.Core.Services;
 using MMIv8_Ktype.Core.Services.Mapping;
 using MMIv8_Ktype.Core.Services.Match;
@@ -14,17 +16,18 @@ using System.Text.RegularExpressions;
 namespace MMIv8_Ktype.Core.Endpoints
 {
     public class MatchBaseEndpoints(MatchBaseService matchBaseService,
-                                    MappingService mappingService,
-                                    IVersionProvider versionProvider) : IMatchBaseEndpoints
+                                    MappingService mappingService) : IMatchBaseEndpoints
     {
-        public async Task<List<MatchBase>> GetAll() //TODO change to stream call
+        public async Task<PagedResponse<MatchBase>> GetAll(int Page = 1, int PageSize = 100)
         {
-            return await matchBaseService.GetFindFluent().ToListAsync();
+            return await matchBaseService.PaginateDocuments<MatchBase>(page: Page, pageSize: PageSize);
         }
 
-        public async Task<List<MatchBase>> GetByMatchBaseType(MatchBaseType MatchBaseType) //TODO change to stream call
+        public async Task<PagedResponse<MatchBase>> GetByMatchBaseType(MatchBaseType MatchBaseType, int Page = 1, int PageSize = 100, PageCount PageCount = PageCount.Count) //TODO change to stream call
         {
-            return await matchBaseService.GetByMatchBaseType(MatchBaseType);
+            var filter = Builders<MatchBase>.Filter.Eq(c => c.MatchBaseType, MatchBaseType);
+
+            return await matchBaseService.PaginateDocuments<MatchBase>(filter, page: Page, pageSize: PageSize, pageCount: PageCount);
         }
 
         public async Task<MatchBase?> GetById(string MatchHash)
@@ -32,9 +35,9 @@ namespace MMIv8_Ktype.Core.Endpoints
             return await matchBaseService.GetById(MatchHash);
         }
 
-        public async Task UpdateStatus(MatchBase request, Status status, string? detail = null)
+        public async Task UpdateStatus(MatchBase request, StatusChange newStatus)
         {
-            await matchBaseService.Update(request).AppendPipeline(c => c.AppendStatus(versionProvider.NewStatus(status, detail))).UpdateDocuments();
+            await matchBaseService.Update(request).AppendPipeline(c => c.AppendStatus(newStatus)).UpdateDocuments();
         }
 
         public async Task UpdateMatchBaseScore(PutMatchBaseRequest request)

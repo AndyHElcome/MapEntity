@@ -4,6 +4,7 @@ using MMIv8_Ktype.Api.Requests;
 using MMIv8_Ktype.Api.Responses;
 using MMIv8_Ktype.Models.Attributes;
 using MMIv8_Ktype.Models.Collections;
+using MMIv8_Ktype.Models.Util;
 using MongoDB.Driver;
 using Refit;
 
@@ -19,10 +20,10 @@ namespace MMIv8_Ktype.Api.Endpoints
         Task<MatchEntity?> CheckEntityMatch(MatchEntityByExternalRequest request);
 
         [Get("/GetAll")]
-        Task<PagedResponse<MatchEntity>> GetAll([FromQuery] int Page = 1, [FromQuery] int PageSize = 100);
+        Task<PagedResponse<MatchEntity>> GetAll([FromQuery] int Page, [FromQuery] int PageSize);
 
         [Post("/MatchRefine/GetAll")]
-        Task<PagedResponse<MatchEntity>> GetAllMatchRefine([FromQuery] int Page = 1, [FromQuery] int PageSize = 100);
+        Task<PagedResponse<MatchEntity>> GetAllMatchRefine([FromQuery] int Page, [FromQuery] int PageSize, [FromQuery] PageCount pageCount);
 
         [Put("/UpdateFailedFlag")]
         Task UpdateFailedFlag(UpdateFlagRequest request);
@@ -34,7 +35,7 @@ namespace MMIv8_Ktype.Api.Endpoints
         Task UpdateMatchRefineStatus([FromBody] int[] MMI_V8_Keys);
 
         [Post("/Debug/GetMatchEntityBackup")]
-        Task<PagedResponse<MatchEntityBackup>> GetMatchEntityBackup([FromQuery] int Page = 1, [FromQuery] int PageSize = 100);
+        Task<PagedResponse<MatchEntityBackup>> GetMatchEntityBackup([FromQuery] int Page, [FromQuery] int PageSize);
 
         [Delete("/Debug/DeleteAll")]
         Task DeleteAll();

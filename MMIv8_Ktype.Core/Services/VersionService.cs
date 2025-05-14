@@ -37,7 +37,7 @@ namespace MMIv8_Ktype.Core.Services
             var sort = Builders<Version>.Sort.Descending(m => m.VersionNumber);
             var projection = Builders<Version>.Projection.Expression(c => c.DocumentId);
 
-            return await base.GetFindFluent(sort: sort, skip: skip).Project(projection).FirstOrDefaultAsync();
+            return await base.GetFindFluent(sort: sort).Skip(skip).Project(projection).FirstOrDefaultAsync();
         }
 
         public async Task<Version> GetByVersion(int version)

@@ -290,7 +290,7 @@ namespace MMIv8_Ktype.Core.Services.Mapping
             {
                 Log.Debug("Starting {MatchBaseType} {time}", groupedMatchBase.Key, sw);
 
-                var existingMatchBases = (await MatchBaseService.GetByMatchBaseType(groupedMatchBase.Key)).ToList();
+                var existingMatchBases = await MatchBaseService.GetByMatchBaseType(groupedMatchBase.Key);
 
                 existingMatchBases = existingMatchBases.IntersectBy(groupedMatchBase.Value.Select(c => c.DocumentId), c => c.DocumentId).ToList();
                 var newMatchBases = groupedMatchBase.Value.Where(c => c.MatchBaseMethod == MatchBaseMethod.Manual).ExceptBy(existingMatchBases.Select(c => c.DocumentId), c => c.DocumentId);
@@ -507,7 +507,7 @@ namespace MMIv8_Ktype.Core.Services.Mapping
 
         public async IAsyncEnumerable<IEnumerable<MatchEntity>> GenerateEntityMatch(IEnumerable<SourceTecDocPC> tecdocEntities, IEnumerable<SourceMMIv8> mmiEntities, ObjectId MakeModelMatchID)
         {
-            foreach (var tecdocEntity in tecdocEntities) //TODO Create previous match collection and then keep these updated
+            foreach (var tecdocEntity in tecdocEntities)
             {
                 var query = mmiEntities.AsParallel().Select(m => new MatchEntity(versionProvider, tecdocEntity, m, MakeModelMatchID)).Where(m => m.DateIntersection.date_Intersection != 0);
 
@@ -515,6 +515,7 @@ namespace MMIv8_Ktype.Core.Services.Mapping
             }
         }
 
+        [Obsolete("No longer required", true)]
         public async Task UpdatePreviousMatchedFlag(IEnumerable<EntityRelation> entityRelations) // TODO Change to single MMI_V8_Key
         {
             var sw = Stopwatch.StartNew();
@@ -544,6 +545,7 @@ namespace MMIv8_Ktype.Core.Services.Mapping
             sw.Stop();
         }
 
+        [Obsolete("No longer required", true)]
         public async Task UpdatePreviousMatchedFlag(IEnumerable<UpdateFlagRequest> input) // TODO Change to single MMI_V8_Key
         {
             var filterBuilder = Builders<MatchEntity>.Filter;
@@ -659,6 +661,26 @@ namespace MMIv8_Ktype.Core.Services.Mapping
 
             var bulkMatchRefineResult = await bulkMatchRefineUpdate.CommitBulkWrite();
             Log.Information("Updated Match Refine for {count} matches", bulkMatchRefineResult.ModifiedCount);
+        }
+
+        public async Task UpdateFailedFlag(UpdateFlagRequest request) // TODO Update to reflect UpdatePreviousMatchedFlag
+        {
+            var sw = Stopwatch.StartNew();
+
+            var filterBuilder = Builders<MatchEntity>.Filter;
+            var filter = filterBuilder.Eq(c => c.TecDocEntity.ExternalId, request.KTypNr)
+                       & filterBuilder.Eq(c => c.MMIv8Entity.ExternalId, request.MMI_V8_Key);
+
+            var combinationFlagUpdate = 
+                new CombinationPipeline<MatchEntity>(MatchEntityService.Collection, filter).AppendUpdate(c => c.SetFailedFlag(request.Flag))
+                                                                                           .AppendPipeline(c => c.AppendStatus(versionProvider.NewStatus(Status.Checked, $"Updated Failed Flag {request.Detail}")));
+            var combinationFlagResult = await combinationFlagUpdate.UpdateDocuments();
+
+            var bulkMatchRefineUpdate = await MatchEntityService.BulkCombinationUpdateMatchRefine([ request.MMI_V8_Key ]);
+            var bulkMatchRefineResult = await bulkMatchRefineUpdate.CommitBulkWrite();
+
+            sw.Stop();
+            Log.Information("Updated Failed Flag {flagUpdate}; {count} MatchRefines in {time}", combinationFlagResult.IsAcknowledged ? combinationFlagResult.ModifiedCount : "notAcknowledged", bulkMatchRefineResult.Acknowledged ? bulkMatchRefineResult.ModifiedCount : "notAcknowledged", sw);
         }
 
         public async Task UpdateMatchRefineStatus(IEnumerable<int> mmi_V8_Keys)

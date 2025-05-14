@@ -13,16 +13,16 @@ namespace MMIv8_Ktype.AccessMdb
     public static class Extensions
     {
 
-        private static readonly Dictionary<Type, Type> AccessTypeMap = new()
-        {
-            { typeof(ObjectId), typeof(string) },
-            // Add more mappings here as needed
-        };
+        //private static readonly Dictionary<Type, Type> AccessTypeMap = new()
+        //{
+        //    { typeof(ObjectId), typeof(string) },
+        //    // Add more mappings here as needed
+        //};
 
-        private static Type AccessTypeHandler(this Type type)
-        {
-            return AccessTypeMap.TryGetValue(type, out var mappedType) ? mappedType : type;
-        }
+        //private static Type AccessTypeHandler(this Type type)
+        //{
+        //    return AccessTypeMap.TryGetValue(type, out var mappedType) ? mappedType : type;
+        //}
 
         public static DataRow ConvertObjToDataRow(this DataRow dataRow, object obj ) // TODO Move
         {
