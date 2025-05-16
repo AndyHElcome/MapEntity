@@ -9,12 +9,6 @@ using System.Threading.Tasks;
 
 namespace MMIv8_Ktype.AccessMdb.Maps
 {
-    public class MatchMakeModelMaps
-    {
-
-
-    }
-
     public record MatchMakeModelRecord (ObjectId MatchID,
                                         string TD_SourceEntityModelHash,
                                         string TD_Make,

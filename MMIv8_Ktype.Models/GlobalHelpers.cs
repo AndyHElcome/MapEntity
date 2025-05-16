@@ -13,18 +13,32 @@ namespace MMIv8_Ktype.Models
 {
     public static class GlobalHelpers
     {
-        public static void AddProperty(ExpandoObject expando, string propertyName, object propertyValue)
+        public static ExpandoObject AddProperty(this ExpandoObject expando, string propertyName, object? propertyValue)
         {
             var expandoDict = expando as IDictionary<string, object>;
             if (expandoDict.ContainsKey(propertyName))
             {
-                expandoDict[ propertyName ] = propertyValue;
+                expandoDict[ propertyName ] = propertyValue ?? string.Empty;
             }
             else
             {
-                expandoDict.Add(propertyName, propertyValue);
+                expandoDict.Add(propertyName, propertyValue ?? string.Empty);
             }
+
+            return expando;
         }
+        //public static void AddProperty(ExpandoObject expando, string propertyName, object propertyValue)
+        //{
+        //    var expandoDict = expando as IDictionary<string, object>;
+        //    if (expandoDict.ContainsKey(propertyName))
+        //    {
+        //        expandoDict[ propertyName ] = propertyValue;
+        //    }
+        //    else
+        //    {
+        //        expandoDict.Add(propertyName, propertyValue);
+        //    }
+        //}
 
         public static string GenerateKey(object sourceObject)
         {
@@ -89,6 +103,7 @@ namespace MMIv8_Ktype.Models
             return lcs;
         }
 
+
         public static Dictionary<string, object> ObjToDictionary(object obj)
         {
             if (obj is null)
@@ -105,15 +120,26 @@ namespace MMIv8_Ktype.Models
             catch (NullReferenceException nrex)
             {
                 //Serilog.Log.Error(nrex, "Exception using ObjToDictionary");
-                return new();
+                //return new();
+                throw new Exception("Exception using ObjToDictionary", nrex);
             }
             catch (Exception ex)
             {
                 //Serilog.Log.Error(ex, "Exception using ObjToDictionary: {obj}", obj);
-                return new();
+                //return new();
+                throw new Exception($"Exception using ObjToDictionary: {@obj}", ex);
             }
         }
 
+        /// <summary>
+        /// Instantiate class from constructorArgs
+        /// </summary>
+        /// <typeparam name="T"></typeparam>
+        /// <param name="type"></param>
+        /// <param name="constructorArgs"></param>
+        /// <returns></returns>
+        /// <exception cref="Exception"></exception>
+        /// <exception cref="NullReferenceException"></exception>
         public static T StringToObject<T>(this Type type, string[] constructorArgs)
         {
             if (type != typeof(T) && !type.IsAssignableTo(typeof(T)))

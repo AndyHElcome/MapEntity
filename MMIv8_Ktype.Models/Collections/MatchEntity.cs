@@ -5,9 +5,13 @@ using MongoDB.Bson.Serialization.Attributes;
 using MMIv8_Ktype.Models.Outputs;
 using MMIv8_Ktype.Models.Status;
 using MMIv8_Ktype.Models.Indexes;
+using System.Text.Json.Serialization;
+using System.Dynamic;
+using System.Xml;
 
 namespace MMIv8_Ktype.Models.Collections
 {
+    [Serializable]
     public class MatchEntity : ICollectionEntity<ObjectId>, IStatusHistory
     {
         [BsonId]
@@ -30,9 +34,11 @@ namespace MMIv8_Ktype.Models.Collections
         public decimal? ScoreSum { get; set; }
         public decimal? ScoreAverage { get; set; }
 
+        [BsonElement]
         public bool IsBest => ScoreSum == MatchRefine.BestScore;
         public bool Matched { get; set; } = false;
         public string? MatchDetail { get; set; }
+
 
         public MatchEntity(IVersionProvider versionProvider, SourceTecDocPC tecdoc, SourceMMIv8 mmiv8, ObjectId matchMakeModelMatchID)
         {
@@ -49,7 +55,12 @@ namespace MMIv8_Ktype.Models.Collections
         [Obsolete("Version Required")]
         public MatchEntity(SourceTecDocPC tecdoc, SourceMMIv8 mmiv8, ObjectId matchMakeModelMatchID)
         {
-           throw new NotImplementedException("Version is now required");
+            throw new NotImplementedException("Version is now required");
+        }
+
+        [JsonConstructor]
+        public MatchEntity()
+        {
         }
 
         public void CalculateMatchBases(IVersionProvider versionProvider)

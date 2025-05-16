@@ -109,18 +109,15 @@ namespace MMIv8_Ktype.Core.Services.Mapping
             {
                 await MatchEntityService.DeleteByFilter(filter); //TODO Create previous match collection and then keep these updated
 
-                using var makeModelMatches = await MatchMakeModelService.GetByModelId(sourceEntity.SourceIndex, sourceEntity.SourceEntityModelHash);
-                while (await makeModelMatches.MoveNextAsync())
+                var makeModelMatches = await MatchMakeModelService.GetByModelId(sourceEntity.SourceIndex, sourceEntity.SourceEntityModelHash);
+                foreach (var makeModelMatch in makeModelMatches)
                 {
-                    foreach (var makeModelMatch in makeModelMatches.Current)
-                    {
-                        var tecdocEntities = await GetEntities<SourceTecDocPC>(makeModelMatch.TecDocModel.DocumentId);
-                        var mmiEntities = await GetEntities<SourceMMIv8>(makeModelMatch.MMIv8Model.DocumentId);
+                    var tecdocEntities = await GetEntities<SourceTecDocPC>(makeModelMatch.TecDocModel.DocumentId);
+                    var mmiEntities = await GetEntities<SourceMMIv8>(makeModelMatch.MMIv8Model.DocumentId);
 
-                        await foreach (var newMatch in MappingService.GenerateEntityMatch(tecdocEntities, mmiEntities, makeModelMatch.DocumentId))
-                        {
-                            await MappingService.BulkCreateEntityMatch(newMatch.ToList());
-                        }
+                    await foreach (var newMatch in MappingService.GenerateEntityMatch(tecdocEntities, mmiEntities, makeModelMatch.DocumentId))
+                    {
+                        await MappingService.BulkCreateEntityMatch(newMatch.ToList());
                     }
                 }
 

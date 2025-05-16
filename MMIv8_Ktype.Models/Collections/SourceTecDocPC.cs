@@ -1,8 +1,12 @@
-﻿using MMIv8_Ktype.Models.DateIntersection;
+﻿using MMIv8_Ktype.Models.Attributes;
+using MMIv8_Ktype.Models.DateIntersection;
 using MMIv8_Ktype.Models.Indexes;
+using MMIv8_Ktype.Models.Util;
 using MongoDB.Bson;
 using MongoDB.Bson.Serialization.Attributes;
+using System.Dynamic;
 using System.Text.Json.Serialization;
+using System.Xml;
 
 namespace MMIv8_Ktype.Models.Collections
 {
@@ -75,6 +79,7 @@ namespace MMIv8_Ktype.Models.Collections
         public string LinkedEngineCodes { get; set; }
 
         [BsonElement]
+        [DoNotUpdateDifferences]
         public override string EntityHash => GlobalHelpers.GenerateKey(new
         {
             KTypNr,

@@ -1,7 +1,9 @@
 ﻿
+using System.Text.Json.Serialization;
+
 namespace MMIv8_Ktype.Models.Status
 {
-
+    [Serializable]
     public class StatusHistory
     {
         public StatusHistory(IVersionProvider versionProvider)
@@ -9,6 +11,7 @@ namespace MMIv8_Ktype.Models.Status
             History = new([ versionProvider.NewStatus(Status.Created) ]);
         }
 
+        [JsonConstructor]
         [Obsolete("Version is now required")]
         public StatusHistory()
         {

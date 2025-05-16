@@ -23,7 +23,7 @@ namespace MMIv8_Ktype.Core.Services.Match
             return await base.GetFindFluent(filter, batchSize: batchSize).ToCursorAsync();
         }
 
-        public async Task<IAsyncCursor<MatchMakeModel>> GetByModelId(SourceIndex sourceIndex, string SourceEntityModelHash)
+        public async Task<List<MatchMakeModel>> GetByModelId(SourceIndex sourceIndex, string SourceEntityModelHash)
         {
             var builder = Builders<MatchMakeModel>.Filter;
             var filter = builder.Empty;
@@ -34,7 +34,7 @@ namespace MMIv8_Ktype.Core.Services.Match
             if (sourceIndex == SourceIndex.MMIv8)
                 filter = builder.Eq(e => e.MMIv8Model.DocumentId, SourceEntityModelHash);
 
-            return await base.GetFindFluent(filter).ToCursorAsync();
+            return await base.GetFindFluent(filter).ToListAsync();
         }
 
         public async Task<MatchMakeModel?> GetByModelIds(MatchMakeModelRequest request)
@@ -97,8 +97,8 @@ namespace MMIv8_Ktype.Core.Services.Match
             var mmiMatches = await GetByModelId(SourceIndex.MMIv8, model.MMIv8Model.DocumentId);
 
             var updateFilter = filterBuilder.Exists(m => m.TecDocModel.DocumentId) & filterBuilder.Exists(m => m.MMIv8Model.DocumentId);
-            var tecdocFilter = filterBuilder.In(m => m.TecDocModel.DocumentId, mmiMatches.ToList().Select(m => m.TecDocModel.DocumentId));
-            var mmiFilter = filterBuilder.In(m => m.MMIv8Model.DocumentId, tecdocMatches.ToList().Select(m => m.MMIv8Model.DocumentId));
+            var tecdocFilter = filterBuilder.In(m => m.TecDocModel.DocumentId, mmiMatches.Select(m => m.TecDocModel.DocumentId));
+            var mmiFilter = filterBuilder.In(m => m.MMIv8Model.DocumentId, tecdocMatches.Select(m => m.MMIv8Model.DocumentId));
 
             updateFilter &= tecdocFilter | mmiFilter;
 

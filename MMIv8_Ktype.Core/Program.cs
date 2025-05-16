@@ -27,9 +27,14 @@ internal class Program
         ConventionRegistry.Register("IgnoreIfNullConvention", new ConventionPack { new IgnoreIfNullConvention(true) }, t => true);
         
 
-        builder.Services.AddControllers().AddJsonOptions(opts => JsonSerializationOptions.ApplyJsonSettings(opts.JsonSerializerOptions)); // Not required if not controllers
+        //builder.Services.AddControllers().AddJsonOptions(opts => JsonSerializationOptions.ApplyJsonSettings(opts.JsonSerializerOptions)); // Not required if not controllers
 
-        builder.Services.Configure<Microsoft.AspNetCore.Http.Json.JsonOptions>(opts => JsonSerializationOptions.ApplyJsonSettings(opts.SerializerOptions));
+        //builder.Services.Configure<Microsoft.AspNetCore.Http.Json.JsonOptions>(opts => JsonSerializationOptions.ApplyJsonSettings(opts.SerializerOptions));
+
+
+        builder.Services.AddControllers().AddJsonOptions(opts => opts.JsonSerializerOptions.GetJsonSerializerOptions()); // Not required if not controllers
+
+        builder.Services.Configure<Microsoft.AspNetCore.Http.Json.JsonOptions>(opts => opts.SerializerOptions.GetJsonSerializerOptions());
 
         builder.Services.AddSingleton<MongoDBContext>();
 

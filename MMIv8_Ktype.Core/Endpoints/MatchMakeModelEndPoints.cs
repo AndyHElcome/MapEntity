@@ -5,6 +5,7 @@ using MMIv8_Ktype.Core.Services;
 using MMIv8_Ktype.Core.Services.Mapping;
 using MMIv8_Ktype.Core.Services.Match;
 using MMIv8_Ktype.Models.Collections;
+using MMIv8_Ktype.Models.Indexes;
 using MongoDB.Bson;
 using MongoDB.Driver;
 
@@ -24,9 +25,14 @@ namespace MMIv8_Ktype.Core.Endpoints
             return await bulkMappingService.GenerateMakeModelMatch();
         }
 
-        public async Task<MatchMakeModel?> GetMakeModelMatch(MatchMakeModelRequest request)
+        public async Task<MatchMakeModel?> GetMakeModelMatch(string TD_SourceEntityModelHash, string MMI_SourceEntityModelHash)
         {
-            return await matchMakeModelService.GetByModelIds(request);
+            return await matchMakeModelService.GetByModelIds(new(TD_SourceEntityModelHash, MMI_SourceEntityModelHash));
+        }
+
+        public async Task<List<MatchMakeModel>> GetByModelId(SourceIndex SourceIndex, string SourceEntityModelHash)
+        {
+            return await matchMakeModelService.GetByModelId(SourceIndex, SourceEntityModelHash);
         }
 
         public async Task<MatchMakeModel?> GetMakeModelMatchById(ObjectId MatchID)

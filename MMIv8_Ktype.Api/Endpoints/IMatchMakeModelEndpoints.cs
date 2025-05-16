@@ -3,6 +3,7 @@ using MMIv8_Ktype.Api.Requests;
 using MMIv8_Ktype.Api.Responses;
 using MMIv8_Ktype.Models.Attributes;
 using MMIv8_Ktype.Models.Collections;
+using MMIv8_Ktype.Models.Indexes;
 using MongoDB.Bson;
 using Refit;
 
@@ -17,8 +18,11 @@ namespace MMIv8_Ktype.Api.Endpoints
         [Get("/{MatchID}")]
         Task<MatchMakeModel?> GetMakeModelMatchById(ObjectId MatchID);
 
-        [Post("/GetByModels")]
-        Task<MatchMakeModel?> GetMakeModelMatch(MatchMakeModelRequest request);
+        [Get("/GetByModels")]
+        Task<MatchMakeModel?> GetMakeModelMatch([FromQuery] string TD_SourceEntityModelHash, [FromQuery] string MMI_SourceEntityModelHash);
+
+        [Get("/{SourceIndex}/{SourceEntityModelHash}")]
+        Task<List<MatchMakeModel>> GetByModelId(SourceIndex SourceIndex, string SourceEntityModelHash);
 
         [Post("/GenerateModelMatch")]
         Task<List<MatchMakeModel>> GenerateMakeModelMatch();

@@ -571,6 +571,23 @@ namespace MMIv8_Ktype.Core.Services.Mapping
             sw.Stop();
             Log.Information("Updated Checked Status {matchEntityCount} MatchEntities; {matchRefineCount} MatchRefines in {time}", matchEntityResult.IsAcknowledged ? matchEntityResult.ModifiedCount : "notAcknowledged", bulkMatchRefineResult.Acknowledged ? bulkMatchRefineResult.ModifiedCount : "notAcknowledged", sw);
         }
+
+        public async Task ResetMatchResult(int mmi_V8_Key)
+        {
+            var sw = Stopwatch.StartNew();
+            var filter = Builders<MatchEntity>.Filter.Eq(c => c.MMIv8Entity.ExternalId, mmi_V8_Key);
+
+            var matchEntityUpdate = new CombinationPipeline<MatchEntity>(MatchEntityService.Collection, filter).AppendUpdate(c => c.SetMatchedFlag(false, ""))
+                                                                                                               .AppendPipeline(c => c.UpdateScoreMatchResult())
+                                                                                                               .AppendPipeline(c => c.RemoveStatus(Status.Checked));
+            var matchEntityResult = await matchEntityUpdate.UpdateDocuments();
+
+            var bulkMatchRefineUpdate = await MatchEntityService.BulkCombinationUpdateMatchRefine([ mmi_V8_Key ]);
+            var bulkMatchRefineResult = await bulkMatchRefineUpdate.CommitBulkWrite();
+
+            sw.Stop();
+            Log.Information("Updated Checked Status {matchEntityCount} MatchEntities; {matchRefineCount} MatchRefines in {time}", matchEntityResult.IsAcknowledged ? matchEntityResult.ModifiedCount : "notAcknowledged", bulkMatchRefineResult.Acknowledged ? bulkMatchRefineResult.ModifiedCount : "notAcknowledged", sw);
+        }
         #endregion
 
 

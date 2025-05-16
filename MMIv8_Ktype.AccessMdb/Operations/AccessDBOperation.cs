@@ -2,11 +2,18 @@
 using MMIv8_Ktype.Api;
 using MMIv8_Ktype.Api.Endpoints;
 using MMIv8_Ktype.Api.Requests;
+using MMIv8_Ktype.Api.Responses;
 using MMIv8_Ktype.Models;
 using MMIv8_Ktype.Models.Collections;
+using MMIv8_Ktype.Models.Outputs;
+using MMIv8_Ktype.Models.Util;
 using Serilog;
 using System.Data;
 using System.Data.OleDb;
+using System.Dynamic;
+using System.Formats.Asn1;
+using System.Text.Json;
+using System.Text.Json.Nodes;
 
 namespace MMIv8_Ktype.AccessMdb.Operations
 {
@@ -17,6 +24,8 @@ namespace MMIv8_Ktype.AccessMdb.Operations
 
         internal string QueryString = $"SELECT * FROM [{tableName}]";
         internal DataSet DBDataSet = new();
+
+        internal JsonSerializerOptions JsonSerializerOptions = new JsonSerializerOptions().GetJsonSerializerOptions();
 
         public abstract Task ExecuteOperation(ILogger log);
 
@@ -71,6 +80,32 @@ namespace MMIv8_Ktype.AccessMdb.Operations
         }
 
         public DataTable AddNewTableToDataSet(object obj, string tableName, string[] primaryKeys, ILogger log)
+        {
+            if (!TableExists(tableName))
+            {
+                DataTable newTable = Extensions.ConvertObjToNewDataTable(obj, tableName, primaryKeys);
+
+                ExecuteSQLQuery(Extensions.BuildCreateTableSql(newTable), log);
+
+                log.Information("Created table {table}", tableName);
+
+                return AddTableToDataSet(tableName, log);
+            }
+            else if (!DBDataSet.Tables.Contains(tableName))
+            {
+                log.Warning("Table {tableName} already exists in Database", tableName);
+
+                return AddTableToDataSet(tableName, log);
+            }
+            else
+            {
+                log.Warning("Table {tableName} already exists in DataSet", tableName);
+
+                return DBDataSet.Tables[ tableName ];
+            }
+        }
+
+        public DataTable AddNewTableToDataSet(Dictionary<string, object> obj, string tableName, string[] primaryKeys, ILogger log)
         {
             if (!TableExists(tableName))
             {
@@ -236,7 +271,7 @@ namespace MMIv8_Ktype.AccessMdb.Operations
         }
     }
 
-    public class LoadPreviousMatches(string dbPath, string tableName, int versionNumber) : AccessDBOperation(dbPath, tableName)
+    public class LoadEntityRelation(string dbPath, string tableName, int versionNumber) : AccessDBOperation(dbPath, tableName)
     {
         public int VersionNumber = versionNumber;
 
@@ -246,12 +281,11 @@ namespace MMIv8_Ktype.AccessMdb.Operations
 
             DataTable dataTable = AddTableToDataSet(TableName, log) ?? throw new NoNullAllowedException();
 
-            var data = dataTable.Select().Select(c => GlobalHelpers.StringToObject<PutEntityRelationRequest>( c.ItemArray.Select(c => c?.ToString() ?? string.Empty).ToArray()) ).ToList();
+            var data = dataTable.Select().Select(c => GlobalHelpers.StringToObject<PutEntityRelationRequest>(c.ItemArray.Select(c => c?.ToString() ?? string.Empty).ToArray())).ToList();
 
-
-            foreach (var mmi in data.GroupBy(c => c.MMI_V8_Key).ToDictionary(g => g.Key, g => g.ToList()))
+            foreach (var batch in data.Chunk(1000))
             {
-                await entityRelationEndpoints.CreateEntityRelation(VersionNumber, mmi.Value); //TODO Create return types
+                await entityRelationEndpoints.CreateEntityRelation(VersionNumber, batch.ToList()); //TODO Create return types
             }
 
             log.Information("Loaded {count} Previous Matches for Version {vesionNumber}", data?.Count, VersionNumber);
@@ -268,10 +302,10 @@ namespace MMIv8_Ktype.AccessMdb.Operations
 
             MatchMakeModelRecord matchMakeModels1 = matchMakeModels.First(); //TODO Change this
 
-            DataTable dataTable = AddNewTableToDataSet(matchMakeModels1, TableName, [ "MatchID" ], log) ?? throw new NoNullAllowedException();
+            DataTable dataTable = AddNewTableToDataSet(matchMakeModels1, TableName, [ nameof(MatchMakeModelRecord.MatchID) ], log) ?? throw new NoNullAllowedException();
 
             foreach (MatchMakeModelRecord matchMakeModel in matchMakeModels)
-            { 
+            {
                 try
                 {
                     var newRow = dataTable.NewRow().ConvertObjToDataRow(matchMakeModel);
@@ -286,7 +320,183 @@ namespace MMIv8_Ktype.AccessMdb.Operations
 
             CommitChanges(TableName, log);
 
-            log.Information("Loaded {tableCount} / {apicount} records into {table}", dataTable.Rows.Count, matchMakeModels.Count, TableName );
+            log.Information("Loaded {tableCount} / {apicount} records into {table}", dataTable.Rows.Count, matchMakeModels.Count, TableName);
+        }
+    }
+
+    public class GenerateMatchRefine(string dbPath, string tableName) : AccessDBOperation(dbPath, tableName)//TODO FIX FOR MATCH REFINE
+    {
+        public async override Task ExecuteOperation(ILogger log)
+        {
+            DropTable(TableName, log);
+
+            var matchEntityEndpoints = new RefitClient(log).CreateService<IMatchEntityEndpoints>();
+
+            var response = await matchEntityEndpoints.GetAllMatchRefine();
+
+            var firstRecord = response.FirstOrDefault(); //TODO Change this
+
+            if (firstRecord is null)
+                return;
+
+            DataTable dataTable = AddNewTableToDataSet(firstRecord, TableName, [ nameof(MatchRefine.MMIv8EntityId) ], log) ?? throw new NoNullAllowedException();
+
+            foreach (MatchRefine matchEntity in response)
+            {
+                try
+                {
+                    var newRow = dataTable.NewRow().ConvertObjToDataRow(matchEntity);
+                    dataTable.Rows.Add(newRow);
+                }
+                catch (Exception ex)
+                {
+                    log.Error(ex, "Error writing {@item}", matchEntity);
+                }
+            }
+
+            CommitChanges(TableName, log);
+
+            log.Information("Loaded {tableCount} / {apicount} records into {table}", dataTable.Rows.Count, response.Count, TableName);
+        }
+    }
+
+    public class GenerateMatchSummary(string dbPath, string tableName) : AccessDBOperation(dbPath, tableName)
+    {
+        public async override Task ExecuteOperation(ILogger log)
+        {
+            DropTable(TableName, log);
+
+            var matchEntityEndpoints = new RefitClient(log).CreateService<IMatchEntityEndpoints>();
+
+            var singleMatch = await matchEntityEndpoints.GetAllMatchEntitySummary(1, 1, MakeModelMatchId: "682484cac744b4c72aec79a5");
+            var firstRecord = singleMatch.Documents.FirstOrDefault(); //TODO Change this
+
+            if (firstRecord is null)
+                return;
+
+            DataTable dataTable = AddNewTableToDataSet(firstRecord, TableName, [ nameof(MatchEntitySummary.DocumentId) ], log) ?? throw new NoNullAllowedException();
+
+            int page = 1;
+            PagedResponse<MatchEntitySummary> response;
+
+            do
+            {
+                response = await matchEntityEndpoints.GetAllMatchEntitySummary(page, 1000, MakeModelMatchId: "682484cac744b4c72aec79a5");
+                foreach (MatchEntitySummary matchEntity in response.Documents)
+                {
+                    try
+                    {
+                        var newRow = dataTable.NewRow().ConvertObjToDataRow(matchEntity);
+                        dataTable.Rows.Add(newRow);
+                    }
+                    catch (Exception ex)
+                    {
+                        log.Error(ex, "Error writing {@item}", matchEntity);
+                    }
+                }
+                page++;
+            }
+            while (response.HasNextPage);
+
+            CommitChanges(TableName, log);
+
+            log.Information("Loaded {tableCount} / {apicount} records into {table}", dataTable.Rows.Count, response.TotalDocuments, TableName);
+        }
+    }
+
+    public class GenerateMatchEntity(string dbPath, string tableName) : AccessDBOperation(dbPath, tableName) //TODO Tidy up expando building maybe even push to project
+    {
+        public async override Task ExecuteOperation(ILogger log)
+        {
+            DropTable(TableName, log);
+
+            var matchEntityEndpoints = new RefitClient(log).CreateService<IMatchEntityEndpoints>();
+            var t = await matchEntityEndpoints.GetAll(1, 1, MakeModelMatchId: "682484cac744b4c72aec79a5");
+            var firstRecord = t.Documents.FirstOrDefault(); //TODO Change this
+
+            var expando = new ExpandoObject();
+            expando.BuildExpando(firstRecord);
+
+            var dict = expando.ToDictionary();
+
+            if (dict is null)
+                return;
+
+            DataTable dataTable = AddNewTableToDataSet(dict, TableName, [ nameof(MatchEntity.DocumentId) ], log) ?? throw new NoNullAllowedException();
+
+            int page = 1;
+            PagedResponse<MatchEntity> response;
+
+            do
+            {
+                response = await matchEntityEndpoints.GetAll(page, 1000, MakeModelMatchId: "682484cac744b4c72aec79a5");
+                foreach (MatchEntity matchEntity in response.Documents)
+                {
+                    try
+                    {
+                        expando = new ExpandoObject();
+                        expando.BuildExpando(matchEntity);
+                        dict = expando.ToDictionary();
+
+                        var newRow = dataTable.NewRow().ConvertObjToDataRow(dict);
+                        dataTable.Rows.Add(newRow);
+                    }
+                    catch (Exception ex)
+                    {
+                        log.Error(ex, "Error writing {@item}", dict);
+                    }
+                }
+                page++;
+            }
+            while (response.HasNextPage);
+
+            CommitChanges(TableName, log);
+
+            log.Information("Loaded {tableCount} / {apicount} records into {table}", dataTable.Rows.Count, response.TotalDocuments, TableName);
+        }
+    }
+
+    public class GenerateMMIEntities(string dbPath, string tableName) : AccessDBOperation(dbPath, tableName)
+    {
+        public async override Task ExecuteOperation(ILogger log)
+        {
+            DropTable(TableName, log);
+
+            var sourceEntityEndpoints = new RefitClient(log).CreateService<ISourceMMIv8Endpoints>();
+
+            var singleMatch = await sourceEntityEndpoints.GetAll(1, 1);
+            var firstRecord = singleMatch.Documents.FirstOrDefault(); //TODO Change this
+
+            if (firstRecord is null)
+                return;
+
+            DataTable dataTable = AddNewTableToDataSet(new SourceMMIv8(), TableName, [ nameof(SourceMMIv8.ExternalId) ], log) ?? throw new NoNullAllowedException();
+
+            int page = 1;
+            PagedResponse<SourceMMIv8> response;
+
+            do
+            {
+                response = await sourceEntityEndpoints.GetAll(page, 1000);
+                foreach (SourceMMIv8 matchEntity in response.Documents)
+                {
+                    try
+                    {
+                        var newRow = dataTable.NewRow().ConvertObjToDataRow(matchEntity);
+                        dataTable.Rows.Add(newRow);
+                    }
+                    catch (Exception ex)
+                    {
+                        log.Error(ex, "Error writing {@item}", matchEntity);
+                    }
+                }
+                page++;
+            }
+            while (response.HasNextPage);
+
+            CommitChanges(TableName, log);
+
+            log.Information("Loaded {tableCount} / {apicount} records into {table}", dataTable.Rows.Count, response.TotalDocuments, TableName);
         }
     }
 }

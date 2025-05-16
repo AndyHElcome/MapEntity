@@ -200,6 +200,10 @@ namespace MMIv8_Ktype.Core.Contexts
                 new (matchEntityIndexBuilder.Ascending(c => c.Matched),
                      new() { Name = "Matched", Unique = false, Background = true }
                 ),
+                new (matchEntityIndexBuilder.Ascending(c => c.MMIv8Entity.DocumentId)
+                                            .Descending(c => c.ScoreSum),
+                     new() { Name = "MMIv8Entity.SourceEntityID_ScoreSum", Unique = false, Background = true }
+                ),
             };
 
             foreach (MatchBaseType matchBaseType in (MatchBaseType[])Enum.GetValues(typeof(MatchBaseType)))

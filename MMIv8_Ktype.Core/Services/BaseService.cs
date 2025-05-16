@@ -25,7 +25,7 @@ namespace MMIv8_Ktype.Core.Services
     {
         public IMongoCollection<T> Collection = Collection;
 
-        public SortDefinition<T> SortByDocumentId(SortDefinition<T>? sort = null) => sort is null ? Builders<T>.Sort.Ascending(c => c.DocumentId) : sort.Ascending(c => c.DocumentId);
+        public SortDefinition<T> SortByDocumentId(SortDefinition<T>? sort = null) => sort is null ? Builders<T>.Sort.Ascending(c => c.DocumentId) : sort;
 
         public FilterDefinition<T> FilterByDocumentId(Tid documentId) => Builders<T>.Filter.Eq(c => c.DocumentId, documentId);
 
@@ -54,8 +54,8 @@ namespace MMIv8_Ktype.Core.Services
         {
             if (filter is null || filter == Builders<T>.Filter.Empty)
             {
-                var opt = new CountOptions() { Hint = "_id_" };
                 filter = Builders<T>.Filter.Empty;
+                var opt = new CountOptions() { Hint = "_id_" };
                 return await Collection.CountDocumentsAsync(filter, opt);
             }
             else
@@ -74,6 +74,34 @@ namespace MMIv8_Ktype.Core.Services
             filter ??= Builders<T>.Filter.Empty;
 
             return await Collection.DistinctAsync<TOut>(fieldName, filter);
+        }
+
+        public async Task<List<TOut>> GetDistinctDocuments<TOut>(string fieldName, FilterDefinition<T>? filter = null)
+        {
+            filter ??= Builders<T>.Filter.Empty;
+
+            return await Collection.Distinct<TOut>(fieldName, filter).ToListAsync();
+        }
+
+        public async IAsyncEnumerable<IEnumerable<TOut>> EnumerateDistinctDocuments<TOut>(string fieldName, FilterDefinition<T>? filter = null)
+        {
+            filter ??= Builders<T>.Filter.Empty;
+
+            Log.Debug("Starting Enumerate Distinct {Type}", typeof(T).Name);
+            var sw = Stopwatch.StartNew();
+
+            int i = 0;
+            using var cursor = await this.GetDistinctCursor<TOut>(fieldName, filter);
+            while (await cursor.MoveNextAsync())
+            {
+                yield return cursor.Current;
+
+                i += cursor.Current.Count();
+                Log.Debug("Enumerating Distinct {Type} {Current} {Time}", typeof(T).Name, i, sw);
+            }
+
+            sw.Stop();
+            Log.Information("Completed Enumerate of {count} Distinct {Type} into {OutType} in {Time}", i, typeof(T).Name, typeof(TOut).Name, sw);
         }
 
         public async Task<T> GetById(Tid documentId)

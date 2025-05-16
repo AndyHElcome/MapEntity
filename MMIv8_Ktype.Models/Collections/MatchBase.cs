@@ -73,13 +73,13 @@ namespace MMIv8_Ktype.Models.Collections
             string mmiEntity = string.Join(' ', MMIEntity.Select(c => c.Value.ToString()).Where(c => !string.IsNullOrWhiteSpace(c)));
             return $"TD: [{tecdocEntity}] MMI: [{mmiEntity}] Score: {Score} [{MatchBaseType}-{DocumentId}]";
         }
-
         public dynamic BuildCsvObject()
         {
             dynamic csvObj = new ExpandoObject();
 
             csvObj.MatchHash = DocumentId;
             csvObj.MatchBaseType = MatchBaseType;
+
 
             foreach (var p in TecDocEntity)
             {
