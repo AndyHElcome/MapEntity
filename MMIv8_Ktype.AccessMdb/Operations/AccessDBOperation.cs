@@ -16,6 +16,7 @@ using System.Data;
 using System.Data.OleDb;
 using System.Dynamic;
 using System.Formats.Asn1;
+using System.Reflection.Metadata;
 using System.Security.Cryptography;
 using System.Text.Json;
 using static MMIv8_Ktype.AccessMdb.Operations.GenerateMMIEntities;
@@ -37,8 +38,9 @@ namespace MMIv8_Ktype.AccessMdb.Operations
         public delegate Task<PagedResponse<T>> GetPagedDocumentsDelegate<T>(int page, int pageSize);
         public delegate Task<PagedCursorResponse<T>> GetPagedDocumentsDelegatev2<T>(string? cursor, int pageSize);
         public delegate Task<List<T>> GetDocumentsDelegate<T>();
+        public delegate Task<T> GetDocumentsByIdDelegate<T, Tid>(Tid documentId);
         public delegate TOut ConvertDocumentToDataRowObject<T, TOut>(T document);
-        public delegate TCursor ConvertDocumentIdToCursor<Tid, TCursor>(Tid document);
+        public delegate TCursor ConvertDocumentIdToCursor<Tid, TCursor>(Tid documentId);
 
         public async Task GenerateTableFromPagedCursor<T, TObjType, TDocumentId>(
             string tableName,
@@ -46,9 +48,11 @@ namespace MMIv8_Ktype.AccessMdb.Operations
             GetPagedDocumentsDelegatev2<T> getPagedDocumentsFunc,
             ConvertDocumentToDataRowObject<T, TObjType> convertToRow,
             string[] primaryKeys,
-            int pageSize = 1000)
+            int pageSize = 1000,
+            bool append = false)
         {
-            DropTable(tableName, log);
+            if (!append)
+                DropTable(tableName, log);
 
             string? cursor = null;
             var headerDocument = await getPagedDocumentsFunc(cursor, 1);
@@ -57,7 +61,6 @@ namespace MMIv8_Ktype.AccessMdb.Operations
                 return;
             if (headerDocument is null || headerDocument.Documents.Count == 0 || headerDocument.TotalDocuments == 0)
                 throw new Exception("Pattern Matching didn't work");
-
 
             DataTable dataTable = AddNewTableToDataSet(convertToRow(headerDocument!.Documents!.FirstOrDefault()!)!, tableName, primaryKeys, log) ?? throw new NoNullAllowedException();
 
@@ -93,9 +96,11 @@ namespace MMIv8_Ktype.AccessMdb.Operations
             ILogger log,
             GetPagedDocumentsDelegate<T> getPagedDocumentsFunc,
             ConvertDocumentToDataRowObject<T, TObjType> convertToRow,
-            string[] primaryKeys)
+            string[] primaryKeys,
+            bool append = false)
         {
-            DropTable(tableName, log);
+            if (!append)
+                DropTable(tableName, log);
 
             var headerDocument = await getPagedDocumentsFunc(1, 1);
 
@@ -139,9 +144,11 @@ namespace MMIv8_Ktype.AccessMdb.Operations
             ILogger log,
             GetDocumentsDelegate<T> getDocumentsFunc,
             ConvertDocumentToDataRowObject<T, TObjType> convertToRow,
-            string[] primaryKeys)
+            string[] primaryKeys,
+            bool append = false)
         {
-            DropTable(tableName, log);
+            if (!append)
+                DropTable(tableName, log);
 
             var response = await getDocumentsFunc();
 
@@ -375,13 +382,13 @@ namespace MMIv8_Ktype.AccessMdb.Operations
         }
     }
 
-    public class Match(string dbPath, string tableName, string outputColumn) : AccessDBOperation(dbPath, tableName)
+    public class UpdateMatchedFlag(string dbPath, string tableName, string outputColumn) : AccessDBOperation(dbPath, tableName)
     {
         public string OutputColumn = outputColumn;
 
         public async override Task ExecuteOperation(ILogger log)
         {
-            IMatchBaseEndpoints matchBaseEndpoints = new RefitClient(log, 5).CreateService<IMatchBaseEndpoints>();
+            IMatchEntityEndpoints matchEntityEndpoints = new RefitClient(log).CreateService<IMatchEntityEndpoints>();
 
             DataTable dataTable = AddTableToDataSet(TableName, log) ?? throw new NoNullAllowedException();
 
@@ -390,12 +397,12 @@ namespace MMIv8_Ktype.AccessMdb.Operations
                 try
                 {
                     string[] args = row.ItemArray.Select(c => c?.ToString() ?? string.Empty)
-                                             .Where(c => c != row[ OutputColumn ].ToString())
-                                             .ToArray();
+                                                 .Where(c => c != row[ OutputColumn ].ToString())
+                                                 .ToArray();
 
-                    PutMatchBaseRequest putMatchBaseRequest = GlobalHelpers.StringToObject<PutMatchBaseRequest>(args);
+                    UpdateFlagRequest record = GlobalHelpers.StringToObject<UpdateFlagRequest>(args);
 
-                    await matchBaseEndpoints.StorePartialMatchBase(putMatchBaseRequest.MatchBaseType, putMatchBaseRequest.MatchHash, putMatchBaseRequest.NewScore); //TODO Create return types
+                    await matchEntityEndpoints.UpdateMatchedFlag(record); //TODO Create return types
 
                     row[ OutputColumn ] = "Updated";
                 }
@@ -457,6 +464,7 @@ namespace MMIv8_Ktype.AccessMdb.Operations
         public bool? IsFailed { get; }
         public bool? HasDifference { get; }
         public Status[]? Status { get; }
+        public bool Append { get; }
 
         public GenerateMatchRefine(
             string dbPath,
@@ -468,7 +476,8 @@ namespace MMIv8_Ktype.AccessMdb.Operations
             bool? isMatched = null,
             bool? isFailed = null,
             bool? hasDifference = null,
-            Status[]? status = null) : base(dbPath, tableName)
+            Status[]? status = null,
+            bool append = false) : base(dbPath, tableName)
         {
             MakeModelMatchId = makeModelMatchId;
             TecDocEntityId = tecDocEntityId;
@@ -478,6 +487,7 @@ namespace MMIv8_Ktype.AccessMdb.Operations
             IsFailed = isFailed;
             HasDifference = hasDifference;
             Status = status;
+            Append = append;
         }
 
         public GenerateMatchRefine(string dbPath, string tableName) : base(dbPath, tableName) { }
@@ -493,7 +503,8 @@ namespace MMIv8_Ktype.AccessMdb.Operations
                 log,
                 () => matchEntityEndpoints.GetAllMatchRefine(MakeModelMatchId, TecDocEntityId, MMIv8EntityId, IsCheck, IsMatched, IsFailed, HasDifference, Status),
                 (document) => document,
-                [ nameof(MatchRefine.DocumentId) ]
+                [ nameof(MatchRefine.DocumentId) ],
+                append: Append
                 );
         }
     }
@@ -508,6 +519,7 @@ namespace MMIv8_Ktype.AccessMdb.Operations
         public bool? IsFailed { get; }
         public bool? HasDifference { get; }
         public Status[]? Status { get; }
+        public bool Append { get; }
 
         public GenerateMatchSummary(string dbPath, string tableName) : base(dbPath, tableName) { }
 
@@ -521,7 +533,8 @@ namespace MMIv8_Ktype.AccessMdb.Operations
             bool? isMatched = null,
             bool? isFailed = null,
             bool? hasDifference = null,
-            Status[]? status = null) : base(dbPath, tableName)
+            Status[]? status = null,
+            bool append = false) : base(dbPath, tableName)
         {
             MakeModelMatchId = makeModelMatchId;
             TecDocEntityId = tecDocEntityId;
@@ -531,6 +544,7 @@ namespace MMIv8_Ktype.AccessMdb.Operations
             IsFailed = isFailed;
             HasDifference = hasDifference;
             Status = status;
+            Append = append;
         }
 
 
@@ -543,7 +557,8 @@ namespace MMIv8_Ktype.AccessMdb.Operations
                 log,
                 (string? cursor, int pageSize) => matchEntityEndpoints.GetAllMatchEntitySummary(cursor, pageSize, MakeModelMatchId, TecDocEntityId, MMIv8EntityId, IsCheck, IsMatched, IsFailed, HasDifference, Status),
                 (document) => document,
-                [ nameof(MatchEntitySummary.DocumentId) ]
+                [ nameof(MatchEntitySummary.DocumentId) ],
+                append: Append
                 );
         }
     }
@@ -558,6 +573,7 @@ namespace MMIv8_Ktype.AccessMdb.Operations
         public bool? IsFailed { get; }
         public bool? HasDifference { get; }
         public Status[]? Status { get; }
+        public bool Append { get; }
 
         public GenerateMatchEntity(string dbPath, string tableName) : base(dbPath, tableName) { }
 
@@ -571,7 +587,8 @@ namespace MMIv8_Ktype.AccessMdb.Operations
             bool? isMatched = null,
             bool? isFailed = null,
             bool? hasDifference = null,
-            Status[]? status = null) : base(dbPath, tableName)
+            Status[]? status = null,
+            bool append = false) : base(dbPath, tableName)
         {
             MakeModelMatchId = makeModelMatchId;
             TecDocEntityId = tecDocEntityId;
@@ -581,6 +598,7 @@ namespace MMIv8_Ktype.AccessMdb.Operations
             IsFailed = isFailed;
             HasDifference = hasDifference;
             Status = status;
+            Append = append;
         }
 
 
@@ -593,8 +611,93 @@ namespace MMIv8_Ktype.AccessMdb.Operations
                 log,
                 (string? cursor, int pageSize) => matchEntityEndpoints.GetAll(cursor, pageSize, MakeModelMatchId, TecDocEntityId, MMIv8EntityId, IsCheck, IsMatched, IsFailed, HasDifference, Status),
                 (MatchEntity document) => new ExpandoObject().BuildExpando(document),
-                [ nameof(MatchEntity.DocumentId) ]
+                [ nameof(MatchEntity.DocumentId) ], 
+                append: Append
                 );
+        }
+    }
+
+    public class GenerateMatchEntityById : AccessDBOperation //TODO Tidy up expando building maybe even push to projection
+    {
+        private readonly string tableName;
+        public string DocumentId;
+        public bool Append;
+        public IMatchEntityEndpoints? MatchEntityEndpoints;
+
+        public GenerateMatchEntityById(string dbPath, string tableName, string documentId, bool append) : base(dbPath, tableName)
+        {
+            this.tableName = tableName;
+            DocumentId = documentId;
+            Append = append;
+            MatchEntityEndpoints = null;
+        }
+        public GenerateMatchEntityById(string dbPath, string tableName, string documentId, bool append, IMatchEntityEndpoints matchEntityEndpoints) : base(dbPath, tableName)
+        {
+            this.tableName = tableName;
+            DocumentId = documentId;
+            Append = append;
+            MatchEntityEndpoints = matchEntityEndpoints;
+        }
+
+        public async override Task ExecuteOperation(ILogger log)
+        {
+            if (!Append)
+                DropTable(TableName, log);
+
+            MatchEntityEndpoints ??= new RefitClient(log).CreateService<IMatchEntityEndpoints>();
+
+            try
+            {
+                var objectId = ObjectId.Parse(DocumentId);
+                var matchEntity = await MatchEntityEndpoints.GetById(objectId);
+                var matchEntityExpando = new ExpandoObject().BuildExpando(matchEntity);
+
+                DataTable dataTable = AddNewTableToDataSet(matchEntityExpando, tableName, [ nameof(MatchEntity.DocumentId) ], log) ?? throw new NoNullAllowedException();
+
+                var newRow = dataTable.NewRow().ConvertObjToDataRow(matchEntityExpando);
+                dataTable.Rows.Add(newRow);
+            }
+            catch (Exception ex)
+            {
+                log.Error(ex, "Error writing {@item}", DocumentId);
+            }
+                
+            CommitChanges(TableName, log);
+        }
+    }
+
+    public class GenerateEntityMatchByIds(string dbPath, string tableName, string outputTableName, string inputColumn, string outputColumn, bool append) : AccessDBOperation(dbPath, tableName)
+    {
+        public string OutputTableName = outputTableName;
+        public string OutputColumn = outputColumn;
+        public string InputColumn = inputColumn;
+        public bool Append = append;
+
+        public async override Task ExecuteOperation(ILogger log)
+        {
+            if (!Append)
+                DropTable(OutputTableName, log);
+
+            DataTable dataTable = AddTableToDataSet(TableName, log) ?? throw new NoNullAllowedException();
+
+            var matchEntityEndpoints = new RefitClient(log).CreateService<IMatchEntityEndpoints>();
+
+            foreach (DataRow row in dataTable.Rows)
+            {
+                try
+                {
+                    await new GenerateMatchEntityById(DBPath, OutputTableName, row[ InputColumn ].ToString(), true, matchEntityEndpoints).ExecuteOperation(log); //TODO Create return types
+
+                    row[ OutputColumn ] = "Updated";
+                }
+                catch (Exception ex)
+                {
+                    row[ OutputColumn ] = ex.Message;
+                    log.Error(ex, "Error in {@args}", row.ItemArray);
+                }
+            }
+
+            CommitChanges(TableName, log);
         }
     }
 

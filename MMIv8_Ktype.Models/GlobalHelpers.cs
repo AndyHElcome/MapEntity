@@ -161,10 +161,13 @@ namespace MMIv8_Ktype.Models
                 //parsedArgs[ i ] = Convert.ChangeType(constructorArgs[ i ], parameters[ i ].ParameterType);
 
                 Type paramType = parameters[ i ].ParameterType;
+                var defaultValue = parameters[ i ].DefaultValue;
                 string arg = constructorArgs[ i ];
-                
+
                 if (paramType.IsEnum)
-                    parsedArgs[ i ] = Enum.Parse( paramType, arg );
+                    parsedArgs[ i ] = Enum.Parse(paramType, arg);
+                else if (arg == "null")
+                   parsedArgs[ i ] = defaultValue;
                 else
                     parsedArgs[ i ] = Convert.ChangeType(arg, paramType);
             }
