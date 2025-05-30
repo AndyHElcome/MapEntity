@@ -13,7 +13,7 @@ namespace MMIv8_Ktype.Api.Endpoints
     public interface IMatchMakeModelEndpoints : IEndpoint
     {
         [Get("")]
-        Task<PagedResponse<MatchMakeModel>> GetAll([FromQuery] int Page, [FromQuery] int PageSize);
+        Task<PagedCursorResponse<MatchMakeModel>> GetAll([FromQuery] string? cursor = null, [FromQuery] int PageSize = 0);
 
         [Get("/{MatchID}")]
         Task<MatchMakeModel?> GetMakeModelMatchById(ObjectId MatchID);

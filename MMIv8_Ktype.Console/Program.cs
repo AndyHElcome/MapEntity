@@ -39,9 +39,13 @@ internal class Program
 
         args = [ "MMIv8_Ktype.AccessMdb", "GenerateMatchRefine", @"C:\Users\andy.hargreaves\OneDrive - Elcome Ltd\Desktop\NEW MMI TO KTYPE\MMIv8_Ktype2.accdb", "MatchRefine" ];
 
-        args = [ "MMIv8_Ktype.AccessMdb", "GenerateMatchSummary", @"C:\Users\andy.hargreaves\OneDrive - Elcome Ltd\Desktop\NEW MMI TO KTYPE\MMIv8_Ktype2.accdb", "MatchEntitySummary" ];
+        //args = [ "MMIv8_Ktype.AccessMdb", "GenerateMatchSummary", @"C:\Users\andy.hargreaves\OneDrive - Elcome Ltd\Desktop\NEW MMI TO KTYPE\MMIv8_Ktype2.accdb", "MatchEntitySummary" ];
 
-        args = [ "MMIv8_Ktype.AccessMdb", "GenerateMatchEntity", @"C:\Users\andy.hargreaves\OneDrive - Elcome Ltd\Desktop\NEW MMI TO KTYPE\MMIv8_Ktype2.accdb", "MatchEntity" ];
+        //args = [ "MMIv8_Ktype.AccessMdb", "GenerateMatchEntity", @"C:\Users\andy.hargreaves\OneDrive - Elcome Ltd\Desktop\NEW MMI TO KTYPE\MMIv8_Ktype2.accdb", "MatchEntity" ];
+
+        //args = [ "MMIv8_Ktype.AccessMdb", "GenerateMMIEntities", @"C:\Users\andy.hargreaves\OneDrive - Elcome Ltd\Desktop\NEW MMI TO KTYPE\MMIv8_Ktype2.accdb", "Source_MMIv8" ];
+
+        //args = [ "MMIv8_Ktype.AccessMdb", "GenerateTecDocEntities", @"C:\Users\andy.hargreaves\OneDrive - Elcome Ltd\Desktop\NEW MMI TO KTYPE\MMIv8_Ktype2.accdb", "Source_TecDocPC" ];
 
         //args = [ "MMIv8_Ktype.CSV", "GenerateModelMatchCSV", @"C:\Users\andy.hargreaves\OneDrive - Elcome Ltd\Desktop\NEW MMI TO KTYPE\Output\MakeModelMatch.csv" ];
 
@@ -60,6 +64,10 @@ internal class Program
         //args = [ "MMIv8_Ktype.CSV", "UpdateTecDocEntity", @"C:\Users\andy.hargreaves\OneDrive - Elcome Ltd\Desktop\NEW MMI TO KTYPE\Source_TD_PC-124.txt" ];
 
         //args = [ "MMIv8_Ktype.CSV", "UpdateMMIv8Entity", @"C:\Users\andy.hargreaves\OneDrive - Elcome Ltd\Desktop\NEW MMI TO KTYPE\Source_MMIv8-100051.txt" ];
+
+        //args = [ "MMIv8_Ktype.CSV", "ReloadTecDocPCEntities", @"C:\Users\andy.hargreaves\OneDrive - Elcome Ltd\Desktop\NEW MMI TO KTYPE\Source_TD_PC.txt" ];
+
+        //args = [ "MMIv8_Ktype.CSV", "ReloadMMIv8Entities", @"C:\Users\andy.hargreaves\OneDrive - Elcome Ltd\Desktop\NEW MMI TO KTYPE\Source_MMIv8.txt" ];
 
         if (args.Length < 2)
         {

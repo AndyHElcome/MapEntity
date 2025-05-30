@@ -17,10 +17,10 @@ namespace MMIv8_Ktype.Api.Endpoints
     public interface IEntityRelationEndpoints : IEndpoint
     {
         [Get("/GetCurrentEntityRelations")]
-        Task<PagedResponse<EntityRelation>> GetCurrentEntityRelations([FromQuery] int Page, [FromQuery] int PageSize);
+        Task<PagedCursorResponse<EntityRelation>> GetCurrentEntityRelations([FromQuery] string? cursor = null, [FromQuery] int PageSize = 0);
 
         [Get("/GetPreviousEntityRelations")]
-        Task<PagedResponse<EntityRelation>> GetPreviousEntityRelations([FromQuery] int Page, [FromQuery] int PageSize);
+        Task<PagedCursorResponse<EntityRelation>> GetPreviousEntityRelations([FromQuery] string? cursor = null, [FromQuery] int PageSize = 0);
 
         [Post("/CreateEntityRelation")]
         Task CreateEntityRelation(int versionNumber, List<PutEntityRelationRequest> entityRelationsRequest);

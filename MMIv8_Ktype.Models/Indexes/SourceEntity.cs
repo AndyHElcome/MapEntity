@@ -20,7 +20,7 @@ namespace MMIv8_Ktype.Models.Indexes
         [DoNotUpdateDifferences]
         public StatusHistory Status { get; set; }
 
-        public abstract DateTimeRange DateRange { get; }
+        public abstract DateOnlyRange DateRange { get; }
         public abstract string EntityHash { get; }
         public abstract string SourceEntityModelHash { get; }
 

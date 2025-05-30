@@ -9,6 +9,7 @@ using MMIv8_Ktype.Models.Collections;
 using MMIv8_Ktype.Models.Indexes;
 using MongoDB.Bson;
 using MongoDB.Driver;
+using System.Reflection.Metadata;
 
 namespace MMIv8_Ktype.Core.Endpoints
 {
@@ -24,9 +25,10 @@ namespace MMIv8_Ktype.Core.Endpoints
                                           ISourceEntityUpdateService<T> updateService) : ISourceEntityEndpoints<T>
         where T : SourceEntity
     {
-        public async Task<PagedResponse<T>> GetAll(int Page, int PageSize)
+        public async Task<PagedCursorResponse<T>> GetAll(string? Cursor, int PageSize)
         {
-            return await sourceEntityService.PaginateDocuments<T>(page: Page, pageSize: PageSize);
+            var objectId = ObjectId.TryParse(Cursor, out var objectid) ? objectid : ObjectId.Empty;
+            return await sourceEntityService.PaginateDocumentsByCursor<T, ObjectId>(cursor: objectId, pageSize: PageSize);
         }
 
         public async Task<T?> GetById(ObjectId EntityId)

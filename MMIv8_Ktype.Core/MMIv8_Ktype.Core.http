@@ -29,3 +29,7 @@ GET {{MMIv8_Ktype.Core_HostAddress}}/MatchBase/GetByType/{{MatchBaseType}}
 GET {{MMIv8_Ktype.Core_HostAddress}}/MatchEntity/GetAll?Page={{Page}}&PageSize={{PageSize}}
 
 ###
+
+GET {{MMIv8_Ktype.Core_HostAddress}}/MatchEntity/MatchRefine
+
+###

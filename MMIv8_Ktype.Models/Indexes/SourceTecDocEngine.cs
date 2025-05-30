@@ -16,7 +16,7 @@ namespace MMIv8_Ktype.Models.Indexes
         public int DTo { get; set; }
 
         [MongoDB.Bson.Serialization.Attributes.BsonElement]
-        public override DateTimeRange DateRange => new(DFrom, DTo);
+        public override DateOnlyRange DateRange => new(DFrom, DTo);
 
         [MongoDB.Bson.Serialization.Attributes.BsonRepresentation(BsonType.Decimal128)]
         public int Valves { get; set; }

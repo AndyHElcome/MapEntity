@@ -3,9 +3,10 @@ using MongoDB.Bson;
 
 namespace MMIv8_Ktype.Models.Outputs
 {
-    public class MatchRefine
+    public class MatchRefine : ICollectionEntity<ObjectId>
     {
-        public ObjectId MMIv8EntityId { get; set; }
+        [MongoDB.Bson.Serialization.Attributes.BsonElement("MMIv8EntityId")]
+        public ObjectId DocumentId { get; set; }
         public ObjectId[]? BestMatches { get; set; }
         public ObjectId[]? LastMatches { get; set; }
         public ObjectId[]? ChosenMatches { get; set; }
@@ -22,9 +23,9 @@ namespace MMIv8_Ktype.Models.Outputs
             var mmiv8EntityId = matchEntities.Select(c => c.MMIv8Entity.DocumentId).Distinct();
 
             if (mmiv8EntityId.Count() > 1)
-                MMIv8EntityId = ObjectId.Empty;
+                DocumentId = ObjectId.Empty;
             else
-                MMIv8EntityId = mmiv8EntityId.FirstOrDefault();
+                DocumentId = mmiv8EntityId.FirstOrDefault();
 
             var passedMatches = matchEntities.Where(c => !c.MatchResult.Failed);
 

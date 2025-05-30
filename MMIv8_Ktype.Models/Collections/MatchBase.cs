@@ -340,16 +340,16 @@ namespace MMIv8_Ktype.Models.Collections
         public override Dictionary<string, dynamic> CreateTecDocEntity(MatchEntity matchEntity)
             => GlobalHelpers.ObjToDictionary(new
             {
-                matchEntity.TecDocEntity.DateRange.Start,
-                matchEntity.TecDocEntity.DateRange.End,
+                Start = matchEntity.TecDocEntity.DateRange.Start.ToString(),
+                End = matchEntity.TecDocEntity.DateRange.End.ToString(),
                 matchEntity.DateIntersection.date_TD_Coverage,
             });
 
         public override Dictionary<string, dynamic> CreateMMIEntity(MatchEntity matchEntity)
             => GlobalHelpers.ObjToDictionary(new
             {
-                matchEntity.MMIv8Entity.DateRange.Start,
-                matchEntity.MMIv8Entity.DateRange.End,
+                Start = matchEntity.MMIv8Entity.DateRange.Start.ToString(),
+                End = matchEntity.MMIv8Entity.DateRange.End.ToString(),
                 matchEntity.DateIntersection.date_MMI_Coverage,
                 matchEntity.DateIntersection.date_InverseIntersection,
             });

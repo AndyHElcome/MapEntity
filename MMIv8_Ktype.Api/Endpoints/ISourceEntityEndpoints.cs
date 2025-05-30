@@ -15,7 +15,7 @@ namespace MMIv8_Ktype.Api.Endpoints
     public interface ISourceEntityEndpoints<T>
     {
         [Get("")]
-        Task<PagedResponse<T>> GetAll(int Page, int PageSize);
+        Task<PagedCursorResponse<T>> GetAll(string? Cursor, int PageSize);
 
         [Get("/GetByExternalId/{ExternalId}")]
         Task<T?> GetByExternalId(int ExternalId);

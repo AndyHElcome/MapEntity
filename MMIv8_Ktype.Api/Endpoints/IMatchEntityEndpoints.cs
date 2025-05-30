@@ -19,9 +19,9 @@ namespace MMIv8_Ktype.Api.Endpoints
         [Get("/{DocumentId}")]
         Task<MatchEntity> GetById(ObjectId DocumentId);
 
-        [Get("")]
-        Task<PagedResponse<MatchEntity>> GetAll(
-            int Page = 1,
+        [Get("")] 
+        Task<PagedCursorResponse<MatchEntity>> GetAll(
+            string? cursor = null,
             int PageSize = 100,
             string? MakeModelMatchId = null,
             string? TecDocEntityId = null,
@@ -33,8 +33,8 @@ namespace MMIv8_Ktype.Api.Endpoints
             Status[]? Status = null);
 
         [Get("/MatchSummary")]
-        Task<PagedResponse<MatchEntitySummary>> GetAllMatchEntitySummary(
-            int Page = 1,
+        Task<PagedCursorResponse<MatchEntitySummary>> GetAllMatchEntitySummary(
+            string? cursor = null,
             int PageSize = 100,
             string? MakeModelMatchId = null,
             string? TecDocEntityId = null,
@@ -71,10 +71,10 @@ namespace MMIv8_Ktype.Api.Endpoints
         [Put("/ResetMatchResult/{MMI_V8_Key}")]
         Task ResetMatchResult([FromRoute] int MMI_V8_Key);
 
-        [Post("/Debug/GetMatchEntityBackup")]
-        Task<PagedResponse<MatchEntityBackup>> GetMatchEntityBackup([FromQuery] int Page, [FromQuery] int PageSize);
+        [Get("/Debug/GetMatchEntityBackup")]
+        Task<PagedCursorResponse<MatchEntityBackup>> GetMatchEntityBackup(string? cursor = null, int PageSize = 100);
 
         [Delete("/Debug/DeleteAll")]
         Task DeleteAll();
-     }
+    }
 }

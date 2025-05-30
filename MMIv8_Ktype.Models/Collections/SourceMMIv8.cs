@@ -42,7 +42,7 @@ namespace MMIv8_Ktype.Models.Collections
         public int End_Year { get; set; }
 
         [BsonElement]
-        public override DateTimeRange DateRange => new(Start_Month, Start_Year, End_Month, End_Year);
+        public override DateOnlyRange DateRange => new(Start_Month, Start_Year, End_Month, End_Year);
 
         public string Body { get; set; }
         public int Doors { get; set; }

@@ -12,17 +12,13 @@ using MMIv8_Ktype.Models.Status;
 using MMIv8_Ktype.Models.Util;
 using MongoDB.Bson;
 using MongoDB.Driver;
+using System.Reflection.Metadata;
 
 namespace MMIv8_Ktype.Core.Endpoints
 {
     public class MatchEntityEndpoints(MatchEntityService matchEntityService,
                                       MappingService mappingService) : IMatchEntityEndpoints
     {
-        //public async Task<PagedResponse<MatchEntity>> GetAll(int Page = 1, int PageSize = 100)
-        //{
-        //    return await matchEntityService.PaginateDocuments<MatchEntity>(page: Page, pageSize: PageSize);
-        //}
-
         private static FilterDefinition<MatchEntity> MatchEntityFilter(
             string? MakeModelMatchId = null,
             string? TecDocEntityId = null,
@@ -68,8 +64,8 @@ namespace MMIv8_Ktype.Core.Endpoints
             return await matchEntityService.GetById(DocumentId);
         }
 
-        public async Task<PagedResponse<MatchEntity>> GetAll(
-            int Page = 1,
+        public async Task<PagedCursorResponse<MatchEntity>> GetAll(
+            string? cursor = null,
             int PageSize = 100,
             string? MakeModelMatchId = null,
             string? TecDocEntityId = null,
@@ -81,12 +77,13 @@ namespace MMIv8_Ktype.Core.Endpoints
             Status[]? Status = null)
         {
             var filter = MatchEntityFilter(MakeModelMatchId, TecDocEntityId, MMIv8EntityId, IsCheck, IsMatched, IsFailed, HasDifference, Status);
+            var objectId = ObjectId.TryParse(cursor, out var objectid) ? objectid : ObjectId.Empty;
 
-            return await matchEntityService.PaginateDocuments<MatchEntity>(filter: filter, page: Page, pageSize: PageSize);
+            return await matchEntityService.PaginateDocumentsByCursor<MatchEntity, ObjectId>(filter: filter, cursor: objectId, pageSize: PageSize);
         }
 
-        public async Task<PagedResponse<MatchEntitySummary>> GetAllMatchEntitySummary(
-            int Page = 1,
+        public async Task<PagedCursorResponse<MatchEntitySummary>> GetAllMatchEntitySummary(
+            string? cursor = null,
             int PageSize = 100,
             string? MakeModelMatchId = null,
             string? TecDocEntityId = null,
@@ -98,6 +95,7 @@ namespace MMIv8_Ktype.Core.Endpoints
             Status[]? Status = null)
         {
             var filter = MatchEntityFilter(MakeModelMatchId, TecDocEntityId, MMIv8EntityId, IsCheck, IsMatched, IsFailed, HasDifference, Status);
+            var objectId = ObjectId.TryParse(cursor, out var objectid) ? objectid : ObjectId.Empty;
 
             var projection = Builders<MatchEntity>.Projection.Expression(c
                 => new MatchEntitySummary(
@@ -118,7 +116,7 @@ namespace MMIv8_Ktype.Core.Endpoints
                     c.Status.Current.Status)
                 );
 
-            return await matchEntityService.PaginateDocuments(filter: filter, page: Page, pageSize: PageSize, projection: projection);
+            return await matchEntityService.PaginateDocumentsByCursor<MatchEntitySummary, ObjectId>(filter: filter, cursor: objectId, pageSize: PageSize, projection: projection);
         }
 
         public async Task<List<MatchRefine>> GetAllMatchRefine(
@@ -136,16 +134,17 @@ namespace MMIv8_Ktype.Core.Endpoints
             return await matchEntityService.GetDistinctDocuments<MatchRefine>(nameof(MatchEntity.MatchRefine), filter);
         }
 
-        public async Task<PagedResponse<MatchEntityBackup>> GetMatchEntityBackup(int Page = 1, int PageSize = 100)
+        public async Task<PagedCursorResponse<MatchEntityBackup>> GetMatchEntityBackup(string? cursor = null, int PageSize = 100)
         {
             var filterBuilder = Builders<MatchEntity>.Filter;
             var filter = filterBuilder.Eq(c => c.Matched, true)
                        | filterBuilder.Eq(c => c.Status.Current.Status, Models.Status.Status.Check)
                        | filterBuilder.Eq(c => c.Status.Current.Status, Models.Status.Status.Checked);
+            var objectId = ObjectId.TryParse(cursor, out var objectid) ? objectid : ObjectId.Empty;
 
-            var sort = Builders<MatchEntity>.Sort.Ascending(c => c.MMIv8Entity.ExternalId).Ascending(c => c.TecDocEntity.ExternalId);
             var projection = Builders<MatchEntity>.Projection.Expression(c 
-                => new MatchEntityBackup(c.MMIv8Entity.MMI_V8_Key, 
+                => new MatchEntityBackup(c.DocumentId,
+                                         c.MMIv8Entity.MMI_V8_Key,
                                          c.TecDocEntity.KTypNr, 
                                          c.Matched, 
                                          c.MatchDetail ?? "", 
@@ -153,7 +152,7 @@ namespace MMIv8_Ktype.Core.Endpoints
                                          c.MatchResult.FailDetail ?? "", 
                                          c.Status.Current.Status));
 
-            return await matchEntityService.PaginateDocuments(filter: filter, sort: sort, page: Page, pageSize: PageSize, projection: projection);
+            return await matchEntityService.PaginateDocumentsByCursor<MatchEntityBackup, ObjectId>(filter: filter, cursor: objectId, pageSize: PageSize, projection: projection);
         }
 
         public async Task<MatchEntity?> GetMatchEntity(MatchEntityByExternalRequest request)

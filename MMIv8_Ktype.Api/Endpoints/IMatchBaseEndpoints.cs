@@ -12,22 +12,22 @@ namespace MMIv8_Ktype.Api.Endpoints
     public interface IMatchBaseEndpoints : IEndpoint
     {
         [Get("")]
-        Task<PagedResponse<MatchBase>> GetAll([FromQuery] int Page, [FromQuery] int PageSize);
+        Task<PagedCursorResponse<MatchBase>> GetAll([FromQuery] string? cursor = null, [FromQuery] int PageSize = 100);
 
         [Get("/GetByType/{MatchBaseType}")]
-        Task<PagedResponse<MatchBase>> GetByMatchBaseType([FromQuery] MatchBaseType MatchBaseType, [FromQuery] int Page, [FromQuery] int PageSize);
+        Task<PagedCursorResponse<MatchBase>> GetByMatchBaseType([FromRoute] MatchBaseType MatchBaseType, [FromQuery] string? cursor = null, [FromQuery] int PageSize = 0);
 
         [Get("/GetById/{MatchHash}")]
         Task<MatchBase?> GetById(string MatchHash);
 
-        [Put("")]
-        Task UpdateMatchBaseScore(PutMatchBaseRequest request);
+        [Put("/{MatchBaseType}")]
+        Task UpdateMatchBaseScore([FromRoute] MatchBaseType MatchBaseType, [FromQuery] string MatchHash, [FromQuery] decimal NewScore);
 
-        [Put("/Partial/")]
-        Task StorePartialMatchBase(PutMatchBaseRequest request);
+        [Put("/Partial/{MatchBaseType}")]
+        Task StorePartialMatchBase([FromRoute] MatchBaseType MatchBaseType, [FromQuery] string MatchHash, [FromQuery] decimal NewScore);
 
-        [Delete("/Partial/{MatchBaseType}/{MatchHash}")]
-        Task RemovePartialMatchBase(MatchBaseType MatchBaseType, string MatchHash);
+        [Delete("/Partial/{MatchBaseType}")]
+        Task RemovePartialMatchBase([FromRoute] MatchBaseType MatchBaseType, [FromQuery] string MatchHash);
 
         [Delete("/Debug/DeleteAll")]
         Task DeleteAll();

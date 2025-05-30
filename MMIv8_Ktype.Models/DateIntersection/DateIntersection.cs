@@ -3,15 +3,15 @@ namespace MMIv8_Ktype.Models.DateIntersection
 {
     public class DateIntersection
     {
-        public DateIntersection(DateTimeRange TD_Date, DateTimeRange MMI_Date)
+        public DateIntersection(DateOnlyRange TD_Date, DateOnlyRange MMI_Date)
         {
             td_Date = TD_Date;
             mmi_Date = MMI_Date;
         }
 
-        private DateTimeRange td_Date { get; set; }
+        private DateOnlyRange td_Date { get; set; }
 
-        private DateTimeRange mmi_Date { get; set; }
+        private DateOnlyRange mmi_Date { get; set; }
 
         [MongoDB.Bson.Serialization.Attributes.BsonElement]
         public int date_Intersection => mmi_Date.GetIntersectionSpan(td_Date);

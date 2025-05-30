@@ -55,7 +55,7 @@ namespace MMIv8_Ktype.Models.Collections
         public int DTo { get; set; }
 
         [BsonElement]
-        public override DateTimeRange DateRange => new(DFrom, DTo);
+        public override DateOnlyRange DateRange => new(DFrom, DTo);
 
         public int KW { get; set; }
         public int PS { get; set; }

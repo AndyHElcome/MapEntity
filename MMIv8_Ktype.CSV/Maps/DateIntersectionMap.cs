@@ -11,9 +11,9 @@ namespace MMIv8_Ktype.CSV.Maps
             AutoMap(CultureInfo.InvariantCulture);
         }
     }
-    public sealed class DateTimeRangeMap : ClassMap<DateTimeRange>
+    public sealed class DateOnlyRangeMap : ClassMap<DateOnlyRange>
     {
-        public DateTimeRangeMap()
+        public DateOnlyRangeMap()
         {
             AutoMap(CultureInfo.InvariantCulture);
             Map(m => m.Start).TypeConverterOption.Format("yyyy/MM/dd");

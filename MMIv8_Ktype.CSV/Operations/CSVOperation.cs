@@ -92,7 +92,7 @@ namespace MMIv8_Ktype.CSV.Operations
             foreach (var matchBaseType in (MatchBaseType[])Enum.GetValues(typeof(MatchBaseType)))
             {
                 filepath = Path.Combine(path, $"Match{matchBaseType.ToString()}.csv");
-                var matchBases = await matchBase.GetByMatchBaseType(matchBaseType, 1, 0);
+                var matchBases = await matchBase.GetByMatchBaseType(matchBaseType);
 
                 using (var csvWriter = new CsvWritingStream(filepath).CsvWriter)
                 {
@@ -107,14 +107,16 @@ namespace MMIv8_Ktype.CSV.Operations
             filepath = Path.Combine(path, "MatchEntity.csv");
             using (var csvWriter = new CsvWritingStream(filepath).CsvWriter)
             {
+                string? cursor = null;
                 int page = 1;
-                PagedResponse<MatchEntityBackup> response;
+                PagedCursorResponse<MatchEntityBackup> response;
 
                 do
                 {
-                    response = await matchEntity.GetMatchEntityBackup(page, 10000);
+                    response = await matchEntity.GetMatchEntityBackup(cursor, 1000);
                     csvWriter.WriteRecords(response.Documents);
                     page++;
+                    cursor = response.Cursor;
                 }
                 while (response.HasNextPage);
             }
@@ -125,7 +127,7 @@ namespace MMIv8_Ktype.CSV.Operations
             filepath = Path.Combine(path, "CurrentRelations.csv");
             using (var csvWriter = new CsvWritingStream(filepath).CsvWriter)
             {
-                var response = await entityRelation.GetCurrentEntityRelations(1, 0);
+                var response = await entityRelation.GetCurrentEntityRelations();
                 csvWriter.WriteRecords(response.Documents);
             }
             log.Information("Created file for Current Relations {path}", filepath);
@@ -133,7 +135,7 @@ namespace MMIv8_Ktype.CSV.Operations
             filepath = Path.Combine(path, "PreviousRelations.csv");
             using (var csvWriter = new CsvWritingStream(filepath).CsvWriter)
             {
-                var response = await entityRelation.GetPreviousEntityRelations(1, 0);
+                var response = await entityRelation.GetPreviousEntityRelations();
                 csvWriter.WriteRecords(response.Documents);
             }
             log.Information("Created file for Previous Relations {path}", filepath);
@@ -353,9 +355,9 @@ namespace MMIv8_Ktype.CSV.Operations
                 csvReader.ReadHeader();
                 while (csvReader.Read())
                 {
-                    var record = csvReader.GetRecord<PutMatchBaseRequest>();
+                    var putMatchBaseRequest = csvReader.GetRecord<PutMatchBaseRequest>();
 
-                    await matchBaseEndpoints.UpdateMatchBaseScore(record);
+                    await matchBaseEndpoints.UpdateMatchBaseScore(putMatchBaseRequest.MatchBaseType, putMatchBaseRequest.MatchHash, putMatchBaseRequest.NewScore);
                     count++;
                 }
             }
@@ -379,9 +381,9 @@ namespace MMIv8_Ktype.CSV.Operations
                 csvReader.ReadHeader();
                 while (csvReader.Read())
                 {
-                    var record = csvReader.GetRecord<PutMatchBaseRequest>();
+                    var putMatchBaseRequest = csvReader.GetRecord<PutMatchBaseRequest>();
 
-                    await matchBaseEndpoints.StorePartialMatchBase(record);
+                    await matchBaseEndpoints.StorePartialMatchBase(putMatchBaseRequest.MatchBaseType, putMatchBaseRequest.MatchHash, putMatchBaseRequest.NewScore);
                     count++;
                 }
             }

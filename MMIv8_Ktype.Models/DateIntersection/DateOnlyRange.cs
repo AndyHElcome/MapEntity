@@ -1,19 +1,17 @@
-﻿using System.Globalization;
-
-namespace MMIv8_Ktype.Models.DateIntersection
+﻿namespace MMIv8_Ktype.Models.DateIntersection
 {
-    public struct DateTimeRange
+    public struct DateOnlyRange
     {
 
         #region Construction
-        public DateTimeRange()
+        public DateOnlyRange()
         {
             if (start > end)
             {
                 throw new Exception("Invalid range edges.");
             }
         }
-        public DateTimeRange(DateTime start, DateTime end) : this()
+        public DateOnlyRange(DateOnly start, DateOnly end) : this()
         {
             this.start = start;
             this.end = end;
@@ -22,17 +20,17 @@ namespace MMIv8_Ktype.Models.DateIntersection
         /// <summary>
         /// Constructor for MMIv8 Date Format
         /// </summary>
-        public DateTimeRange(int startMonth, int startYear, int endMonth, int endYear) : this()
+        public DateOnlyRange(int startMonth, int startYear, int endMonth, int endYear) : this()
         {
-            DateTime start = DateTime.MinValue.Date;
-            DateTime end = DateTime.MaxValue.Date;
+            DateOnly start = DateOnly.MinValue;
+            DateOnly end = DateOnly.MaxValue;
 
             if (startMonth.ToString().Length <= 2 && startYear.ToString().Length == 4)
-                start = new DateTime(startYear, startMonth, 01, 0, 0, 0, DateTimeKind.Utc).Date;
+                start = new DateOnly(startYear, startMonth, 01);
 
 
             if (endMonth.ToString().Length <= 2 && endYear.ToString().Length == 4)
-                end = new DateTime(endYear, endMonth, 01, 0, 0, 0, DateTimeKind.Utc).Date;
+                end = new DateOnly(endYear, endMonth, 01);
 
             this.start = start;
             this.end = end;
@@ -41,17 +39,17 @@ namespace MMIv8_Ktype.Models.DateIntersection
         /// <summary>
         /// Constructor for TecDoc Date Format
         /// </summary>
-        public DateTimeRange(int dFrom, int dTo) : this()
+        public DateOnlyRange(int dFrom, int dTo) : this()
         {
-            DateTime start = DateTime.MinValue.Date;
-            DateTime end = DateTime.MaxValue.Date;
+            DateOnly start = DateOnly.MinValue;
+            DateOnly end = DateOnly.MaxValue;
 
 
-            if (dFrom.ToString().Length == 6 && DateTime.TryParseExact(dFrom.ToString(), "yyyyMM", CultureInfo.InvariantCulture, DateTimeStyles.AssumeUniversal, out DateTime _start))
-                start = _start.Date;
+            if (dFrom.ToString().Length == 6 && DateOnly.TryParseExact(dFrom.ToString(), "yyyyMM", out DateOnly _start))
+                start = _start;
 
-            if (dTo.ToString().Length == 6 && DateTime.TryParseExact(dTo.ToString(), "yyyyMM", CultureInfo.InvariantCulture, DateTimeStyles.AssumeUniversal, out DateTime _end))
-                end = _end.Date;
+            if (dTo.ToString().Length == 6 && DateOnly.TryParseExact(dTo.ToString(), "yyyyMM", out DateOnly _end))
+                end = _end;
 
             this.start = start;
             this.end = end;
@@ -59,18 +57,16 @@ namespace MMIv8_Ktype.Models.DateIntersection
         #endregion
 
         #region Properties
-        private DateTime start;
+        private DateOnly start;
 
-        [MongoDB.Bson.Serialization.Attributes.BsonDateTimeOptions(DateOnly = true)]
-        public DateTime Start
+        public DateOnly Start
         {
             get { return start; }
             private set { start = value; }
         }
-        private DateTime end;
+        private DateOnly end;
 
-        [MongoDB.Bson.Serialization.Attributes.BsonDateTimeOptions(DateOnly = true)]
-        public DateTime End
+        public DateOnly End
         {
             get { return end; }
             private set { end = value; }
@@ -78,21 +74,21 @@ namespace MMIv8_Ktype.Models.DateIntersection
         #endregion
 
         #region Operators
-        public static bool operator ==(DateTimeRange range1, DateTimeRange range2)
+        public static bool operator ==(DateOnlyRange range1, DateOnlyRange range2)
         {
             return range1.Equals(range2);
         }
 
-        public static bool operator !=(DateTimeRange range1, DateTimeRange range2)
+        public static bool operator !=(DateOnlyRange range1, DateOnlyRange range2)
         {
             return !(range1 == range2);
         }
         public override bool Equals(object obj)
         {
-            if (obj is DateTimeRange)
+            if (obj is DateOnlyRange)
             {
                 var range1 = this;
-                var range2 = (DateTimeRange)obj;
+                var range2 = (DateOnlyRange)obj;
                 return range1.Start == range2.Start && range1.End == range2.End;
             }
             return base.Equals(obj);
@@ -104,18 +100,18 @@ namespace MMIv8_Ktype.Models.DateIntersection
         #endregion
 
         #region Querying
-        public bool Intersects(DateTimeRange range)
+        public bool Intersects(DateOnlyRange range)
         {
             var type = GetIntersectionType(range);
             return type != IntersectionType.None;
         }
 
-        public bool IsInRange(DateTime date)
+        public bool IsInRange(DateOnly date)
         {
             return date >= Start && date <= End;
         }
 
-        public IntersectionType GetIntersectionType(DateTimeRange range)
+        public IntersectionType GetIntersectionType(DateOnlyRange range)
         {
             if (this == range)
             {
@@ -140,7 +136,7 @@ namespace MMIv8_Ktype.Models.DateIntersection
             return IntersectionType.None;
         }
 
-        public DateTimeRange GetIntersection(DateTimeRange range)
+        public DateOnlyRange GetIntersection(DateOnlyRange range)
         {
             var type = GetIntersectionType(range);
             if (type == IntersectionType.RangesEqauled || type == IntersectionType.ContainedInRange)
@@ -149,11 +145,11 @@ namespace MMIv8_Ktype.Models.DateIntersection
             }
             else if (type == IntersectionType.StartsInRange)
             {
-                return new DateTimeRange(range.Start, End);
+                return new DateOnlyRange(range.Start, End);
             }
             else if (type == IntersectionType.EndsInRange)
             {
-                return new DateTimeRange(Start, range.End);
+                return new DateOnlyRange(Start, range.End);
             }
             else if (type == IntersectionType.ContainsRange)
             {
@@ -164,7 +160,7 @@ namespace MMIv8_Ktype.Models.DateIntersection
                 return default;
             }
         }
-        public int GetInverseIntersectionSpan(DateTimeRange range)
+        public int GetInverseIntersectionSpan(DateOnlyRange range)
         {
             var currentStart = Math.Abs(Start.Year * 12 + Start.Month);
             var currentEnd = Math.Abs(End.Year * 12 + End.Month);
@@ -175,12 +171,12 @@ namespace MMIv8_Ktype.Models.DateIntersection
             var startDifference = Math.Abs(currentStart - rangeStart);
             var endDifference = Math.Abs(currentEnd - rangetEnd);
 
-            if (Start == DateTime.MinValue.Date || range.Start == DateTime.MinValue.Date)
+            if (Start == DateOnly.MinValue || range.Start == DateOnly.MinValue)
             {
                 startDifference = 0;
             }
-            
-            if (End == DateTime.MaxValue.Date || range.End == DateTime.MaxValue.Date)
+
+            if (End == DateOnly.MaxValue || range.End == DateOnly.MaxValue)
             {
                 endDifference = 0;
             }
@@ -199,7 +195,7 @@ namespace MMIv8_Ktype.Models.DateIntersection
             return Math.Abs(MonthDifference());
         }
 
-        public int GetIntersectionSpan(DateTimeRange range)
+        public int GetIntersectionSpan(DateOnlyRange range)
         {
             var intersection = GetIntersection(range);
             return intersection.MonthDifferenceAbs();

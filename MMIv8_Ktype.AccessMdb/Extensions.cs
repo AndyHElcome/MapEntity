@@ -247,7 +247,13 @@ namespace MMIv8_Ktype.AccessMdb
 
         public static DataRow ConvertObjToDataRow(this DataRow dataRow, object obj) // TODO Move
         {
-            var dictionary = GlobalHelpers.ObjToDictionary(obj);
+            Dictionary<string, object> dictionary = new();
+
+            if (obj is ExpandoObject)
+                dictionary = ((ExpandoObject)obj).ToDictionary();
+            else
+                dictionary = GlobalHelpers.ObjToDictionary(obj);
+
             return dataRow.ConvertObjToDataRow(dictionary);
         }
 
@@ -271,7 +277,19 @@ namespace MMIv8_Ktype.AccessMdb
 
         public static DataTable ConvertObjToNewDataTable(object obj, string tableName, string[] primaryKeyNames) // TODO Move
         {
-            var dictionary = GlobalHelpers.ObjToDictionary(obj);
+            Dictionary<string, object> dictionary = new();
+
+            if (obj is ExpandoObject)
+                dictionary = ((ExpandoObject)obj).ToDictionary();
+            else
+                dictionary = GlobalHelpers.ObjToDictionary(obj);
+
+            return ConvertObjToNewDataTable(dictionary, tableName, primaryKeyNames);
+        }
+
+        public static DataTable ConvertObjToNewDataTable(ExpandoObject obj, string tableName, string[] primaryKeyNames) // TODO Move
+        {
+            var dictionary = obj.ToDictionary();
             return ConvertObjToNewDataTable(dictionary, tableName, primaryKeyNames);
         }
 

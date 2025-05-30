@@ -17,17 +17,19 @@ using System.Net.NetworkInformation;
 using Microsoft.AspNetCore.Mvc.RazorPages;
 using MMIv8_Ktype.Core.Services;
 using MMIv8_Ktype.Models.Util;
+using System.Data.SqlTypes;
 
 namespace MMIv8_Ktype.Core.Services
 {
     public class BaseService<T, Tid>(IMongoCollection<T> Collection)
-        where T : ICollectionEntity<Tid>
+        where T : ICollectionEntity<Tid?>
     {
         public IMongoCollection<T> Collection = Collection;
 
         public SortDefinition<T> SortByDocumentId(SortDefinition<T>? sort = null) => sort is null ? Builders<T>.Sort.Ascending(c => c.DocumentId) : sort;
-
         public FilterDefinition<T> FilterByDocumentId(Tid documentId) => Builders<T>.Filter.Eq(c => c.DocumentId, documentId);
+        public FilterDefinition<T> FilterGtDocumentId(Tid documentId) => Builders<T>.Filter.Gt(c => c.DocumentId, documentId);
+        public FilterDefinition<T> FilterLteDocumentId(Tid documentId) => Builders<T>.Filter.Lte(c => c.DocumentId, documentId);
 
         #region Query
         public IFindFluent<T, T> GetFindFluent(FilterDefinition<T>? filter = null, SortDefinition<T>? sort = null, int? batchSize = null)
@@ -35,14 +37,7 @@ namespace MMIv8_Ktype.Core.Services
             filter ??= Builders<T>.Filter.Empty;
             var options = new FindOptions { BatchSize = batchSize };
 
-            var query = Collection.Find(filter, options);
-
-            if (sort is not null)
-                query = query.Sort(sort);
-            else
-                query = query.Sort(this.SortByDocumentId());
-
-            return query;
+            return Collection.Find(filter, options).Sort(this.SortByDocumentId(sort));
         }
 
         public IQueryable<T> GetQueryable()
@@ -61,7 +56,7 @@ namespace MMIv8_Ktype.Core.Services
             else
             {
                 var projection = Builders<T>.Projection.Include(c => c.DocumentId);
-                return await Collection.Find(filter).Sort(this.SortByDocumentId()).Project(projection).CountDocumentsAsync();
+                return await Collection.Find(filter).Project(projection).CountDocumentsAsync();
             }
         }
 
@@ -80,7 +75,14 @@ namespace MMIv8_Ktype.Core.Services
         {
             filter ??= Builders<T>.Filter.Empty;
 
-            return await Collection.Distinct<TOut>(fieldName, filter).ToListAsync();
+            Log.Debug("Starting Get Distinct {Type}", typeof(T).Name);
+            var sw = Stopwatch.StartNew();
+
+            var results = await Collection.Distinct<TOut>(fieldName, filter).ToListAsync();
+
+            sw.Stop();
+            Log.Information("Completed Get of {count} Distinct {Type} into {OutType} in {Time}", results.Count, typeof(T).Name, typeof(TOut).Name, sw);
+            return results;
         }
 
         public async IAsyncEnumerable<IEnumerable<TOut>> EnumerateDistinctDocuments<TOut>(string fieldName, FilterDefinition<T>? filter = null)
@@ -116,13 +118,53 @@ namespace MMIv8_Ktype.Core.Services
 
             var count = this.CountByFilter(filter);
 
-            var results = this.GetFindFluent(filter, this.SortByDocumentId(sort))
+            var results = this.GetFindFluent(filter, sort)
                               .Skip((page - 1) * pageSize)
                               .Limit(pageSize)
                               .Project(projection)
                               .ToListAsync();
 
             var pagedResults = new PagedResponse<TOut>(await results, Convert.ToInt32(await count), page, pageSize);
+
+            sw.Stop();
+            Log.Information("Paged {Type} {@page} in {Time}", typeof(T).Name, pagedResults.PageDetails(), sw);
+
+            return pagedResults;
+        }
+
+        public async Task<PagedCursorResponse<TOut>> PaginateDocumentsByCursor<TOut, TOutId>(FilterDefinition<T>? filter = null, Tid? cursor = default, int pageSize = 100, ProjectionDefinition<T, TOut>? projection = null)
+            where TOut : ICollectionEntity<TOutId>
+        {
+            Log.Debug("Paging {Type} after: {@cursor}", typeof(T).Name, cursor?.ToString() ?? string.Empty);
+            var sw = Stopwatch.StartNew();
+
+            var count = this.CountByFilter(filter);
+            long preCount = 1;
+
+            if (cursor is not null)
+            {
+                if (filter is null)
+                {
+                    preCount = await this.CountByFilter(this.FilterLteDocumentId(cursor));
+                    filter = this.FilterGtDocumentId(cursor);
+                }
+                else
+                {
+                    preCount = await this.CountByFilter(this.FilterLteDocumentId(cursor) & filter);
+                    filter = this.FilterGtDocumentId(cursor) & filter;
+
+                }
+            }
+            
+
+            var results = await this.GetFindFluent(filter)
+                                    .Limit(pageSize)
+                                    .Project(projection)
+                                    .ToListAsync();
+
+            var pre = preCount == 0 ? 1 : (Convert.ToInt32(preCount) / pageSize) + 1;
+
+            var pagedResults = new PagedCursorResponse<TOut>(results, Convert.ToInt32(await count), pre, pageSize, results.LastOrDefault()?.DocumentId?.ToString() ?? string.Empty);
 
             sw.Stop();
             Log.Information("Paged {Type} {@page} in {Time}", typeof(T).Name, pagedResults.PageDetails(), sw);

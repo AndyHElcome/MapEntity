@@ -15,9 +15,10 @@ namespace MMIv8_Ktype.Core.Endpoints
                                          MappingService mappingService,
                                          BulkMappingService bulkMappingService) : IMatchMakeModelEndpoints
     {
-        public async Task<PagedResponse<MatchMakeModel>> GetAll(int Page = 1, int PageSize = 100) //TODO Fix large gets
+        public async Task<PagedCursorResponse<MatchMakeModel>> GetAll(string? cursor = null, int PageSize = 100) //TODO Fix large gets
         {
-            return await matchMakeModelService.PaginateDocuments<MatchMakeModel>(page: Page, pageSize: PageSize);
+            var objectId = ObjectId.TryParse(cursor, out var objectid) ? objectid : ObjectId.Empty;
+            return await matchMakeModelService.PaginateDocumentsByCursor<MatchMakeModel, ObjectId>(cursor: objectId, pageSize: PageSize);
         }
 
         public async Task<List<MatchMakeModel>> GenerateMakeModelMatch()
