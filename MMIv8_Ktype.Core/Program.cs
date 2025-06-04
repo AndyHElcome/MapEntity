@@ -14,6 +14,7 @@ using MMIv8_Ktype.Models.Util;
 using MMIv8_Ktype.Api.Endpoints;
 using MongoDB.Bson.IO;
 using MMIv8_Ktype.Core.Exceptions;
+using MMIv8_Ktype.Api;
 
 internal class Program
 {

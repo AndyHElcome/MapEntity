@@ -201,18 +201,18 @@ namespace MMIv8_Ktype.Core.Services.Mapping
             }
         }
 
-        public async Task CheckMatchBaseDeprecated()//TODO Utilise Deprecate Match Base
-        {
-            var currentMatch = await MatchBaseService.GetFindFluent(batchSize: 1000).ToCursorAsync();
+        //public async Task CheckMatchBaseDeprecated()//TODO Utilise Deprecate Match Base
+        //{
+        //    var currentMatch = await MatchBaseService.GetFindFluent(batchSize: 1000).ToCursorAsync();
 
-            while (await currentMatch.MoveNextAsync())
-            {
-                foreach (var matchBase in currentMatch.Current)
-                {
-                    await DeprecateMatchBase(matchBase);
-                }
-            }
-        }
+        //    while (await currentMatch.MoveNextAsync())
+        //    {
+        //        foreach (var matchBase in currentMatch.Current)
+        //        {
+        //            await DeprecateMatchBase(matchBase);
+        //        }
+        //    }
+        //}
 
         /// <summary>
         /// 
@@ -590,21 +590,30 @@ namespace MMIv8_Ktype.Core.Services.Mapping
         }
         #endregion
 
-
         #region Version
-        public async Task<Result<Version>> CreateVersion(CreateVersionRequest request)
+        public async Task<Result<Version>> CreateVersion(string tecdocEntityVersion, string mmiv8EntityVersion, string userName)
         {
-            var user = await UserService.CreateAndReturn(request.UserName);
-            return await VersionService.Create(request.TecDocEntityVersion, request.MMIv8EntityVersion, user);
+            var userResult = await UserService.GetByName(userName);
+            if (!userResult.IsSuccess)
+                return userResult.Error!;
+
+            return await VersionService.Create(tecdocEntityVersion, mmiv8EntityVersion, userResult.Value);
         }
 
         public async Task<Result<Version>> UpdateVersion(int versionNumber, string? tecdocEntityVersion = null, string? mmiv8EntityVersion = null, string? userName = null)
         {
-            User? user = userName is null ? null : await UserService.CreateAndReturn(userName);
-
             var versionResult = await VersionService.GetByVersion(versionNumber);
             if (!versionResult.IsSuccess)
                 return versionResult;
+
+            User? user = null;
+            if (userName is not null)
+            {
+                var userResult = await UserService.GetByName(userName);
+                if (!userResult.IsSuccess)
+                    return userResult.Error!;
+                user = userResult.Value;
+            }
 
             var versionUpdate = VersionService.Update(versionResult.Value).AppendUpdate(c => c.UpdateVersionTecdocEntityVersion(tecdocEntityVersion)
                                                                                               .UpdateVersionMMIv8EntityVersion(mmiv8EntityVersion)
@@ -681,28 +690,21 @@ namespace MMIv8_Ktype.Core.Services.Mapping
         #endregion
 
         #region User
-        public async Task DeleteUser(string userName)
+        public async Task<Result<DeleteResult>> DeleteUser(string userName)
         {
             var user = await UserService.GetByName(userName);
-
-            if (user is null)
-            {
-                Log.Error("User not found for deletion");
-                return;
-            }
+            if (!user.IsSuccess)
+                return user.Error!;
 
             var versionResult = await VersionService.GetByUser(userName);
 
-            if (!versionResult.IsSuccess)
-                return;
-
-            if (versionResult.Value.Count > 0)
-            {
-                Log.Error("Cannot Delete user as it's in use");
-                return;
-            }
-
-            await UserService.DeleteByFilter(userName);
+            if (versionResult.IsSuccess && versionResult.Value.Count != 0)
+                return Error.Validation("User.DeletionValidation", $"Cannot Delete user {userName} as it's in use");
+            
+            if (!versionResult.IsSuccess && versionResult.Error!.Type == ErrorType.NoContent)
+                return await UserService.DeleteByName(userName);
+                
+            throw new NotImplementedException();
         }
         #endregion
     }

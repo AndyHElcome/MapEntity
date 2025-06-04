@@ -44,8 +44,6 @@ namespace MMIv8_Ktype.Api.Endpoints
 
             foreach (var method in methods)
             {
-                var test = method.GetCustomAttributes<HttpMethodAttribute>();
-
                 foreach(var httpMethodAttribute in method.GetCustomAttributes<HttpMethodAttribute>())
                 {
                     if (httpMethodAttribute is null)
@@ -81,14 +79,14 @@ namespace MMIv8_Ktype.Api.Endpoints
 
                     _ = httpMethodAttribute.Method.Method switch
                     {
-                        "GET" => group.MapGet(path, handler).WithName(methodName),
-                        "PUT" => group.MapPut(path, handler).WithName(methodName),
-                        "POST" => group.MapPost(path, handler).WithName(methodName),
-                        "DELETE" => group.MapDelete(path, handler).WithName(methodName),
+                        "GET" => group.MapGet(path, handler).WithName(methodName).AddEndpointFilter<ResultEndpointFilter>(),
+                        "PUT" => group.MapPut(path, handler).WithName(methodName).AddEndpointFilter<ResultEndpointFilter>(),
+                        "POST" => group.MapPost(path, handler).WithName(methodName).AddEndpointFilter<ResultEndpointFilter>(),
+                        "DELETE" => group.MapDelete(path, handler).WithName(methodName).AddEndpointFilter<ResultEndpointFilter>(),
                         //"HEAD" => _,
                         //"OPTIONS" => _,
                         //"TRACE" => _,
-                        "PATCH" => group.MapPatch(path, handler).WithName(methodName),
+                        "PATCH" => group.MapPatch(path, handler).WithName(methodName).AddEndpointFilter<ResultEndpointFilter>(),
                         //"CONNECT" => _,
                         _ => throw new NotSupportedException($"Do not recognise HttpMethod {httpMethodAttribute.Method}")
                     };

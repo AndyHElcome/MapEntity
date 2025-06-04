@@ -26,13 +26,13 @@ namespace MMIv8_Ktype.Core.Services
     {
         public IMongoCollection<T> Collection = Collection;
 
-        public SortDefinition<T> SortByDocumentId(SortDefinition<T>? sort = null) => sort is null ? Builders<T>.Sort.Ascending(c => c.DocumentId) : sort;
-        public FilterDefinition<T> FilterByDocumentId(Tid documentId) => Builders<T>.Filter.Eq(c => c.DocumentId, documentId);
-        public FilterDefinition<T> FilterGtDocumentId(Tid documentId) => Builders<T>.Filter.Gt(c => c.DocumentId, documentId);
-        public FilterDefinition<T> FilterLteDocumentId(Tid documentId) => Builders<T>.Filter.Lte(c => c.DocumentId, documentId);
+        private protected SortDefinition<T> SortByDocumentId(SortDefinition<T>? sort = null) => sort is null ? Builders<T>.Sort.Ascending(c => c.DocumentId) : sort;
+        private protected FilterDefinition<T> FilterByDocumentId(Tid documentId) => Builders<T>.Filter.Eq(c => c.DocumentId, documentId);
+        private protected FilterDefinition<T> FilterGtDocumentId(Tid documentId) => Builders<T>.Filter.Gt(c => c.DocumentId, documentId);
+        private protected FilterDefinition<T> FilterLteDocumentId(Tid documentId) => Builders<T>.Filter.Lte(c => c.DocumentId, documentId);
 
         #region Query
-        public IFindFluent<T, T> GetFindFluent(FilterDefinition<T>? filter = null, SortDefinition<T>? sort = null, int? batchSize = null)
+        internal IFindFluent<T, T> GetFindFluent(FilterDefinition<T>? filter = null, SortDefinition<T>? sort = null, int? batchSize = null)
         {
             filter ??= Builders<T>.Filter.Empty;
             var options = new FindOptions { BatchSize = batchSize };
@@ -40,12 +40,12 @@ namespace MMIv8_Ktype.Core.Services
             return Collection.Find(filter, options).Sort(this.SortByDocumentId(sort));
         }
 
-        public IQueryable<T> GetQueryable()
+        internal IQueryable<T> GetQueryable()
         {
             return Collection.AsQueryable();
         }
 
-        public async Task<long> CountByFilter(FilterDefinition<T>? filter = null)
+        internal async Task<long> CountByFilter(FilterDefinition<T>? filter = null)
         {
             if (filter is null || filter == Builders<T>.Filter.Empty)
             {
@@ -64,7 +64,7 @@ namespace MMIv8_Ktype.Core.Services
 
         #region Get Documents
 
-        public async Task<IAsyncCursor<TOut>> GetDistinctCursor<TOut>(string fieldName, FilterDefinition<T>? filter = null)
+        private protected async Task<IAsyncCursor<TOut>> GetDistinctCursor<TOut>(string fieldName, FilterDefinition<T>? filter = null)
         {
             filter ??= Builders<T>.Filter.Empty;
 
@@ -156,14 +156,12 @@ namespace MMIv8_Ktype.Core.Services
                 }
             }
             
-
             var results = await this.GetFindFluent(filter)
                                     .Limit(pageSize)
                                     .Project(projection)
                                     .ToListAsync();
 
-            var pre = preCount == 0 ? 1 : (Convert.ToInt32(preCount) / pageSize) + 1;
-
+            var pre = preCount == 0 ? 1 : (Convert.ToInt32(preCount) / pageSize) + 1; //TODO review this
             var pagedResults = new PagedCursorResponse<TOut>(results, Convert.ToInt32(await count), pre, pageSize, results.LastOrDefault()?.DocumentId?.ToString() ?? string.Empty);
 
             sw.Stop();
@@ -197,13 +195,7 @@ namespace MMIv8_Ktype.Core.Services
 
         #region Creation 
         //TODO Look into replace or upsert creations?
-        public async Task Create(T document)
-        {
-            await Collection.InsertOneAsync(document);
-            Log.Debug("Created {Count} {Type}", 1, typeof(T).Name);
-        }
-
-        public async Task<Result> CreateWithResult(T document)
+        public async Task<Result> Create(T document)
         {
             try
             {
@@ -213,8 +205,8 @@ namespace MMIv8_Ktype.Core.Services
             }
             catch (Exception ex)
             {
-                Log.Error("Error Creating {Type}", typeof(T).Name);
-                return Error.CannotCreateDocument(typeof(T), $"Error: {ex.Message}");
+                Log.Error("Error Creating {Type} {@document}", typeof(T).Name, document);
+                return Error.Failure($"{typeof(T)}.CreationFailure", $"Could not create {@document}. Error: {ex.Message}");
             }
         }
 

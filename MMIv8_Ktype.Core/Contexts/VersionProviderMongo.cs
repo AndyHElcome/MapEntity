@@ -18,16 +18,19 @@ namespace MMIv8_Ktype.Core.Contexts
 
             if (!versionResult.IsSuccess)
             {
-                var userResult = userService.CreateAndReturn("Admin").Result;
+                var userResult = userService.GetByName("Admin").Result;
 
-                //if (userResult.IsSuccess)
-                //versionResult = versionService.Create("Legacy", "Legacy", userResult.Value).Result;
+                if (!userResult.IsSuccess)
+                    userResult = userService.Create("Admin").Result;
 
-                versionResult = versionService.Create("Legacy", "Legacy", userResult).Result;
+                if (!userResult.IsSuccess)
+                    throw new NotImplementedException();
+
+                versionResult = versionService.Create("Legacy", "Legacy", userResult.Value).Result;
             }
 
             if (!versionResult.IsSuccess)
-                throw new Exception();
+                throw new NotImplementedException();
 
             VersionID = versionResult.Value.DocumentId;
         }

@@ -13,15 +13,29 @@ public class VersionProviderApi : IVersionProvider
 
     public VersionProviderApi(RefitClient RefitClient)
     {
-        var versionResult = RefitClient.CreateService<IVersionEndpoints>().GetCurrentVersion().Result;
+        var versionEndpoints = RefitClient.CreateService<IVersionEndpoints>();
+
+        var versionResult = versionEndpoints.GetCurrentVersion().Result;
 
         if (!versionResult.IsSuccess)
-            versionResult = RefitClient.CreateService<IVersionEndpoints>().CreateVersion(new("Legacy", "Legacy", "Admin")).Result;
+        {
+            var userEndpoints = RefitClient.CreateService<IUserEndpoints>();
+
+            var userResult = userEndpoints.GetByUserName("Admin").Result;
+
+            if (!userResult.IsSuccess)
+                userResult = userEndpoints.Create("Admin").Result;
+
+            if (!userResult.IsSuccess)
+                throw new NotImplementedException();
+
+            versionResult = versionEndpoints.CreateVersion("Legacy", "Legacy", userResult.ToResult().Value.Name).Result;
+        }
 
         if (!versionResult.IsSuccess)
             throw new NotImplementedException();
 
-        VersionID = versionResult.Value.DocumentId;
+        VersionID = versionResult.ToResult().Value.DocumentId;
     }
 
     public StatusChange NewStatus(Status status, string? detail = null) => new()

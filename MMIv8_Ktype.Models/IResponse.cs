@@ -1,7 +1,9 @@
 ﻿// minimal endpoint https://youtu.be/gsAuFIhXz3g?si=MfaGxzKFgLlgWIbR
 // reflection endpoint mapping https://youtu.be/CkGFV5bekbY?si=GkVIYuPIObrZDMu1
 using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.Http.HttpResults;
 using System.Diagnostics.CodeAnalysis;
+using System.Runtime.CompilerServices;
 using System.Text.Json.Serialization;
 using static MongoDB.Driver.WriteConcern;
 
@@ -11,7 +13,7 @@ namespace MMIv8_Ktype.Models
 
 
 
-    public class Result
+    public class Result : IResultWrapper
     {
         protected internal Result(bool isSuccess, Error error)
         {
@@ -56,14 +58,20 @@ namespace MMIv8_Ktype.Models
             ? _value!
             : throw new InvalidOperationException("The value of a failure result can't be accessed.");
 
-        public static implicit operator Result<TValue>(TValue? value) =>
-            value is not null ? Success(value) : Failure<TValue>(Error.NotFound);
+        public static implicit operator Result<TValue>(TValue value) =>
+            Success(value);
 
         public static implicit operator Result<TValue>(Error error) =>
             Failure<TValue>(error);
     }
 
-    public sealed class SerializableResult<T>
+    public interface IResultWrapper
+    {
+        bool IsSuccess { get; }
+        Error? Error { get; }
+    }
+
+    public sealed class SerializableResult<T> : IResultWrapper
     {
         public required bool IsSuccess { get; init; }
         public T? Value { get; init; }
@@ -78,32 +86,35 @@ namespace MMIv8_Ktype.Models
 
         public static implicit operator Result<T>(SerializableResult<T> result) => 
             result.IsSuccess ? Result.Success(result.Value!) : Result.Failure<T>(result.Error!);
+
+        public Result<T> ToResult() => this;
     }
 
     public record Error(ErrorType Type, string Code, string Description)
     {
         public static readonly Error None = new(ErrorType.None, string.Empty, string.Empty);
-        public static readonly Error NullValue = new(ErrorType.Validation, "Error.NullValue", "Null value was provided");
-        public static readonly Error NotFound = new(ErrorType.NotFound, "Error.NotFound", "Value was not found");
 
-
-        public static Error CannotFindDocument(Type documentType, string? description = null) => new(ErrorType.NotFound, $"{documentType.Name}.NotFound", description ?? "Cannot find document");
-        public static Error CannotCreateDocument(Type documentType, string? description = null) => new(ErrorType.Failure, $"{documentType.Name}.CreationError", description ?? "Could not create document");
+        public static Error Failure(string Code, string description) => new(ErrorType.Failure, Code, description);
+        public static Error Validation(string Code, string description) => new(ErrorType.Validation, Code, description);
+        public static Error NotFound(string Code, string description) => new(ErrorType.NotFound, Code, description);
+        public static Error NoContent(string Code, string description) => new(ErrorType.NoContent, Code, description);
+        public static Error Conflict(string Code, string description) => new(ErrorType.Conflict, Code, description);
     }
 
     public enum ErrorType
     {
         None = -1,
-        Failure = 1,
-        Validation = 2,
-        NotFound = 3,
-        Conflict = 4
+        Failure,
+        Validation,
+        NotFound,
+        NoContent,
+        Conflict,
     }
 
 
     public static class ResultExtensions
     {
-        public static IResult ToProblemDetails(this Result result)
+        public static IResult ToProblemDetails(this IResultWrapper result)
         {
             if (result.IsSuccess)
             {
@@ -111,13 +122,44 @@ namespace MMIv8_Ktype.Models
             }
 
             return Results.Problem(
-                statusCode: StatusCodes.Status400BadRequest,
-                title: "Bad Request",
-                type: "https://tools.ietf.org/html/rfc7231#section-6.5.1",
+                statusCode: result.Error?.Type.GetStatusCode(),
+                title: result.Error?.Type.GetTitle(),
+                type: result.Error?.Type.GetProblemDetailsType(),
                 extensions: new Dictionary<string, object?>
                 {
                     { "errors", new[] { result.Error } }
                 });
         }
+
+        private static int GetStatusCode(this ErrorType errorType) => errorType switch
+        {
+            ErrorType.None => throw new NotImplementedException(),
+            ErrorType.Failure => StatusCodes.Status500InternalServerError,
+            ErrorType.Validation => StatusCodes.Status400BadRequest,
+            ErrorType.NotFound => StatusCodes.Status404NotFound,
+            ErrorType.NoContent => StatusCodes.Status204NoContent,
+            ErrorType.Conflict => StatusCodes.Status409Conflict,
+            _ => throw new NotImplementedException(),
+        };
+
+        private static string GetTitle(this ErrorType errorType) => errorType switch
+        {
+            ErrorType.None => throw new NotImplementedException(),
+            ErrorType.Validation => "Bad Request",
+            ErrorType.NotFound => "Not Found",
+            ErrorType.NoContent => "No Content",
+            ErrorType.Conflict => "Conflict",
+            _ => "Server Failure",
+        };
+
+        private static string GetProblemDetailsType(this ErrorType errorType) => errorType switch
+        {
+            ErrorType.None => throw new NotImplementedException(),
+            ErrorType.Validation => "https://datatracker.ietf.org/doc/html/rfc7231#section-6.5.1",
+            ErrorType.NotFound => "https://datatracker.ietf.org/doc/html/rfc7231#section-6.5.4",
+            ErrorType.NoContent => "https://datatracker.ietf.org/doc/html/rfc7231#section-6.3.5",
+            ErrorType.Conflict => "https://datatracker.ietf.org/doc/html/rfc7231#section-6.5.8",
+            _ => "https://datatracker.ietf.org/doc/html/rfc7231#section-6.6.1",
+        };
     }
 }

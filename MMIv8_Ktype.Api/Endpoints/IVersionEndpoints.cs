@@ -25,7 +25,7 @@ namespace MMIv8_Ktype.Api.Endpoints
         Task<SerializableResult<Version>> GetCurrentVersion();
 
         [Put("/Create")]
-        Task<SerializableResult<Version>> CreateVersion(CreateVersionRequest request);
+        Task<SerializableResult<Version>> CreateVersion(string TecDocEntityVersion, string MMIv8EntityVersion, string UserName);
 
         [Patch("/{VersionNumber}")]
         Task<SerializableResult<Version>> UpdateVersion([FromHeader] int VersionNumber, [FromQuery] string? TecdocEntityVersion = null, [FromQuery] string? MMIv8EntityVersion = null, [FromQuery] string? UserName = null);

@@ -17,7 +17,7 @@ namespace MMIv8_Ktype.Core.Endpoints
     {
         public async Task<SerializableResult<List<Version>>> GetAll() //TODO change results to stream
         {
-            return  (Result<List<Version>>)(await versionService.GetFindFluent().ToListAsync());
+            return Result.Success(await versionService.GetFindFluent().ToListAsync());
         }
 
         public async Task<SerializableResult<Version>> GetCurrentVersion()
@@ -30,9 +30,9 @@ namespace MMIv8_Ktype.Core.Endpoints
             return await versionService.GetByVersion(VersionNumber);
         }
 
-        public async Task<SerializableResult<Version>> CreateVersion(CreateVersionRequest request)
+        public async Task<SerializableResult<Version>> CreateVersion(string TecDocEntityVersion, string MMIv8EntityVersion, string UserName)
         {
-            return await mappingService.CreateVersion(request);
+            return await mappingService.CreateVersion(TecDocEntityVersion, MMIv8EntityVersion, UserName);
         }
 
         public async Task<SerializableResult<Version>> UpdateVersion(int VersionNumber, string? TecdocEntityVersion = null, string? MMIv8EntityVersion = null, string? UserName = null)
@@ -40,7 +40,7 @@ namespace MMIv8_Ktype.Core.Endpoints
             if (TecdocEntityVersion is null && MMIv8EntityVersion is null && UserName is null)
             {
                 Log.Error("No updates given for Version {versionNumber}", VersionNumber);
-                return Result<Version>.Failure<Version>(Error.NullValue);
+                return Result<Version>.Failure<Version>(Error.Validation("Version.UpdateValidation", $"No updates given for Version {VersionNumber}"));
             }
 
             return await mappingService.UpdateVersion(VersionNumber, TecdocEntityVersion, MMIv8EntityVersion, UserName);

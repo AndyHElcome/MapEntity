@@ -18,7 +18,7 @@ namespace MMIv8_Ktype.Core.Services
 
             var version = await base.GetFindFluent(sort: sort).FirstOrDefaultAsync();
 
-            return version is not null ? version : Error.CannotFindDocument(typeof(Version), "No current version exist");
+            return version is not null ? version : Error.NotFound("Version.NoCurrentVersion", "No current version exist");
         }
 
         public async Task<Result<Version>> GetByVersion(int versionNumber)
@@ -27,7 +27,7 @@ namespace MMIv8_Ktype.Core.Services
 
             var version = await base.GetFindFluent(filter: filter).FirstOrDefaultAsync();
 
-            return version is not null ? version : Error.CannotFindDocument(typeof(Version), $"No version exists with VersionNumber {versionNumber}");
+            return version is not null ? version : Error.NotFound("Version.NotFoundByVersionNumber", $"No version exists with VersionNumber {versionNumber}");
         }
 
         public async Task<Result<List<Version>>> GetByUser(string userName)
@@ -36,7 +36,7 @@ namespace MMIv8_Ktype.Core.Services
 
             var version = await base.GetFindFluent(filter: filter).ToListAsync();
 
-            return version is not null ? version : Error.CannotFindDocument(typeof(Version), $"No versions exist with User {userName}");
+            return version is { Count: > 0} ? version : Error.NoContent("Version.NotFoundByUser", $"No versions exist with User {userName}");
         }
 
         public async Task<Result<Version>> Create(string tecdocEntityVersion, string mmiv8EntityVersion, User user)
@@ -46,7 +46,7 @@ namespace MMIv8_Ktype.Core.Services
 
             var version = new Version(newVersionNumber, tecdocEntityVersion, mmiv8EntityVersion, user);
 
-            var createVersionResult = await base.CreateWithResult(version);
+            var createVersionResult = await base.Create(version);
 
             if (!createVersionResult.IsSuccess)
                 return createVersionResult.Error!;

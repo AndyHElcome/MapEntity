@@ -161,8 +161,8 @@ namespace MMIv8_Ktype.CSV.Operations
             string filepath;
 
             await deleteVersionTask;
-            var legacyversion = await client.CreateService<IVersionEndpoints>().CreateVersion(new CreateVersionRequest("Legacy", "Legacy", "Admin"));
-            var currentversion = await client.CreateService<IVersionEndpoints>().CreateVersion(new CreateVersionRequest("0", "0", "Admin"));
+            var legacyversion = await client.CreateService<IVersionEndpoints>().CreateVersion("Legacy", "Legacy", "Admin");
+            var currentversion = await client.CreateService<IVersionEndpoints>().CreateVersion("0", "0", "Admin");
 
 
             filepath = Path.IsPathRooted(MMIv8Path) ? MMIv8Path : Path.Combine(path, MMIv8Path);
