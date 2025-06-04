@@ -8,11 +8,29 @@ using MongoDB.Bson;
 
 namespace MMIv8_Ktype.Core.Contexts
 {
-    public class VersionProviderMongo(VersionService versionService, UserService userService) : IVersionProvider
+    public class VersionProviderMongo : IVersionProvider
     {
-        public ObjectId VersionID { get; } = versionService.GetCurrentVersion().Result?.DocumentId
-                                          ?? versionService.Create("Legacy", "Legacy", userService.CreateAndReturn("Admin").Result).Result?.DocumentId //TODO Test this works
-                                          ?? throw new NotImplementedException();
+        public ObjectId VersionID { get; }
+
+        public VersionProviderMongo(VersionService versionService, UserService userService)
+        {
+            var versionResult = versionService.GetCurrentVersion().Result;
+
+            if (!versionResult.IsSuccess)
+            {
+                var userResult = userService.CreateAndReturn("Admin").Result;
+
+                //if (userResult.IsSuccess)
+                //versionResult = versionService.Create("Legacy", "Legacy", userResult.Value).Result;
+
+                versionResult = versionService.Create("Legacy", "Legacy", userResult).Result;
+            }
+
+            if (!versionResult.IsSuccess)
+                throw new Exception();
+
+            VersionID = versionResult.Value.DocumentId;
+        }
 
         public StatusChange NewStatus(Status status, string? detail = null) => new()
         {

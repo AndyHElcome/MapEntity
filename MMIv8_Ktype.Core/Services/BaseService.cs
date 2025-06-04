@@ -203,6 +203,21 @@ namespace MMIv8_Ktype.Core.Services
             Log.Debug("Created {Count} {Type}", 1, typeof(T).Name);
         }
 
+        public async Task<Result> CreateWithResult(T document)
+        {
+            try
+            {
+                await Collection.InsertOneAsync(document);
+                Log.Debug("Created {Count} {Type}", 1, typeof(T).Name);
+                return Result.Success();
+            }
+            catch (Exception ex)
+            {
+                Log.Error("Error Creating {Type}", typeof(T).Name);
+                return Error.CannotCreateDocument(typeof(T), $"Error: {ex.Message}");
+            }
+        }
+
         public async Task CreateAndValidate(T document)
         {
             if (await this.GetById(document.DocumentId) is not null)
@@ -237,6 +252,13 @@ namespace MMIv8_Ktype.Core.Services
             return this.Update(filter);
         }
 
+        public CombinationPipeline<T> Update(Tid documentId)
+        {
+            var filter = this.FilterByDocumentId(documentId);
+
+            return this.Update(filter);
+        }
+
 
         [Obsolete("UseComboUpdate")]
         public async Task<UpdateResult> Update(FilterDefinition<T> filter, UpdateDefinition<T> update)
@@ -263,7 +285,7 @@ namespace MMIv8_Ktype.Core.Services
             return result;
         }
 
-        public async Task<DeleteResult> DeleteAll()
+        public async Task<Result<DeleteResult>> DeleteAll()
         {
             var filter = Builders<T>.Filter.Empty;
             return await this.DeleteByFilter(filter);

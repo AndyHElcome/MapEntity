@@ -592,16 +592,25 @@ namespace MMIv8_Ktype.Core.Services.Mapping
 
 
         #region Version
-        public async Task<Version> CreateVersion(CreateVersionRequest request)
+        public async Task<Result<Version>> CreateVersion(CreateVersionRequest request)
         {
             var user = await UserService.CreateAndReturn(request.UserName);
             return await VersionService.Create(request.TecDocEntityVersion, request.MMIv8EntityVersion, user);
         }
 
-        public async Task<Version?> UpdateVersion(int versionNumber, string? tecdocEntityVersion = null, string? mmiv8EntityVersion = null, string? userName = null)
+        public async Task<Result<Version>> UpdateVersion(int versionNumber, string? tecdocEntityVersion = null, string? mmiv8EntityVersion = null, string? userName = null)
         {
             User? user = userName is null ? null : await UserService.CreateAndReturn(userName);
-            return await VersionService.Update(versionNumber, tecdocEntityVersion, mmiv8EntityVersion, user);
+
+            var versionResult = await VersionService.GetByVersion(versionNumber);
+            if (!versionResult.IsSuccess)
+                return versionResult;
+
+            var versionUpdate = VersionService.Update(versionResult.Value).AppendUpdate(c => c.UpdateVersionTecdocEntityVersion(tecdocEntityVersion)
+                                                                                              .UpdateVersionMMIv8EntityVersion(mmiv8EntityVersion)
+                                                                                              .UpdateVersionUser(user));
+
+            return await versionUpdate.FindAndUpdateDocument();
         }
         #endregion
 
@@ -610,8 +619,8 @@ namespace MMIv8_Ktype.Core.Services.Mapping
         {
             var sw = Stopwatch.StartNew();
 
-            Version? version = await VersionService.GetByVersion(versionNumber);
-            var entityRelations = entityRelationsRequest.ConvertAll(c => new EntityRelation(version.DocumentId, c.MMI_V8_Key, c.KTypNr, c.Comment, c.VersionNumber));
+            var versionResult = await VersionService.GetByVersion(versionNumber);
+            var entityRelations = entityRelationsRequest.ConvertAll(c => new EntityRelation(versionResult.Value.DocumentId, c.MMI_V8_Key, c.KTypNr, c.Comment, c.VersionNumber));
 
             await EntityRelationService.Create([ .. entityRelations ]);
 
@@ -645,9 +654,13 @@ namespace MMIv8_Ktype.Core.Services.Mapping
         {
             var entityRelationVersionIDs = await EntityRelationService.GetQueryable().Select(c => c.VersionID).Distinct().ToListAsync();
 
-            ObjectId currentVersionID = await VersionService.GetCurrentVersionID();
+            var currentVersionIDResult = await VersionService.GetCurrentVersion();
+
+            if (!currentVersionIDResult.IsSuccess)
+                return null;
+
             Version version = await VersionService.GetQueryable()
-                                                  .Where(c => entityRelationVersionIDs.Contains(c.DocumentId) && c.DocumentId != currentVersionID)
+                                                  .Where(c => entityRelationVersionIDs.Contains(c.DocumentId) && c.DocumentId != currentVersionIDResult.Value.DocumentId)
                                                   .OrderByDescending(c => c.VersionNumber)
                                                   .FirstOrDefaultAsync();
             return version;
@@ -678,8 +691,12 @@ namespace MMIv8_Ktype.Core.Services.Mapping
                 return;
             }
 
-            var versions = await VersionService.GetByUser(userName);
-            if (versions.Count > 0)
+            var versionResult = await VersionService.GetByUser(userName);
+
+            if (!versionResult.IsSuccess)
+                return;
+
+            if (versionResult.Value.Count > 0)
             {
                 Log.Error("Cannot Delete user as it's in use");
                 return;

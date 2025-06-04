@@ -1,4 +1,5 @@
-﻿using MMIv8_Ktype.Core.Contexts;
+﻿using MMIv8_Ktype.Api.Responses;
+using MMIv8_Ktype.Core.Contexts;
 using MMIv8_Ktype.Models;
 using MMIv8_Ktype.Models.Collections;
 using MongoDB.Bson;
@@ -23,7 +24,7 @@ namespace MMIv8_Ktype.Core.Services
             await base.Create(new User(newUserName));
         }
 
-        public async Task<User> CreateAndReturn(string newUserName)
+        public async Task<User> CreateAndReturn(string newUserName) // TODO Move to Bas Service
         {
             await this.Create(newUserName);
             return await this.GetByName(newUserName);

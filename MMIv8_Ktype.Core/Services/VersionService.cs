@@ -12,79 +12,46 @@ namespace MMIv8_Ktype.Core.Services
 {
     public class VersionService(MongoDBContext MMIv8_Ktype) : BaseService<Version, ObjectId>(MMIv8_Ktype.Collections.Version)
     {
-        public async Task<Version> GetCurrentVersion()
+        public async Task<Result<Version>> GetCurrentVersion()
         {
             var sort = Builders<Version>.Sort.Descending(m => m.VersionNumber);
 
-            return await base.GetFindFluent(sort: sort).FirstOrDefaultAsync();
+            var version = await base.GetFindFluent(sort: sort).FirstOrDefaultAsync();
+
+            return version is not null ? version : Error.CannotFindDocument(typeof(Version), "No current version exist");
         }
 
-        public async Task<ObjectId> GetCurrentVersionID()
+        public async Task<Result<Version>> GetByVersion(int versionNumber)
         {
-            var sort = Builders<Version>.Sort.Descending(m => m.VersionNumber);
-            var projection = Builders<Version>.Projection.Expression(c => c.DocumentId);
+            var filter = Builders<Version>.Filter.Eq(e => e.VersionNumber, versionNumber);
 
-            return await base.GetFindFluent(sort: sort).Project(projection).FirstOrDefaultAsync();
+            var version = await base.GetFindFluent(filter: filter).FirstOrDefaultAsync();
+
+            return version is not null ? version : Error.CannotFindDocument(typeof(Version), $"No version exists with VersionNumber {versionNumber}");
         }
 
-        /// <summary>
-        /// Get older versions skip = 0 is current version.
-        /// </summary>
-        /// <param name="skip"></param>
-        /// <returns></returns>
-        public async Task<ObjectId> GetPreviousVersionID(int skip = 1)
-        {
-            var sort = Builders<Version>.Sort.Descending(m => m.VersionNumber);
-            var projection = Builders<Version>.Projection.Expression(c => c.DocumentId);
-
-            return await base.GetFindFluent(sort: sort).Skip(skip).Project(projection).FirstOrDefaultAsync();
-        }
-
-        public async Task<Version> GetByVersion(int version)
-        {
-            var filter = Builders<Version>.Filter.Eq(e => e.VersionNumber, version);
-
-            return await base.GetFindFluent(filter: filter).FirstOrDefaultAsync();
-        }
-
-        public async Task<List<Version>> GetByUser(string userName)
+        public async Task<Result<List<Version>>> GetByUser(string userName)
         {
             var filter = Builders<Version>.Filter.Eq(e => e.User.Name, userName);
 
-            return await base.GetFindFluent(filter: filter).ToListAsync();
+            var version = await base.GetFindFluent(filter: filter).ToListAsync();
+
+            return version is not null ? version : Error.CannotFindDocument(typeof(Version), $"No versions exist with User {userName}");
         }
 
-        public async Task<Version> Create(string tecdocEntityVersion, string mmiv8EntityVersion, User user)
+        public async Task<Result<Version>> Create(string tecdocEntityVersion, string mmiv8EntityVersion, User user)
         {
-            var currentVersion = await GetCurrentVersion();
-            int newVersionNumber = currentVersion is null ? 0 : currentVersion.VersionNumber + 1;
+            var currentVersionResult = await GetCurrentVersion();
+            int newVersionNumber = currentVersionResult.IsSuccess ? currentVersionResult.Value.VersionNumber + 1 : 0 ;
 
-            await base.Create( new Version(newVersionNumber, tecdocEntityVersion, mmiv8EntityVersion, user) );
+            var version = new Version(newVersionNumber, tecdocEntityVersion, mmiv8EntityVersion, user);
+
+            var createVersionResult = await base.CreateWithResult(version);
+
+            if (!createVersionResult.IsSuccess)
+                return createVersionResult.Error!;
 
             return await GetCurrentVersion();
-        }
-
-        public async Task<Version?> Update(int versionNumber, string? tecdocEntityVersion = null, string? mmiv8EntityVersion = null, User? user = null)
-        {
-            if (tecdocEntityVersion is null && mmiv8EntityVersion is null && user is null)
-            {
-                Log.Warning("No updates given for Version {versionNumber}", versionNumber);
-                return null; 
-            }
-
-            var filter = Builders<Version>.Filter.Eq(c => c.VersionNumber, versionNumber);
-            var update = Builders<Version>.Update.Combine();
-
-            if (tecdocEntityVersion is not null)
-                update = update.Set(c => c.TecDocEntityVersion, tecdocEntityVersion);
-
-            if (mmiv8EntityVersion is not null)
-                update = update.Set(c => c.MMIv8EntityVersion, mmiv8EntityVersion);
-
-            if (user is not null)
-                update = update.Set(c => c.User, user);
-
-            return await base.FindOneAndUpdate(filter, update);
         }
     }
 }

@@ -7,11 +7,22 @@ using MongoDB.Bson;
 
 namespace MMIv8_Ktype.Api;
 
-public class VersionProviderApi(RefitClient RefitClient) : IVersionProvider
+public class VersionProviderApi : IVersionProvider
 {
-    public ObjectId VersionID { get; } = RefitClient.CreateService<IVersionEndpoints>().GetCurrentVersionID().Result
-                                      ?? RefitClient.CreateService<IVersionEndpoints>().CreateVersion(new("Legacy", "Legacy", "Admin")).Result?.DocumentId
-                                      ?? throw new NotImplementedException(); //TODO Test this works
+    public ObjectId VersionID { get; } //TODO Test this works
+
+    public VersionProviderApi(RefitClient RefitClient)
+    {
+        var versionResult = RefitClient.CreateService<IVersionEndpoints>().GetCurrentVersion().Result;
+
+        if (!versionResult.IsSuccess)
+            versionResult = RefitClient.CreateService<IVersionEndpoints>().CreateVersion(new("Legacy", "Legacy", "Admin")).Result;
+
+        if (!versionResult.IsSuccess)
+            throw new NotImplementedException();
+
+        VersionID = versionResult.Value.DocumentId;
+    }
 
     public StatusChange NewStatus(Status status, string? detail = null) => new()
     {

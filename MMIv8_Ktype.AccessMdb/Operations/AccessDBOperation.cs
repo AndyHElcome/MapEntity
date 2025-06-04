@@ -492,8 +492,6 @@ namespace MMIv8_Ktype.AccessMdb.Operations
 
         public GenerateMatchRefine(string dbPath, string tableName) : base(dbPath, tableName) { }
 
-
-
         public async override Task ExecuteOperation(ILogger log)
         {
             var matchEntityEndpoints = new RefitClient(log).CreateService<IMatchEntityEndpoints>();
@@ -547,7 +545,6 @@ namespace MMIv8_Ktype.AccessMdb.Operations
             Append = append;
         }
 
-
         public async override Task ExecuteOperation(ILogger log)
         {
             var matchEntityEndpoints = new RefitClient(log).CreateService<IMatchEntityEndpoints>();
@@ -600,7 +597,6 @@ namespace MMIv8_Ktype.AccessMdb.Operations
             Status = status;
             Append = append;
         }
-
 
         public async override Task ExecuteOperation(ILogger log)
         {

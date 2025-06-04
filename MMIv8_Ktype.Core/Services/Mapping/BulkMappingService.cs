@@ -1,4 +1,5 @@
-﻿using MMIv8_Ktype.Api.Requests;
+﻿using Microsoft.AspNetCore.Http.HttpResults;
+using MMIv8_Ktype.Api.Requests;
 using MMIv8_Ktype.Core.Contexts;
 using MMIv8_Ktype.Core.Services.Match;
 using MMIv8_Ktype.Core.Services.Source;
@@ -70,7 +71,7 @@ namespace MMIv8_Ktype.Core.Services.Mapping
 
             List<Task> creates = new();
             int i = 0;
-            using var makeModelMatches = await MatchMakeModelService.GetAllMatches(batchSize: 10);
+            using var makeModelMatches = await MatchMakeModelService.GetAllMatches(batchSize: 100);
             while (await makeModelMatches.MoveNextAsync())
             {
                 var swInner = Stopwatch.StartNew();
@@ -78,6 +79,7 @@ namespace MMIv8_Ktype.Core.Services.Mapping
                 foreach (var makeModelMatch in makeModelMatches.Current)
                 {
                     creates.Add(MappingService.StoreEntityMatch(makeModelMatch));
+                    //await MappingService.StoreEntityMatch(makeModelMatch);
                 }
 
                 swInner.Stop();

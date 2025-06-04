@@ -1,4 +1,6 @@
-﻿namespace MMIv8_Ktype.Api.Responses
+﻿using MMIv8_Ktype.Models;
+
+namespace MMIv8_Ktype.Api.Responses
 {
     public class PagedCursorResponse<T>(List<T> documents,
                                   int totalDocuments,

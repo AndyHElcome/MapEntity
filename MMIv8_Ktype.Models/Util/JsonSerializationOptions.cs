@@ -21,22 +21,11 @@ namespace MMIv8_Ktype.Models.Util
             target.NumberHandling = JsonNumberHandling.AllowReadingFromString;
             target.PropertyNameCaseInsensitive = true;
             target.PropertyNamingPolicy = JsonNamingPolicy.CamelCase;
-            target.TypeInfoResolver = new DefaultJsonTypeInfoResolver();
+            target.TypeInfoResolver = JsonTypeInfoResolver.Combine(
+                ResultJsonContext.Default,
+                new DefaultJsonTypeInfoResolver()
+            );
             target.WriteIndented = true;
-        }
-
-        [Obsolete()]
-        public static void ApplyJsonOptions(JsonSerializerOptions target, JsonSerializerOptions source)
-        {
-            foreach (var converter in source.Converters)
-                target.Converters.Add(converter);
-
-            target.DefaultIgnoreCondition = source.DefaultIgnoreCondition;
-            target.NumberHandling = source.NumberHandling;
-            target.PropertyNameCaseInsensitive = source.PropertyNameCaseInsensitive;
-            target.PropertyNamingPolicy = source.PropertyNamingPolicy;
-            target.TypeInfoResolver = source.TypeInfoResolver;
-            target.WriteIndented = source.WriteIndented;
         }
     }
 }

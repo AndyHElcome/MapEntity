@@ -35,8 +35,12 @@ namespace MMIv8_Ktype.Core.Endpoints
 
         public async Task<PagedCursorResponse<EntityRelation>> GetCurrentEntityRelations(string? cursor = null, int PageSize = 0) //TODO change to stream call
         {
-            var version = await versionService.GetCurrentVersion();
-            return await this.GetByVersion(version.DocumentId, cursor, PageSize);
+            var versionResult = await versionService.GetCurrentVersion();
+
+            if (!versionResult.IsSuccess)
+                return default;
+
+            return await this.GetByVersion(versionResult.Value.DocumentId, cursor, PageSize);
         }
 
         public async Task<PagedCursorResponse<EntityRelation>> GetPreviousEntityRelations(string? cursor = null, int PageSize = 0) //TODO change to stream call

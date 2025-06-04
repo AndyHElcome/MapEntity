@@ -173,7 +173,7 @@ namespace MMIv8_Ktype.CSV.Operations
 
             await Task.WhenAll(deleteEntityRelationTask, deleteMatchEntityTask);
             filepath = Path.IsPathRooted(EntityRelationPath) ? EntityRelationPath : Path.Combine(path, EntityRelationPath);
-            Task loadEntityRelationTask = new LoadEntityRelation(filepath, legacyversion.VersionNumber).ExecuteOperation(log);
+            Task loadEntityRelationTask = new LoadEntityRelation(filepath, legacyversion.Value.VersionNumber).ExecuteOperation(log);
 
             await Task.WhenAll(deleteMatchMakeModelTask, loadMMITask, loadTDTask, loadEntityRelationTask);
             filepath = Path.Combine(path, "MatchMakeModel.csv");
