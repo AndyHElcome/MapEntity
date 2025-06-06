@@ -43,7 +43,7 @@ namespace MMIv8_Ktype.Core.Services
             return await base.GetFindFluent(filter: filter).FirstOrDefaultAsync();
         }
 
-        public async Task<DeleteResult> DeleteAllByVersion(ObjectId versionID)
+        public async Task<Result<DeleteResult>> DeleteAllByVersion(ObjectId versionID)
         {
             var filter = Builders<EntityRelation>.Filter.Eq(e => e.VersionID, versionID);
             return await base.DeleteByFilter(filter);

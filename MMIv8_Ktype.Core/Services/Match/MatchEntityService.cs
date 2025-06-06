@@ -187,8 +187,12 @@ namespace MMIv8_Ktype.Core.Services.Match
         {
             var tasks = mmi_V8_Keys.Select(c => CombinationUpdateMatchRefine(c)).ToArray();
 
-            return new BulkCombinationUpdate(MMIv8_Ktype).AddCombinationUpdate( await Task.WhenAll(tasks) );
+            return new BulkCombinationUpdate(MMIv8_Ktype).AddCombinationUpdate(await Task.WhenAll(tasks));
+        }
 
+        public BulkCombinationUpdate CreateBulkCombinationUpdate() //TODO Move into base service with MMIV8KTYPE_CONTEXT
+        {
+            return new BulkCombinationUpdate(MMIv8_Ktype);
         }
 
         public async Task<BulkCombinationUpdate> BulkCombinationUpdateMatchRefine(FilterDefinition<MatchEntity> filter) //TODO Move into unique MatchRefine Class
@@ -228,17 +232,10 @@ namespace MMIv8_Ktype.Core.Services.Match
             return base.Update(entityFilter).AppendUpdate(c => c.UpdateMatchRefine(new(matchEntities.ToArray())));
         }
 
-        public async Task<DeleteResult?> DeleteInvalidDates() 
+        public async Task<Result<DeleteResult>> DeleteInvalidDates() 
         {
             var filterBuilder = Builders<MatchEntity>.Filter;
             var filter = filterBuilder.Eq(c => c.DateIntersection.date_Intersection, 0);
-
-            var count = await base.CountByFilter(filter);
-
-            if (count == 0)
-                return null;
-
-            Log.Information("Deleting Entity Matches with 0 Date intersection");
 
             return await DeleteByFilter(filter);      
         }

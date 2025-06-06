@@ -6,6 +6,7 @@ using MMIv8_Ktype.Api.Requests;
 using MMIv8_Ktype.Api.Responses;
 using MMIv8_Ktype.Core.Services.Mapping;
 using MMIv8_Ktype.Core.Services.Match;
+using MMIv8_Ktype.Models;
 using MMIv8_Ktype.Models.Collections;
 using MMIv8_Ktype.Models.Outputs;
 using MMIv8_Ktype.Models.Status;
@@ -59,7 +60,7 @@ namespace MMIv8_Ktype.Core.Endpoints
             return filter;
         }
 
-        public async Task<MatchEntity> GetById(ObjectId DocumentId)
+        public async Task<SerializableResult<MatchEntity>> GetById(ObjectId DocumentId)
         {
             return await matchEntityService.GetById(DocumentId);
         }
@@ -119,7 +120,7 @@ namespace MMIv8_Ktype.Core.Endpoints
             return await matchEntityService.PaginateDocumentsByCursor<MatchEntitySummary, ObjectId>(filter: filter, cursor: objectId, pageSize: PageSize, projection: projection);
         }
 
-        public async Task<List<MatchRefine>> GetAllMatchRefine(
+        public async Task<SerializableResult<List<MatchRefine>>> GetAllMatchRefine(
             string? MakeModelMatchId = null,
             string? TecDocEntityId = null,
             string? MMIv8EntityId = null,

@@ -5,6 +5,8 @@ using MMIv8_Ktype.Models.Indexes;
 using MongoDB.Bson;
 using MongoDB.Driver;
 using Serilog;
+using System.Reflection.Metadata;
+using System.Xml.Linq;
 
 namespace MMIv8_Ktype.Core.Services.Source
 {
@@ -15,21 +17,20 @@ namespace MMIv8_Ktype.Core.Services.Source
     public abstract class SourceEntityService<T>(IMongoCollection<T> Collection, IVersionProvider versionProvider) : BaseServiceWithDifferences<T, ObjectId>(Collection, versionProvider)
         where T : SourceEntity
     {
-        public async Task<T?> GetByExternalId(int externalId)
+        public async Task<Result<T>> GetByExternalId(int externalId)
         {
             var filter = Builders<T>.Filter.Eq(e => e.ExternalId, externalId);
-            var result = await base.GetFindFluent(filter).FirstOrDefaultAsync();
+            var document = await base.GetFindFluent(filter).FirstOrDefaultAsync();
 
-            if (result is null)
-                Log.Warning("No {type} found with ExternalId {ExternalId}", typeof(T), externalId);
-
-            return result;
+            return document is not null ? document : Error.NotFound($"{typeof(T)}.NotFoundByExternalId", $"No {typeof(T).Name} exists with ExternalId {externalId}");
         }
 
-        public async Task<IAsyncCursor<T>> GetByModelId(string SourceEntityModelHash, int? batchSize = null)
+        public async Task<Result<List<T>>> GetByModelId(string SourceEntityModelHash)
         {
             var filter = Builders<T>.Filter.Eq(e => e.SourceEntityModelHash, SourceEntityModelHash);
-            return await base.GetFindFluent(filter: filter, batchSize: batchSize).ToCursorAsync();
+            var documents = await base.GetFindFluent(filter: filter).ToListAsync();
+
+            return documents is { Count: > 0 } ? documents : Error.NotFound($"{typeof(T)}.NotFoundBySourceEntityModelHash", $"No {typeof(T).Name} exists with SourceEntityModelHash {SourceEntityModelHash}");
         }
     }
 }

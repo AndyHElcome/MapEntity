@@ -22,7 +22,7 @@ using System.Data.SqlTypes;
 namespace MMIv8_Ktype.Core.Services
 {
     public class BaseService<T, Tid>(IMongoCollection<T> Collection)
-        where T : ICollectionEntity<Tid?>
+        where T : ICollectionEntity<Tid>
     {
         public IMongoCollection<T> Collection = Collection;
 
@@ -71,7 +71,7 @@ namespace MMIv8_Ktype.Core.Services
             return await Collection.DistinctAsync<TOut>(fieldName, filter);
         }
 
-        public async Task<List<TOut>> GetDistinctDocuments<TOut>(string fieldName, FilterDefinition<T>? filter = null)
+        public async Task<Result<List<TOut>>> GetDistinctDocuments<TOut>(string fieldName, FilterDefinition<T>? filter = null)
         {
             filter ??= Builders<T>.Filter.Empty;
 
@@ -82,10 +82,10 @@ namespace MMIv8_Ktype.Core.Services
 
             sw.Stop();
             Log.Information("Completed Get of {count} Distinct {Type} into {OutType} in {Time}", results.Count, typeof(T).Name, typeof(TOut).Name, sw);
-            return results;
+            return results is { Count: > 0} ? results : Error.NoContent($"{typeof(T)}.NoContent", $"Could not find any documents");
         }
 
-        public async IAsyncEnumerable<IEnumerable<TOut>> EnumerateDistinctDocuments<TOut>(string fieldName, FilterDefinition<T>? filter = null)
+        private protected async IAsyncEnumerable<IEnumerable<TOut>> EnumerateDistinctDocuments<TOut>(string fieldName, FilterDefinition<T>? filter = null)
         {
             filter ??= Builders<T>.Filter.Empty;
 
@@ -106,9 +106,10 @@ namespace MMIv8_Ktype.Core.Services
             Log.Information("Completed Enumerate of {count} Distinct {Type} into {OutType} in {Time}", i, typeof(T).Name, typeof(TOut).Name, sw);
         }
 
-        public async Task<T> GetById(Tid documentId)
+        public async Task<Result<T>> GetById(Tid documentId)
         {
-            return await this.GetFindFluent(this.FilterByDocumentId(documentId)).FirstOrDefaultAsync();
+            var document = await this.GetFindFluent(this.FilterByDocumentId(documentId)).FirstOrDefaultAsync();
+            return document is not null ? document : Error.NotFound($"{typeof(T)}.NotFoundByDocumentId", $"No {typeof(T).Name} exists with DocumentId {documentId}");
         }
 
         public async Task<PagedResponse<TOut>> PaginateDocuments<TOut>(FilterDefinition<T>? filter = null, SortDefinition<T>? sort = null, int page = 1, int pageSize = 100, ProjectionDefinition<T, TOut>? projection = null)
@@ -170,7 +171,7 @@ namespace MMIv8_Ktype.Core.Services
             return pagedResults;
         }
 
-        public async IAsyncEnumerable<IEnumerable<TOut>> EnumerateDocuments<TOut>(FilterDefinition<T> filter, int batchSize = 10000, ProjectionDefinition<T, TOut>? projection = null)
+        private protected async IAsyncEnumerable<IEnumerable<TOut>> EnumerateDocuments<TOut>(FilterDefinition<T> filter, int batchSize = 10000, ProjectionDefinition<T, TOut>? projection = null)
         {
             Log.Debug("Starting Enumerate {Type}", typeof(T).Name);
             var sw = Stopwatch.StartNew();
@@ -205,26 +206,24 @@ namespace MMIv8_Ktype.Core.Services
             }
             catch (Exception ex)
             {
-                Log.Error("Error Creating {Type} {@document}", typeof(T).Name, document);
+                Log.Error(ex, "Error Creating {Type} {@document}", typeof(T).Name, document);
                 return Error.Failure($"{typeof(T)}.CreationFailure", $"Could not create {@document}. Error: {ex.Message}");
             }
         }
 
-        public async Task CreateAndValidate(T document)
+        public async Task<Result> Create(T[] documents)
         {
-            if (await this.GetById(document.DocumentId) is not null)
+            try
             {
-                Log.Information("Document already exists {type} with Id of {DocumentId}", typeof(T), document.DocumentId?.ToString());
-                return;
+                await Collection.InsertManyAsync(documents);
+                Log.Debug("Created {Count} {Type}", documents.Length, typeof(T).Name);
+                return Result.Success();
             }
-
-            await this.Create(document);
-        }
-
-        public async Task Create(T[] documents)
-        {
-            await Collection.InsertManyAsync(documents);
-            Log.Debug("Created {Count} {Type}", documents.Length, typeof(T).Name);
+            catch (Exception ex)
+            {
+                Log.Error(ex, "Error Creating multiple {Type} {count}", typeof(T).Name, documents.Length);
+                return Error.Failure($"{typeof(T)}.CreationFailure", $"Could not create {documents.Length} documents. Error: {ex.Message}");
+            }
         }
         #endregion
 
@@ -251,30 +250,26 @@ namespace MMIv8_Ktype.Core.Services
             return this.Update(filter);
         }
 
-
-        [Obsolete("UseComboUpdate")]
-        public async Task<UpdateResult> Update(FilterDefinition<T> filter, UpdateDefinition<T> update)
-        {
-            var result = await Collection.UpdateManyAsync(filter, update);
-            Log.Debug("Updated {Count} {Type}", result.ModifiedCount, typeof(T).Name);
-            return result;
-        }
-
-        [Obsolete("UseComboUpdate")]
-        public async Task<T> FindOneAndUpdate(FilterDefinition<T> filter, UpdateDefinition<T> update)
-        {
-            var result = await Collection.FindOneAndUpdateAsync(filter, update, new FindOneAndUpdateOptions<T, T>() { ReturnDocument = ReturnDocument.After });
-            Log.Debug("Updated 1 {Type}", typeof(T).Name);
-            return result;
-        }
+        //public BulkCombinationUpdate CreateBulkCombinationUpdate()
+        //{
+        //    return new BulkCombinationUpdate(mmiv8_Ktype)
+        //}
         #endregion
 
         #region Deletion
-        public async Task<DeleteResult> DeleteByFilter(FilterDefinition<T> filter)
+        public async Task<Result<DeleteResult>> DeleteByFilter(FilterDefinition<T> filter)
         {
-            var result = await Collection.DeleteManyAsync(filter);
-            Log.Debug("Deleted {Count} {Type}", result.DeletedCount, typeof(T).Name);
-            return result;
+            try
+            {
+                var result = await Collection.DeleteManyAsync(filter);
+                Log.Debug("Deleted {Count} {Type}", result.DeletedCount, typeof(T).Name);
+                return result;
+            }
+            catch (Exception ex)
+            {
+                Log.Error(ex, "Error Deleting {Type} from filter: {filter}", typeof(T).Name, filter.ToString());
+                return Error.Failure($"{typeof(T)}.DeletionFailure", $"Could not delete document. Error: {ex.Message}");
+            }
         }
 
         public async Task<Result<DeleteResult>> DeleteAll()
@@ -283,23 +278,32 @@ namespace MMIv8_Ktype.Core.Services
             return await this.DeleteByFilter(filter);
         }
 
-        public async Task<T> FindOneAndDelete(FilterDefinition<T> filter)
+        public async Task<Result<T>> FindOneAndDelete(FilterDefinition<T> filter)
         {
-            var result = await Collection.FindOneAndDeleteAsync(filter);
-            Log.Debug("Deleted 1 {Type}", typeof(T).Name);
-            return result;
+            try
+            {
+                var result = await Collection.FindOneAndDeleteAsync(filter);
+                Log.Debug("Deleted 1 {Type}", typeof(T).Name);
+                return result;
+            }
+            catch (Exception ex)
+            {
+                Log.Error(ex, "Error Deleting {Type} from filter: {filter}", typeof(T).Name, filter.ToString());
+                return Error.Failure($"{typeof(T)}.DeletionFailure", $"Could not delete document. Error: {ex.Message}");
+            }
         }
 
-        public async Task<T> DeleteById(Tid documentId)
+        public async Task<Result<T>> DeleteById(Tid documentId)
         {
             return await this.FindOneAndDelete(this.FilterByDocumentId(documentId));
         }
 
-        public async Task<T> Delete(T document)
+        public async Task<Result<T>> Delete(T document)
         {
             return await this.DeleteById(document.DocumentId);
         }
 
+        [Obsolete]
         public async Task Delete(T[] documents)
         {
             foreach (var document in documents)

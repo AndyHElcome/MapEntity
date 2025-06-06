@@ -38,7 +38,8 @@ namespace MMIv8_Ktype.Core.Controllers
 
             var matchMakeModel= await MatchMakeModelService.GetById(ObjectId.Parse(objectId));
 
-            await MappingService.StoreEntityMatch(matchMakeModel!);
+            if (matchMakeModel.IsSuccess)
+                await MappingService.StoreEntityMatch(matchMakeModel.Value);
 
             return Ok("updated");
         }

@@ -31,12 +31,12 @@ namespace MMIv8_Ktype.Core.Endpoints
             return await sourceEntityService.PaginateDocumentsByCursor<T, ObjectId>(cursor: objectId, pageSize: PageSize);
         }
 
-        public async Task<T?> GetById(ObjectId EntityId)
+        public async Task<SerializableResult<T>> GetById(ObjectId EntityId)
         {
             return await sourceEntityService.GetById(EntityId);
         }
 
-        public async Task<T?> GetByExternalId(int ExternalId)
+        public async Task<SerializableResult<T>> GetByExternalId(int ExternalId)
         {
             return await sourceEntityService.GetByExternalId(ExternalId);
         }

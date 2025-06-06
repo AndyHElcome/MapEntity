@@ -31,7 +31,7 @@ namespace MMIv8_Ktype.Core.Endpoints
             return await matchBaseService.PaginateDocumentsByCursor<MatchBase, string>(filter: filter, cursor: cursor, pageSize: PageSize);
         }
 
-        public async Task<MatchBase?> GetById(string MatchHash)
+        public async Task<SerializableResult<MatchBase>> GetById(string MatchHash)
         {
             return await matchBaseService.GetById(MatchHash);
         }

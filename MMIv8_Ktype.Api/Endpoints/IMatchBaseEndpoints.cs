@@ -1,6 +1,7 @@
 ﻿using Microsoft.AspNetCore.Mvc;
 using MMIv8_Ktype.Api.Requests;
 using MMIv8_Ktype.Api.Responses;
+using MMIv8_Ktype.Models;
 using MMIv8_Ktype.Models.Attributes;
 using MMIv8_Ktype.Models.Collections;
 using MMIv8_Ktype.Models.Util;
@@ -18,7 +19,7 @@ namespace MMIv8_Ktype.Api.Endpoints
         Task<PagedCursorResponse<MatchBase>> GetByMatchBaseType([FromRoute] MatchBaseType MatchBaseType, [FromQuery] string? cursor = null, [FromQuery] int PageSize = 0);
 
         [Get("/GetById/{MatchHash}")]
-        Task<MatchBase?> GetById(string MatchHash);
+        Task<SerializableResult<MatchBase>> GetById(string MatchHash);
 
         [Put("/{MatchBaseType}")]
         Task UpdateMatchBaseScore([FromRoute] MatchBaseType MatchBaseType, [FromQuery] string MatchHash, [FromQuery] decimal NewScore);

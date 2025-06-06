@@ -63,6 +63,7 @@ namespace MMIv8_Ktype.Models
 
         public static implicit operator Result<TValue>(Error error) =>
             Failure<TValue>(error);
+
     }
 
     public interface IResultWrapper

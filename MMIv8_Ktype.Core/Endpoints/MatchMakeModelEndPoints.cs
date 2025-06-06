@@ -4,6 +4,7 @@ using MMIv8_Ktype.Api.Responses;
 using MMIv8_Ktype.Core.Services;
 using MMIv8_Ktype.Core.Services.Mapping;
 using MMIv8_Ktype.Core.Services.Match;
+using MMIv8_Ktype.Models;
 using MMIv8_Ktype.Models.Collections;
 using MMIv8_Ktype.Models.Indexes;
 using MongoDB.Bson;
@@ -36,7 +37,7 @@ namespace MMIv8_Ktype.Core.Endpoints
             return await matchMakeModelService.GetByModelId(SourceIndex, SourceEntityModelHash);
         }
 
-        public async Task<MatchMakeModel?> GetMakeModelMatchById(ObjectId MatchID)
+        public async Task<SerializableResult<MatchMakeModel>> GetMakeModelMatchById(ObjectId MatchID)
         {
             return await matchMakeModelService.GetById(MatchID);
         }

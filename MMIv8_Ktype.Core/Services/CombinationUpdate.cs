@@ -121,12 +121,13 @@ namespace MMIv8_Ktype.Core.Services
             WriteOptions = writeOptions;
         }
 
-        public BulkCombinationUpdate AddCombinationUpdate<T>(params CombinationPipeline<T>[] combinationPipelines)
+        public BulkCombinationUpdate AddCombinationUpdate(ICombinationPipeline combinationPipeline)
         {
-            return AddCombinationUpdate((IEnumerable<CombinationPipeline<T>>)combinationPipelines);
+            combinationPipelines.Add(combinationPipeline);
+            return this;
         }
 
-        public BulkCombinationUpdate AddCombinationUpdate<T>(IEnumerable<CombinationPipeline<T>> combinationPipelines)
+        public BulkCombinationUpdate AddCombinationUpdate(IEnumerable<ICombinationPipeline> combinationPipelines)
         {
             foreach (var combinationPipeline in combinationPipelines)
             {
@@ -135,10 +136,14 @@ namespace MMIv8_Ktype.Core.Services
             return this;
         }
 
-        public BulkCombinationUpdate AddCombinationUpdate<T>(CombinationPipeline<T> combinationPipeline)
+        public BulkCombinationUpdate AddCombinationUpdate(params ICombinationPipeline[] combinationPipelines)
         {
-            combinationPipelines.Add(combinationPipeline);
-            return this;
+            return AddCombinationUpdate((IEnumerable<ICombinationPipeline>)combinationPipelines);
+        }
+
+        public BulkCombinationUpdate Combine(BulkCombinationUpdate bulkCombinationPipeline)
+        {
+            return AddCombinationUpdate(bulkCombinationPipeline.combinationPipelines);
         }
 
         public async Task<ClientBulkWriteResult?> CommitBulkWrite()

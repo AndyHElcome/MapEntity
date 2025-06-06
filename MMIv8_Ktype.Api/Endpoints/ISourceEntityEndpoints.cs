@@ -1,4 +1,5 @@
 ﻿using MMIv8_Ktype.Api.Responses;
+using MMIv8_Ktype.Models;
 using MMIv8_Ktype.Models.Attributes;
 using MMIv8_Ktype.Models.Collections;
 using MMIv8_Ktype.Models.Indexes;
@@ -18,10 +19,10 @@ namespace MMIv8_Ktype.Api.Endpoints
         Task<PagedCursorResponse<T>> GetAll(string? Cursor, int PageSize);
 
         [Get("/GetByExternalId/{ExternalId}")]
-        Task<T?> GetByExternalId(int ExternalId);
+        Task<SerializableResult<T>> GetByExternalId(int ExternalId);
 
         [Get("/GetEntityId/{EntityId}")]
-        Task<T?> GetById(ObjectId EntityId);
+        Task<SerializableResult<T>> GetById(ObjectId EntityId);
 
         [Put("/Update")]
         Task UpdateEntity(T sourceEntity);

@@ -19,8 +19,8 @@ namespace MMIv8_Ktype.Core.Services
 
         public async Task<Result<User>> Create(string newUserName)
         {
-            if (await this.GetByName(newUserName) is not null)
-                return Error.Conflict("User.UserNameConflict", $"User already exists with user name {newUserName}");
+            //if (await this.GetByName(newUserName) is not null)
+            //    return Error.Conflict("User.UserNameConflict", $"User already exists with user name {newUserName}");
 
             User user = new(newUserName);
             var userResult = await base.Create(user);

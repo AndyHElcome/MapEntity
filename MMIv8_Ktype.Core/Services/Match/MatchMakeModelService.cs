@@ -12,18 +12,20 @@ namespace MMIv8_Ktype.Core.Services.Match
 {
     public class MatchMakeModelService(MongoDBContext MMIv8_Ktype, IVersionProvider versionProvider) : BaseServiceWithVersion<MatchMakeModel, ObjectId>(MMIv8_Ktype.Collections.MatchMakeModel, versionProvider)
     {
-        public async Task<IAsyncCursor<MatchMakeModel>> GetAllMatches(FilterDefinition<MatchMakeModel>? filter = null, int? batchSize = 1000)
+        public async Task<IAsyncCursor<MatchMakeModel>> GetAllMatches(FilterDefinition<MatchMakeModel>? filter = null, int? batchSize = 1000, bool validOnly = true)
         {
             var filterBuilder = Builders<MatchMakeModel>.Filter;
             filter ??= filterBuilder.Empty;
-            filter &= filterBuilder.Exists(m => m.TecDocModel.DocumentId)
+
+            if (validOnly)
+                filter &= filterBuilder.Exists(m => m.TecDocModel.DocumentId)
                     & filterBuilder.Exists(m => m.MMIv8Model.DocumentId)
                     & filterBuilder.Ne(x => x.Status.Current.Status, Status.Deprecated);
 
             return await base.GetFindFluent(filter, batchSize: batchSize).ToCursorAsync();
         }
 
-        public async Task<List<MatchMakeModel>> GetByModelId(SourceIndex sourceIndex, string SourceEntityModelHash)
+        public async Task<List<MatchMakeModel>> GetByModelId(SourceIndex sourceIndex, string SourceEntityModelHash, bool validOnly = false)
         {
             var builder = Builders<MatchMakeModel>.Filter;
             var filter = builder.Empty;
@@ -33,6 +35,11 @@ namespace MMIv8_Ktype.Core.Services.Match
 
             if (sourceIndex == SourceIndex.MMIv8)
                 filter = builder.Eq(e => e.MMIv8Model.DocumentId, SourceEntityModelHash);
+
+            if (validOnly)
+                filter &= builder.Exists(m => m.TecDocModel.DocumentId)
+                        & builder.Exists(m => m.MMIv8Model.DocumentId)
+                        & builder.Ne(x => x.Status.Current.Status, Status.Deprecated);
 
             return await base.GetFindFluent(filter).ToListAsync();
         }

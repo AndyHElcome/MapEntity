@@ -1,6 +1,7 @@
 ﻿using Microsoft.AspNetCore.Mvc;
 using MMIv8_Ktype.Api.Requests;
 using MMIv8_Ktype.Api.Responses;
+using MMIv8_Ktype.Models;
 using MMIv8_Ktype.Models.Attributes;
 using MMIv8_Ktype.Models.Collections;
 using MMIv8_Ktype.Models.Indexes;
@@ -16,7 +17,7 @@ namespace MMIv8_Ktype.Api.Endpoints
         Task<PagedCursorResponse<MatchMakeModel>> GetAll([FromQuery] string? cursor = null, [FromQuery] int PageSize = 0);
 
         [Get("/{MatchID}")]
-        Task<MatchMakeModel?> GetMakeModelMatchById(ObjectId MatchID);
+        Task<SerializableResult<MatchMakeModel>> GetMakeModelMatchById(ObjectId MatchID);
 
         [Get("/GetByModels")]
         Task<MatchMakeModel?> GetMakeModelMatch([FromQuery] string TD_SourceEntityModelHash, [FromQuery] string MMI_SourceEntityModelHash);

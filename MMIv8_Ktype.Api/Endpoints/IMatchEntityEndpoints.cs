@@ -2,6 +2,7 @@
 using Microsoft.AspNetCore.Mvc;
 using MMIv8_Ktype.Api.Requests;
 using MMIv8_Ktype.Api.Responses;
+using MMIv8_Ktype.Models;
 using MMIv8_Ktype.Models.Attributes;
 using MMIv8_Ktype.Models.Collections;
 using MMIv8_Ktype.Models.Outputs;
@@ -17,7 +18,7 @@ namespace MMIv8_Ktype.Api.Endpoints
     public interface IMatchEntityEndpoints : IEndpoint
     {
         [Get("/{DocumentId}")]
-        Task<MatchEntity> GetById(ObjectId DocumentId);
+        Task<SerializableResult<MatchEntity>> GetById(ObjectId DocumentId);
 
         [Get("")] 
         Task<PagedCursorResponse<MatchEntity>> GetAll(
@@ -46,7 +47,7 @@ namespace MMIv8_Ktype.Api.Endpoints
             Status[]? Status = null);
 
         [Get("/MatchRefine")]
-        Task<List<MatchRefine>> GetAllMatchRefine(
+        Task<SerializableResult<List<MatchRefine>>> GetAllMatchRefine(
             string? MakeModelMatchId = null,
             string? TecDocEntityId = null,
             string? MMIv8EntityId = null,

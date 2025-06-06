@@ -395,23 +395,24 @@ namespace MMIv8_Ktype.Core.Services.Mapping
             if (matchEntityPartial is null)
                 return;
 
-            await MatchBaseService.CreateAndValidate(matchEntityPartial);
+            await MatchBaseService.Create(matchEntityPartial);
 
             if (newScore is not null)
                 await UpdateMatchScore(matchBaseType, matchHash, newScore ?? 0);
         }
 
-        public async Task RemovePartialMatchBase(MatchBaseType matchBaseType, string matchHash) // could be end point
+        public async Task<Result> RemovePartialMatchBase(MatchBaseType matchBaseType, string matchHash) // could be end point
         {
-            var matchEntityPartial = await MatchBaseService.GetById(matchHash);
+            var matchEntityPartialResult = await MatchBaseService.GetById(matchHash);
 
-            if (matchEntityPartial is null)
-                return;
+            if (!matchEntityPartialResult.IsSuccess)
+                return matchEntityPartialResult;
 
 
-            await UpdateMatchScore(matchBaseType, matchHash, matchEntityPartial.Reset(versionProvider).Score);
+            //var updateResult = 
+                await UpdateMatchScore(matchBaseType, matchHash, matchEntityPartialResult.Value.Reset(versionProvider).Score);
 
-            await MatchBaseService.DeleteById(matchHash);
+            return await MatchBaseService.DeleteById(matchHash);
         }
         #endregion
 
@@ -484,27 +485,32 @@ namespace MMIv8_Ktype.Core.Services.Mapping
             }
         }
 
-        public async Task StoreEntityMatch(MatchMakeModel makeModelMatch) // memory heavy
+        public async Task<Result> StoreEntityMatch(MatchMakeModel makeModelMatch) // memory heavy
         {
             var sw = Stopwatch.StartNew();
 
             List<Task> createTasks = new();
-            using (var tecdocEntities = await SourceTecDocPCService.GetByModelId(makeModelMatch.TecDocModel.DocumentId))
-            using (var mmiEntities = await SourceMMIv8Service.GetByModelId(makeModelMatch.MMIv8Model.DocumentId))
+            var tecdocEntities = await SourceTecDocPCService.GetByModelId(makeModelMatch.TecDocModel.DocumentId);
+            if (!tecdocEntities.IsSuccess)
+                return tecdocEntities;
+            
+            var mmiEntities = await SourceMMIv8Service.GetByModelId(makeModelMatch.MMIv8Model.DocumentId);
+            if (!mmiEntities.IsSuccess)
+                return mmiEntities;
+
+            var newMatches = GenerateEntityMatch(tecdocEntities.Value, mmiEntities.Value, makeModelMatch.DocumentId);
+            await foreach (var match in newMatches)
             {
-                var newMatches = GenerateEntityMatch(await tecdocEntities.ToListAsync(), await mmiEntities.ToListAsync(), makeModelMatch.DocumentId);
-
-                await foreach (var match in newMatches)
-                {
-                    if (match.Any())
-                        createTasks.Add(this.BulkCreateEntityMatch(match.ToList()));
-                }
+                if (match.Any())
+                    createTasks.Add(this.BulkCreateEntityMatch(match.ToList()));
             }
-
+            
             Task.WaitAll(createTasks.ToArray());
 
             var filter = Builders<MatchEntity>.Filter.Eq(c => c.MatchMakeModelMatchID, makeModelMatch.DocumentId);
             await this.RecalculateMatchBase(filter);
+
+            return Result.Success();
         }
 
         public async IAsyncEnumerable<IEnumerable<MatchEntity>> GenerateEntityMatch(IEnumerable<SourceTecDocPC> tecdocEntities, IEnumerable<SourceMMIv8> mmiEntities, ObjectId MakeModelMatchID)
@@ -647,7 +653,7 @@ namespace MMIv8_Ktype.Core.Services.Mapping
         {
             var sw = Stopwatch.StartNew();
 
-            await EntityRelationService.Delete([ .. entityRelations ]);
+            await EntityRelationService.Delete([ .. entityRelations ]); //TODO Use a different call here or put the foreach here
 
             var bulkPreviousFlagUpdate = MatchEntityService.BulkCombinationUpdatePreviousMatchedFlag(entityRelations, false);
             var bulkPreviousFlagResult = await bulkPreviousFlagUpdate.CommitBulkWrite();
