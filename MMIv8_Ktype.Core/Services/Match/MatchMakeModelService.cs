@@ -1,4 +1,5 @@
-﻿using MMIv8_Ktype.Api.Requests;
+﻿using Microsoft.AspNetCore.Mvc;
+using MMIv8_Ktype.Api.Requests;
 using MMIv8_Ktype.Core.Contexts;
 using MMIv8_Ktype.Models;
 using MMIv8_Ktype.Models.Collections;
@@ -12,6 +13,7 @@ namespace MMIv8_Ktype.Core.Services.Match
 {
     public class MatchMakeModelService(MongoDBContext MMIv8_Ktype, IVersionProvider versionProvider) : BaseServiceWithVersion<MatchMakeModel, ObjectId>(MMIv8_Ktype.Collections.MatchMakeModel, versionProvider)
     {
+        [Obsolete]
         public async Task<IAsyncCursor<MatchMakeModel>> GetAllMatches(FilterDefinition<MatchMakeModel>? filter = null, int? batchSize = 1000, bool validOnly = true)
         {
             var filterBuilder = Builders<MatchMakeModel>.Filter;
@@ -25,49 +27,61 @@ namespace MMIv8_Ktype.Core.Services.Match
             return await base.GetFindFluent(filter, batchSize: batchSize).ToCursorAsync();
         }
 
-        public async Task<List<MatchMakeModel>> GetByModelId(SourceIndex sourceIndex, string SourceEntityModelHash, bool validOnly = false)
+        public async Task<Result<List<MatchMakeModel>>> GetByModelId(SourceIndex sourceIndex, string SourceEntityModelHash, bool validOnly = false)
         {
-            var builder = Builders<MatchMakeModel>.Filter;
-            var filter = builder.Empty;
+            try
+            {
+                var builder = Builders<MatchMakeModel>.Filter;
+                var filter = builder.Empty;
 
-            if (sourceIndex == SourceIndex.TecDocPC)
-                filter = builder.Eq(e => e.TecDocModel.DocumentId, SourceEntityModelHash);
+                if (sourceIndex == SourceIndex.TecDocPC)
+                    filter = builder.Eq(e => e.TecDocModel.DocumentId, SourceEntityModelHash);
 
-            if (sourceIndex == SourceIndex.MMIv8)
-                filter = builder.Eq(e => e.MMIv8Model.DocumentId, SourceEntityModelHash);
+                if (sourceIndex == SourceIndex.MMIv8)
+                    filter = builder.Eq(e => e.MMIv8Model.DocumentId, SourceEntityModelHash);
 
-            if (validOnly)
-                filter &= builder.Exists(m => m.TecDocModel.DocumentId)
-                        & builder.Exists(m => m.MMIv8Model.DocumentId)
-                        & builder.Ne(x => x.Status.Current.Status, Status.Deprecated);
+                if (validOnly)
+                    filter &= builder.Exists(m => m.TecDocModel.DocumentId)
+                            & builder.Exists(m => m.MMIv8Model.DocumentId)
+                            & builder.Ne(x => x.Status.Current.Status, Status.Deprecated);
+                var result = await base.GetFindFluent(filter: filter).ToListAsync();
 
-            return await base.GetFindFluent(filter).ToListAsync();
+                return result is not null ? result : Error.NoContent("MatchMakeModel.NotFoundByModelId", $"No MatchMakeModel records exist for {sourceIndex} {SourceEntityModelHash}");
+            }
+            catch (Exception ex)
+            {
+                Log.Error(ex, "Error retrieving MatchMakeModel {@sourceIndex} {@SourceEntityModelHash}", sourceIndex, SourceEntityModelHash);
+                return Error.Failure($"MatchMakeModel.GetByModelIdFailure", $"Error getting Documents for {sourceIndex} {SourceEntityModelHash}. Error: {ex.Message}");
+            }
         }
 
-        public async Task<MatchMakeModel?> GetByModelIds(MatchMakeModelRequest request)
+        public async Task<Result<MatchMakeModel>> GetByModelIds(string? TD_SourceEntityModelHash = null, string? MMI_SourceEntityModelHash = null)
         {
-            var builder = Builders<MatchMakeModel>.Filter;
-            var filter = builder.Empty;
+            try
+            {
+                var builder = Builders<MatchMakeModel>.Filter;
+                var filter = builder.Empty;
 
-            if (request.TD_SourceEntityModelHash != "")
-            {
-                filter &= builder.Eq(e => e.TecDocModel.DocumentId, request.TD_SourceEntityModelHash);
-            }
-            else
-            {
-                filter &= builder.Exists(e => e.TecDocModel.DocumentId, false);
-            }
+                if (TD_SourceEntityModelHash is not null && TD_SourceEntityModelHash != string.Empty)
+                    filter &= builder.Eq(e => e.TecDocModel.DocumentId, TD_SourceEntityModelHash);
+                else
+                    filter &= builder.Exists(e => e.TecDocModel.DocumentId, false);
+                
 
-            if (request.MMI_SourceEntityModelHash != "")
-            {
-                filter &= builder.Eq(e => e.MMIv8Model.DocumentId, request.MMI_SourceEntityModelHash);
-            }
-            else
-            {
-                filter &= builder.Exists(e => e.MMIv8Model.DocumentId, false);
-            }
+                if (MMI_SourceEntityModelHash is not null && MMI_SourceEntityModelHash != string.Empty)
+                    filter &= builder.Eq(e => e.MMIv8Model.DocumentId, MMI_SourceEntityModelHash);
+                else
+                    filter &= builder.Exists(e => e.MMIv8Model.DocumentId, false);
+                
+                var result = await base.GetFindFluent(filter: filter).FirstOrDefaultAsync();
 
-            return await base.GetFindFluent(filter).FirstOrDefaultAsync();
+                return result is not null ? result : Error.NoContent("MatchMakeModel.NotFoundByModelIds", $"No MatchMakeModel records exist for TD {TD_SourceEntityModelHash} and MMI {MMI_SourceEntityModelHash}");
+            }
+            catch (Exception ex)
+            {
+                Log.Error(ex, "Error retrieving MatchMakeModel {@TD_SourceEntityModelHash} and {@MMI_SourceEntityModelHash}", TD_SourceEntityModelHash, MMI_SourceEntityModelHash);
+                return Error.Failure($"MatchMakeModel.GetByModelIdsFailure", $"Error getting Documents for TD {TD_SourceEntityModelHash} and MMI {MMI_SourceEntityModelHash}. Error: {ex.Message}");
+            }
         }
 
         public async Task<bool> CheckValid(MongoSourceEntityModel tecdoc, MongoSourceEntityModel mmiv8)
@@ -82,30 +96,34 @@ namespace MMIv8_Ktype.Core.Services.Match
             return match;
         }
 
-        public new async Task Create(MatchMakeModel model)
+        public new async Task<Result> Create(MatchMakeModel model)
         {
-            try
-            {
-                await base.Create(model);
+            var createResult = await base.Create(model);
+            if (!createResult.IsSuccess)
+                return createResult;
 
-                await UpdateRelatedMatches(model, $"Added match {model.DocumentId.ToString()}");
-            }
-            catch (MongoWriteException mwe)
-            {
-                Log.Error(mwe, "Make Model Match creation error");
-            }
+            var updateResult = await UpdateRelatedMatches(model, $"Added match {model.DocumentId.ToString()}");
+            if (!updateResult.IsSuccess)
+                return updateResult;
+
+            return Result.Success();
         }
 
-        private async Task<UpdateResult?> UpdateRelatedMatches(MatchMakeModel model, string? detail = null)
+        private async Task<Result<UpdateResult>> UpdateRelatedMatches(MatchMakeModel model, string? detail = null)
         {
             var filterBuilder = Builders<MatchMakeModel>.Filter;
 
-            var tecdocMatches = await GetByModelId(SourceIndex.TecDocPC, model.TecDocModel.DocumentId);
-            var mmiMatches = await GetByModelId(SourceIndex.MMIv8, model.MMIv8Model.DocumentId);
+            var tecdocMatchesResult = await GetByModelId(SourceIndex.TecDocPC, model.TecDocModel.DocumentId);
+            if (!tecdocMatchesResult.IsSuccess)
+                return tecdocMatchesResult.Error!;
+
+            var mmiMatchesResult = await GetByModelId(SourceIndex.MMIv8, model.MMIv8Model.DocumentId);
+            if (!mmiMatchesResult.IsSuccess)
+                return mmiMatchesResult.Error!;
 
             var updateFilter = filterBuilder.Exists(m => m.TecDocModel.DocumentId) & filterBuilder.Exists(m => m.MMIv8Model.DocumentId);
-            var tecdocFilter = filterBuilder.In(m => m.TecDocModel.DocumentId, mmiMatches.Select(m => m.TecDocModel.DocumentId));
-            var mmiFilter = filterBuilder.In(m => m.MMIv8Model.DocumentId, tecdocMatches.Select(m => m.MMIv8Model.DocumentId));
+            var tecdocFilter = filterBuilder.In(m => m.TecDocModel.DocumentId, tecdocMatchesResult.Value.Select(m => m.TecDocModel.DocumentId));
+            var mmiFilter = filterBuilder.In(m => m.MMIv8Model.DocumentId, mmiMatchesResult.Value.Select(m => m.MMIv8Model.DocumentId));
 
             updateFilter &= tecdocFilter | mmiFilter;
 

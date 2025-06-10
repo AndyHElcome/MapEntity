@@ -41,11 +41,11 @@ internal class Program
 
         //args = [ "MMIv8_Ktype.AccessMdb", "LoadPreviousMatches", @"C:\Users\andy.hargreaves\OneDrive - Elcome Ltd\Desktop\NEW MMI TO KTYPE\MMIv8_Ktype_Data.accdb", "LegacyMasterlist", "1" ];
 
-        //args = [ "MMIv8_Ktype.AccessMdb", "GenerateMatchRefine", @"C:\Users\andy.hargreaves\OneDrive - Elcome Ltd\Desktop\NEW MMI TO KTYPE\MMIv8_Ktype_Data.accdb", "MatchRefine" ];
+        args = [ "MMIv8_Ktype.AccessMdb", "GenerateMatchRefine", @"C:\Users\andy.hargreaves\OneDrive - Elcome Ltd\Desktop\NEW MMI TO KTYPE\MMIv8_Ktype_Data.accdb", "MatchRefine" ];
 
         //args = [ "MMIv8_Ktype.AccessMdb", "GenerateMatchSummary", @"C:\Users\andy.hargreaves\OneDrive - Elcome Ltd\Desktop\NEW MMI TO KTYPE\MMIv8_Ktype_Data.accdb", "MatchEntitySummary" ];
 
-        args = [ "MMIv8_Ktype.AccessMdb", "GenerateMatchEntity", @"C:\Users\andy.hargreaves\OneDrive - Elcome Ltd\Desktop\NEW MMI TO KTYPE\MMIv8_Ktype_Data.accdb", "MatchEntity" ];
+        //args = [ "MMIv8_Ktype.AccessMdb", "GenerateMatchEntity", @"C:\Users\andy.hargreaves\OneDrive - Elcome Ltd\Desktop\NEW MMI TO KTYPE\MMIv8_Ktype_Data.accdb", "MatchEntity" ];
 
         //args = [ "MMIv8_Ktype.AccessMdb", "GenerateMatchEntity", @"C:\Users\andy.hargreaves\OneDrive - Elcome Ltd\Desktop\NEW MMI TO KTYPE\MMIv8_Ktype_Data.accdb", "MatchEntity", "null", "null", "68387beadb32859096003313", "null", "null", "null", "null", "null", "false"];
 

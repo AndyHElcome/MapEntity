@@ -14,29 +14,50 @@ namespace MMIv8_Ktype.Core.Services
     {
         public async Task<Result<Version>> GetCurrentVersion()
         {
-            var sort = Builders<Version>.Sort.Descending(m => m.VersionNumber);
+            try
+            {
+                var sort = Builders<Version>.Sort.Descending(m => m.VersionNumber);
+                var version = await base.GetFindFluent(sort: sort).FirstOrDefaultAsync();
 
-            var version = await base.GetFindFluent(sort: sort).FirstOrDefaultAsync();
-
-            return version is not null ? version : Error.NotFound("Version.NoCurrentVersion", "No current version exist");
+                return version is not null ? version : Error.NotFound("Version.NoCurrentVersion", "No current version exist");
+            }
+            catch (Exception ex)
+            {
+                Log.Error(ex, "Error retrieving current version");
+                return Error.Failure($"Version.GetCurrentVersionFailure", $"Error getting current version. Error: {ex.Message}");
+            }
         }
 
         public async Task<Result<Version>> GetByVersion(int versionNumber)
         {
-            var filter = Builders<Version>.Filter.Eq(e => e.VersionNumber, versionNumber);
+            try
+            {
+                var filter = Builders<Version>.Filter.Eq(e => e.VersionNumber, versionNumber);
+                var version = await base.GetFindFluent(filter: filter).FirstOrDefaultAsync();
 
-            var version = await base.GetFindFluent(filter: filter).FirstOrDefaultAsync();
-
-            return version is not null ? version : Error.NotFound("Version.NotFoundByVersionNumber", $"No version exists with VersionNumber {versionNumber}");
+                return version is not null ? version : Error.NotFound("Version.NotFoundByVersionNumber", $"No version exists with VersionNumber {versionNumber}");
+            }
+            catch (Exception ex)
+            {
+                Log.Error(ex, "Error retrieving version {@versionNumber}", versionNumber);
+                return Error.Failure($"Version.GetByVersionFailure", $"Error getting version {versionNumber}. Error: {ex.Message}");
+            }
         }
 
         public async Task<Result<List<Version>>> GetByUser(string userName)
         {
-            var filter = Builders<Version>.Filter.Eq(e => e.User.Name, userName);
+            try
+            {
+                var filter = Builders<Version>.Filter.Eq(e => e.User.Name, userName);
+                var version = await base.GetFindFluent(filter: filter).ToListAsync();
 
-            var version = await base.GetFindFluent(filter: filter).ToListAsync();
-
-            return version is { Count: > 0} ? version : Error.NoContent("Version.NotFoundByUser", $"No versions exist with User {userName}");
+                return version is { Count: > 0 } ? version : Error.NoContent("Version.NotFoundByUser", $"No versions exist with User {userName}");
+            }
+            catch (Exception ex)
+            {
+                Log.Error(ex, "Error retrieving version with User {@userName}", userName);
+                return Error.Failure($"Version.GetByUserFailure", $"Error getting version with User {userName}. Error: {ex.Message}");
+            }
         }
 
         public async Task<Result<Version>> Create(string tecdocEntityVersion, string mmiv8EntityVersion, User user)
@@ -47,9 +68,8 @@ namespace MMIv8_Ktype.Core.Services
             var version = new Version(newVersionNumber, tecdocEntityVersion, mmiv8EntityVersion, user);
 
             var createVersionResult = await base.Create(version);
-
             if (!createVersionResult.IsSuccess)
-                return createVersionResult.Error!;
+                return Result.Failure<Version>(createVersionResult.Error!);
 
             return await GetCurrentVersion();
         }

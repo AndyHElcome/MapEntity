@@ -20,8 +20,8 @@ namespace MMIv8_Ktype.Api.Endpoints
         [Get("/{DocumentId}")]
         Task<SerializableResult<MatchEntity>> GetById(ObjectId DocumentId);
 
-        [Get("")] 
-        Task<PagedCursorResponse<MatchEntity>> GetAll(
+        [Get("")]
+        Task<SerializableResult<PagedCursorResponse<MatchEntity>>> GetAll(
             string? cursor = null,
             int PageSize = 100,
             string? MakeModelMatchId = null,
@@ -34,7 +34,7 @@ namespace MMIv8_Ktype.Api.Endpoints
             Status[]? Status = null);
 
         [Get("/MatchSummary")]
-        Task<PagedCursorResponse<MatchEntitySummary>> GetAllMatchEntitySummary(
+        Task<SerializableResult<PagedCursorResponse<MatchEntitySummary>>> GetAllMatchEntitySummary(
             string? cursor = null,
             int PageSize = 100,
             string? MakeModelMatchId = null,
@@ -58,24 +58,24 @@ namespace MMIv8_Ktype.Api.Endpoints
             Status[]? Status = null);
         
         [Post("/CheckEntityMatch")] //TODO Change to add the match into the collection
-        Task<MatchEntity?> CheckEntityMatch(MatchEntityByExternalRequest request);
+        Task<SerializableResult<MatchEntity>> CheckEntityMatch([FromQuery] int KtypNr, [FromQuery] int MMI_V8_Key);
 
         [Put("/UpdateFailedFlag")]
-        Task UpdateFailedFlag(UpdateFlagRequest request);
+        Task<Result> UpdateFailedFlag(UpdateFlagRequest request);
 
         [Put("/UpdateMatchedFlag")]
-        Task UpdateMatchedFlag(UpdateFlagRequest request);
+        Task<Result> UpdateMatchedFlag(UpdateFlagRequest request);
 
         [Put("/UpdateMatchRefineStatus/{MMI_V8_Key}")]
-        Task UpdateMatchRefineStatus([FromRoute] int MMI_V8_Key);
+        Task<Result> UpdateMatchRefineStatus([FromRoute] int MMI_V8_Key);
 
         [Put("/ResetMatchResult/{MMI_V8_Key}")]
-        Task ResetMatchResult([FromRoute] int MMI_V8_Key);
+        Task<Result> ResetMatchResult([FromRoute] int MMI_V8_Key);
 
         [Get("/Debug/GetMatchEntityBackup")]
-        Task<PagedCursorResponse<MatchEntityBackup>> GetMatchEntityBackup(string? cursor = null, int PageSize = 100);
+        Task<SerializableResult<PagedCursorResponse<MatchEntityBackup>>> GetMatchEntityBackup(string? cursor = null, int PageSize = 100);
 
         [Delete("/Debug/DeleteAll")]
-        Task DeleteAll();
+        Task<SerializableResult<DeleteResult>> DeleteAll();
     }
 }

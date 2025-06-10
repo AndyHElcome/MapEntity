@@ -19,12 +19,12 @@ namespace MMIv8_Ktype.Core.Endpoints
     public class MatchBaseEndpoints(MatchBaseService matchBaseService,
                                     MappingService mappingService) : IMatchBaseEndpoints
     {
-        public async Task<PagedCursorResponse<MatchBase>> GetAll(string? cursor = null, int PageSize = 100)
+        public async Task<SerializableResult<PagedCursorResponse<MatchBase>>> GetAll(string? cursor = null, int PageSize = 100)
         {
             return await matchBaseService.PaginateDocumentsByCursor<MatchBase, string>(cursor: cursor, pageSize: PageSize);
         }
 
-        public async Task<PagedCursorResponse<MatchBase>> GetByMatchBaseType(MatchBaseType MatchBaseType, string? cursor = null, int PageSize = 100) //TODO change to stream call
+        public async Task<SerializableResult<PagedCursorResponse<MatchBase>>> GetByMatchBaseType(MatchBaseType MatchBaseType, string? cursor = null, int PageSize = 100) //TODO change to stream call
         {
             var filter = Builders<MatchBase>.Filter.Eq(c => c.MatchBaseType, MatchBaseType);
 
@@ -36,29 +36,29 @@ namespace MMIv8_Ktype.Core.Endpoints
             return await matchBaseService.GetById(MatchHash);
         }
 
-        public async Task UpdateStatus(MatchBase request, StatusChange newStatus)
+        public async Task<SerializableResult<MatchBase>> UpdateStatus(MatchBase MatchBase, Status Status, string? Detail = null)
         {
-            await matchBaseService.Update(request).AppendPipeline(c => c.AppendStatus(newStatus)).UpdateDocuments();
+            return await matchBaseService.UpdateStatus(MatchBase, Status, Detail);
         }
 
-        public async Task UpdateMatchBaseScore(MatchBaseType MatchBaseType, string MatchHash, decimal NewScore)
+        public async Task<Result> UpdateMatchBaseScore(MatchBaseType MatchBaseType, string MatchHash, decimal NewScore)
         {
-            await mappingService.UpdateMatchScore(MatchBaseType, MatchHash, NewScore);
+            return await mappingService.UpdateMatchScore(MatchBaseType, MatchHash, NewScore);
         }
 
-        public async Task StorePartialMatchBase(MatchBaseType MatchBaseType, string MatchHash, decimal NewScore)
+        public async Task<Result> StorePartialMatchBase(MatchBaseType MatchBaseType, string MatchHash, decimal NewScore)
         {
-            await mappingService.StorePartialMatchBase(MatchBaseType, MatchHash, NewScore);
+            return await mappingService.StorePartialMatchBase(MatchBaseType, MatchHash, NewScore);
         }
 
-        public async Task RemovePartialMatchBase(MatchBaseType MatchBaseType, string MatchHash)
+        public async Task<Result> RemovePartialMatchBase(MatchBaseType MatchBaseType, string MatchHash)
         {
-            await mappingService.RemovePartialMatchBase(MatchBaseType, MatchHash);
+            return await mappingService.RemovePartialMatchBase(MatchBaseType, MatchHash);
         }
 
-        public async Task DeleteAll()
+        public async Task<SerializableResult<DeleteResult>> DeleteAll()
         {
-            await matchBaseService.DeleteAll();
+            return await matchBaseService.DeleteAll();
         }
     }
 }

@@ -12,18 +12,29 @@ using MongoDB.Driver;
 using MongoDB.Driver.Linq;
 using Serilog;
 using System.Diagnostics;
+using System.Linq.Expressions;
+using System.Reflection.Metadata;
 
 namespace MMIv8_Ktype.Core.Services.Match
 {
 
     public class MatchEntityService(MongoDBContext MMIv8_Ktype, IVersionProvider versionProvider) : BaseServiceWithVersion<MatchEntity, ObjectId>(MMIv8_Ktype.Collections.MatchEntity, versionProvider)
     {
-        public async Task<MatchEntity?> GetByExternalIds(int KtypNr, int MMI_V8_Key)
+        public async Task<Result<MatchEntity>> GetByExternalIds(int KtypNr, int MMI_V8_Key)
         {
-            var builder = Builders<MatchEntity>.Filter;
-            var filter = builder.Eq(c => c.TecDocEntity.ExternalId, KtypNr) & builder.Eq(c => c.MMIv8Entity.ExternalId, MMI_V8_Key);
+            try
+            {
+                var builder = Builders<MatchEntity>.Filter;
+                var filter = builder.Eq(c => c.TecDocEntity.ExternalId, KtypNr) & builder.Eq(c => c.MMIv8Entity.ExternalId, MMI_V8_Key);
+                var result = await base.GetFindFluent(filter: filter).FirstOrDefaultAsync();
 
-            return await base.GetFindFluent(filter: filter).FirstOrDefaultAsync();
+                return result is not null ? result : Error.NotFound("MatchEntity.NotFoundByExternalIds", $"No MatchEntity records exist for KtypNr {KtypNr} and MMIv8Key {MMI_V8_Key}");
+            }
+            catch (Exception ex)
+            {
+                Log.Error(ex, "Error retrieving MatchEntities {@KtypNr} {@MMI_V8_Key}", KtypNr, MMI_V8_Key);
+                return Error.Failure($"MatchEntity.GetByExternalIdsFailure", $"Error getting Documents with KtypNr {KtypNr} and MMIv8Key {MMI_V8_Key}. Error: {ex.Message}");
+            }
         }
 
         public async Task<long> CountUsedBaseMatches(MatchBase matchBase, bool? scoreMatch = null, FilterDefinition<MatchEntity>? filter = null)
@@ -41,31 +52,33 @@ namespace MMIv8_Ktype.Core.Services.Match
             return await base.CountByFilter(filter);
         }
 
-        public async Task<IAsyncCursor<MatchBase>> GetMatchBaseByType(MatchBaseType matchBaseType, MatchBaseMethod[]? method, string? matchHashID, bool emptyScore = false, FilterDefinition<MatchEntity>? filter = null)// TODO Try and convert to driver based query
+        public async Task<Result<List<MatchBase>>> GetMatchBaseByType(MatchBaseType matchBaseType, MatchBaseMethod[]? method, string? matchHashID, bool emptyScore = false, FilterDefinition<MatchEntity>? filter = null)// TODO Try and convert to driver based query
         {
             var filterBuilder = Builders<MatchEntity>.Filter;
             filter ??= filterBuilder.Empty;
 
-            var matchBaseFilter = filterBuilder.Empty;// TODO Try and convert to driver based query maybe once this is its own class
-            if (method is not null)
-                matchBaseFilter &= filterBuilder.In($"EntityComparison.{matchBaseType}.MatchBaseMethod", method.Select(c => c.ToString()));
-            if (matchHashID is not null)
-                matchBaseFilter &= filterBuilder.Eq($"EntityComparison.{matchBaseType}._id", matchHashID);
-            if (emptyScore)
-                matchBaseFilter &= filterBuilder.Exists($"EntityComparison.{matchBaseType}.Score", true);
+            try
+            {
+                var matchBaseFilter = filterBuilder.Empty;// TODO Try and convert to driver based query maybe once this is its own class
+                if (method is not null)
+                    matchBaseFilter &= filterBuilder.In($"EntityComparison.{matchBaseType}.MatchBaseMethod", method.Select(c => c.ToString()));
+                if (matchHashID is not null)
+                    matchBaseFilter &= filterBuilder.Eq($"EntityComparison.{matchBaseType}._id", matchHashID);
+                if (emptyScore)
+                    matchBaseFilter &= filterBuilder.Exists($"EntityComparison.{matchBaseType}.Score", true);
 
-            var uniqueObjects = Collection.Aggregate()// TODO Try and convert to driver based query maybe once this is its own class
-                .Match(filter)
-                .Sort(new BsonDocument
-                    {
+                var distinctMatchBases = await Collection.Aggregate()// TODO Try and convert to driver based query maybe once this is its own class
+                    .Match(filter)
+                    .Sort(new BsonDocument
+                        {
                         { $"EntityComparison.{matchBaseType}.MatchBaseMethod", 1 },
                         { $"EntityComparison.{matchBaseType}._id", 1 },
                         { $"EntityComparison.{matchBaseType}.Score", 1 }
-                    }
-                )
-                .Match(matchBaseFilter)
-                .Group(new BsonDocument
-                    {
+                        }
+                    )
+                    .Match(matchBaseFilter)
+                    .Group(new BsonDocument
+                        {
                         { "_id", new BsonDocument
                                 {
                                     { "_id", $"$EntityComparison.{matchBaseType}._id" },
@@ -79,11 +92,18 @@ namespace MMIv8_Ktype.Core.Services.Match
                         },
                         { "Score", new BsonDocument("$max", $"$EntityComparison.{matchBaseType}.Score") },
                         { "Status", new BsonDocument("$first", $"$EntityComparison.{matchBaseType}.Status") },
-                    }
-                )
-                .ReplaceRoot<MatchBase>(new BsonDocument("$mergeObjects", new BsonArray { "$_id", new BsonDocument("Score", "$Score"), new BsonDocument("Status", "$Status") }));
+                        }
+                    )
+                    .ReplaceRoot<MatchBase>(new BsonDocument("$mergeObjects", new BsonArray { "$_id", new BsonDocument("Score", "$Score"), new BsonDocument("Status", "$Status") }))
+                    .ToListAsync();
 
-            return await uniqueObjects.ToCursorAsync();
+                return distinctMatchBases is { Count: > 0 } ? distinctMatchBases : Error.NoContent("MatchBase.NoContent", $"Cannot find MatchBase");
+            }
+            catch (Exception ex)
+            {
+                Log.Error(ex, "Error retrieving from GetMatchBaseByType");
+                return Error.Failure($"MatchBase.GetMatchBaseByTypeFailure", $"Error getting Documents from GetMatchBaseByType. Error: {ex.Message}");
+            }
         }
 
         public CombinationPipeline<MatchEntity> UpdateMissingMatchBase(MatchBase matchBase, FilterDefinition<MatchEntity>? filter = null)// TODO Try and convert to driver based query
@@ -105,57 +125,6 @@ namespace MMIv8_Ktype.Core.Services.Match
                     & filterBuilder.Eq($"EntityComparison.{matchBase.MatchBaseType}._id", matchBase.DocumentId);
 
             return base.Update(filter).AppendPipeline(c => c.UpdateMatchBase(matchBase).UpdateScoreMatchResult());
-        }
-
-        [Obsolete("not in use?")]
-        public CombinationPipeline<MatchEntity> UpdateEntity(SourceTecDocPC sourceEntity) //TODO Move into Source Entity Updates 
-        {
-            var filter = Builders<MatchEntity>.Filter.Eq(c => c.TecDocEntity.DocumentId, sourceEntity.DocumentId);
-
-            return base.Update(filter).AppendUpdate(c => c.UpdateEntity(sourceEntity));
-        }
-
-        [Obsolete("not in use?")]
-        public CombinationPipeline<MatchEntity> UpdateEntity(SourceMMIv8 sourceEntity) //TODO Move into Source Entity Updates 
-        {
-            var filter = Builders<MatchEntity>.Filter.Eq(c => c.MMIv8Entity.DocumentId, sourceEntity.DocumentId);
-
-            return base.Update(filter).AppendUpdate(c => c.UpdateEntity(sourceEntity));
-        }
-
-        [Obsolete("not in use?")]
-        public async Task RevalidateFailures(FilterDefinition<MatchEntity>? filter = null)
-        {
-            Log.Information("Started RevalidateFailures");
-            var sw = Stopwatch.StartNew();
-
-            //var deleteResult = await DeleteInvalidDates(); //TODO Confirm removal
-            //Log.Information("Deleted {Count} Match Entities with Invalid Dates {Time}", deleteResult?.DeletedCount ?? 0, sw);
-
-            var filterBuilder = Builders<MatchEntity>.Filter;
-            filter ??= filterBuilder.Empty;
-
-            sw.Restart();
-            var matchEntity = await base.GetFindFluent(filter, base.SortByDocumentId()).FirstOrDefaultAsync();
-
-            if (matchEntity is not null)
-            {
-                Log.Information("Starting Revalidation of Match Entities {Time}", sw);
-
-                var matchResultUpdate = new CombinationPipeline<MatchEntity>(Collection, filter).AppendPipeline(c => c.UpdateScoreMatchResult());
-                var matchResultResult = await matchResultUpdate.UpdateDocuments();
-
-                Log.Information("Revalidated {Count} Match Entities {Time}", matchResultResult?.ModifiedCount ?? 0, sw);
-
-                Log.Information("Starting Match Refine Update of Match Entities {Time}", sw);
-
-                var matchRefineUpdate = await BulkCombinationUpdateMatchRefine(filter);
-                var matchRefineResult = await matchRefineUpdate.CommitBulkWrite();
-
-                Log.Information("Updated Match Refine for {Count} Match Entities {Time}", matchResultResult?.ModifiedCount ?? 0, sw);
-            }
-
-            sw.Stop();
         }
 
         public CombinationPipeline<MatchEntity> CombinationUpdatePreviousMatchedFlag(FilterDefinition<MatchEntity> filter, bool matchFlag)

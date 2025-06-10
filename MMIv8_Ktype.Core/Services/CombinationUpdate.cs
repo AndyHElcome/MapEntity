@@ -1,4 +1,5 @@
 ﻿using MMIv8_Ktype.Core.Contexts;
+using MMIv8_Ktype.Models;
 using MongoDB.Bson.Serialization;
 using MongoDB.Driver;
 using Serilog;
@@ -8,8 +9,7 @@ namespace MMIv8_Ktype.Core.Services
 {
     public interface ICombinationPipeline
     {
-        Task<UpdateResult?> UpdateDocuments();
-
+        Task<Result<UpdateResult>> UpdateDocuments();
         BulkWriteModel ToBulkWriteModel();
     }
 
@@ -64,29 +64,45 @@ namespace MMIv8_Ktype.Core.Services
             return this;
         }
 
-        public async Task<UpdateResult?> UpdateDocuments()
+        public async Task<Result<UpdateResult>> UpdateDocuments()
         {
             var sw = Stopwatch.StartNew();
-            var result = await Collection.UpdateManyAsync(Filter, Update);
-            Log.Debug("Updated {Count} {Type} in {time}", result.ModifiedCount, typeof(T).Name, sw);
-            return result;
+            try
+            {
+                var result = await Collection.UpdateManyAsync(Filter, Update);
+                Log.Debug("Updated {Count} {Type} in {time}", result.ModifiedCount, typeof(T).Name, sw);
+                return result;
+            }
+            catch (Exception ex)
+            {
+                Log.Error(ex, "Error Updating {Type} from filter: {filter}", typeof(T).Name, Filter.ToString());
+                return Error.Failure($"{typeof(T)}.UpdateFailure", $"Could not update documents. Error: {ex.Message}");
+            }
         }
 
-        public async Task<T> FindAndUpdateDocument(bool afterUpdate = true)
+        public async Task<Result<T>> FindAndUpdateDocument(bool afterUpdate = true)
         {
             var sw = Stopwatch.StartNew();
-            var updateOptions = UpdateOptions?.ConvertToFindOneAndUpdateOptions() ?? new FindOneAndUpdateOptions<T>();
+            try
+            {
+                var updateOptions = UpdateOptions?.ConvertToFindOneAndUpdateOptions() ?? new FindOneAndUpdateOptions<T>();
 
-            if (afterUpdate)
-                updateOptions.ReturnDocument = ReturnDocument.After;
+                if (afterUpdate)
+                    updateOptions.ReturnDocument = ReturnDocument.After;
 
-            var result = await Collection.FindOneAndUpdateAsync(Filter, Update, updateOptions);
+                var result = await Collection.FindOneAndUpdateAsync(Filter, Update, updateOptions);
 
-            if (result is null)
-                throw new Exception($"Error Updating {typeof(T).Name}: couldn't find and replace");
+                if (result is null)
+                    return Error.NotFound($"{typeof(T).Name}.NotFoundForUpdate", $"Could not find and update document");
 
-            Log.Debug("Updated 1 {Type} in {time}", typeof(T).Name, sw);
-            return result;
+                Log.Debug("Updated 1 {Type} in {time}", typeof(T).Name, sw);
+                return result;
+            }
+            catch (Exception ex)
+            {
+                Log.Error(ex, "Error Updating {Type} from filter: {filter}", typeof(T).Name, Filter.ToString());
+                return Error.Failure($"{typeof(T)}.FindAndUpdateDocumentFailure", $"Could not find and update document. Error: {ex.Message}");
+            }
         }
 
         public BulkWriteModel ToBulkWriteModel() => this;
@@ -146,15 +162,24 @@ namespace MMIv8_Ktype.Core.Services
             return AddCombinationUpdate(bulkCombinationPipeline.combinationPipelines);
         }
 
-        public async Task<ClientBulkWriteResult?> CommitBulkWrite()
+        public async Task<Result<ClientBulkWriteResult>> CommitBulkWrite()
         {
             var sw = Stopwatch.StartNew();
-            if (BulkWriteModels.Count == 0)
-                return new ClientBulkWriteResult();
 
-            var results = await MMIv8_Ktype.Client.BulkWriteAsync(BulkWriteModels);
-            Log.Debug("Matched {Count} {Type} Inserted: {Inserted} Upserted: {Upserted} Modified: {Modified} Deleted: {Deleted} in {time}", results.MatchedCount, "typeof(T)", results.InsertedCount, results.UpsertedCount, results.ModifiedCount, results.DeletedCount, sw);
-            return results;
+            if (BulkWriteModels.Count == 0)
+                return Error.Validation("ClientBulkWriteResult.NoBulkWriteModels", "No Bulk write models present to commit");
+
+            try
+            {
+                var results = await MMIv8_Ktype.Client.BulkWriteAsync(BulkWriteModels);
+                Log.Debug("Matched {Count} {Type} Inserted: {Inserted} Upserted: {Upserted} Modified: {Modified} Deleted: {Deleted} in {time}", results.MatchedCount, "typeof(T)", results.InsertedCount, results.UpsertedCount, results.ModifiedCount, results.DeletedCount, sw);
+                return results;
+            }
+            catch (Exception ex)
+            {
+                Log.Error(ex, "Error in ClientBulkWriteResult");
+                return Error.Failure("ClientBulkWriteResult.UpdateFailure", $"Could not update documents. Error: {ex.Message}");
+            }
         }
 
         public async void CommitInParallel()
@@ -182,5 +207,4 @@ namespace MMIv8_Ktype.Core.Services
             };
         }
     }
-
 }

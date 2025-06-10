@@ -35,10 +35,10 @@ namespace MMIv8_Ktype.AccessMdb.Operations
 
         public abstract Task ExecuteOperation(ILogger log);
 
-        public delegate Task<PagedResponse<T>> GetPagedDocumentsDelegate<T>(int page, int pageSize);
-        public delegate Task<PagedCursorResponse<T>> GetPagedDocumentsDelegatev2<T>(string? cursor, int pageSize);
-        public delegate Task<List<T>> GetDocumentsDelegate<T>();
-        public delegate Task<T> GetDocumentsByIdDelegate<T, Tid>(Tid documentId);
+        public delegate Task<SerializableResult<PagedResponse<T>>> GetPagedDocumentsDelegate<T>(int page, int pageSize);
+        public delegate Task<SerializableResult<PagedCursorResponse<T>>> GetPagedDocumentsDelegatev2<T>(string? cursor, int pageSize);
+        public delegate Task<SerializableResult<List<T>>> GetDocumentsDelegate<T>();
+        public delegate Task<SerializableResult<T>> GetDocumentsByIdDelegate<T, Tid>(Tid documentId);
         public delegate TOut ConvertDocumentToDataRowObject<T, TOut>(T document);
         public delegate TCursor ConvertDocumentIdToCursor<Tid, TCursor>(Tid documentId);
 
@@ -57,18 +57,24 @@ namespace MMIv8_Ktype.AccessMdb.Operations
             string? cursor = null;
             var headerDocument = await getPagedDocumentsFunc(cursor, 1);
 
-            if (headerDocument is null or { Documents.Count: 0 } or { TotalDocuments: 0 })
+            if (!headerDocument.IsSuccess)
+                throw new Exception(headerDocument.Error!.ToString());
+
+            if (headerDocument.Value is null or { Documents.Count: 0 } or { TotalDocuments: 0 })
                 return;
-            if (headerDocument is null || headerDocument.Documents.Count == 0 || headerDocument.TotalDocuments == 0)
+            if (headerDocument.Value is null || headerDocument.Value.Documents.Count == 0 || headerDocument.Value.TotalDocuments == 0)
                 throw new Exception("Pattern Matching didn't work");
 
-            DataTable dataTable = AddNewTableToDataSet(convertToRow(headerDocument!.Documents!.FirstOrDefault()!)!, tableName, primaryKeys, log) ?? throw new NoNullAllowedException();
+            DataTable dataTable = AddNewTableToDataSet(convertToRow(headerDocument!.Value.Documents!.FirstOrDefault()!)!, tableName, primaryKeys, log) ?? throw new NoNullAllowedException();
 
-            PagedCursorResponse<T> response;
+            SerializableResult<PagedCursorResponse<T>> response;
             do
             {
                 response = await getPagedDocumentsFunc(cursor, pageSize);
-                foreach (T document in response.Documents)
+                if (!response.IsSuccess)
+                    throw new Exception(response.Error!.ToString());
+
+                foreach (T document in response.Value!.Documents)
                 {
                     try
                     {
@@ -82,13 +88,13 @@ namespace MMIv8_Ktype.AccessMdb.Operations
                     }
                 }
 
-                cursor = response.Cursor;
+                cursor = response.Value!.Cursor;
             }
-            while (response.HasNextPage);
+            while (response.Value!.HasNextPage);
 
             CommitChanges(tableName, log);
 
-            log.Information("Loaded {tableCount} / {apicount} records into {table}", dataTable.Rows.Count, response.TotalDocuments, tableName);
+            log.Information("Loaded {tableCount} / {apicount} records into {table}", dataTable.Rows.Count, response.Value!.TotalDocuments, tableName);
         }
 
         public async Task GenerateTable<T, TObjType>(
@@ -104,20 +110,26 @@ namespace MMIv8_Ktype.AccessMdb.Operations
 
             var headerDocument = await getPagedDocumentsFunc(1, 1);
 
-            if (headerDocument is null or { Documents.Count: 0 } or { TotalDocuments: 0 })
+            if (!headerDocument.IsSuccess)
+                throw new Exception(headerDocument.Error!.ToString());
+
+            if (headerDocument.Value is null or { Documents.Count: 0 } or { TotalDocuments: 0 })
                 return;
-            if (headerDocument is null || headerDocument.Documents.Count == 0 || headerDocument.TotalDocuments == 0)
+            if (headerDocument.Value is null || headerDocument.Value.Documents.Count == 0 || headerDocument.Value.TotalDocuments == 0)
                 throw new Exception("Pattern Matching didn't work");
 
 
-            DataTable dataTable = AddNewTableToDataSet(convertToRow(headerDocument!.Documents!.FirstOrDefault()!)!, tableName, primaryKeys, log) ?? throw new NoNullAllowedException();
+            DataTable dataTable = AddNewTableToDataSet(convertToRow(headerDocument!.Value.Documents!.FirstOrDefault()!)!, tableName, primaryKeys, log) ?? throw new NoNullAllowedException();
 
             int page = 1;
-            PagedResponse<T> response;
+            SerializableResult<PagedResponse<T>> response;
             do
             {
                 response = await getPagedDocumentsFunc(page, 1000);
-                foreach (T document in response.Documents)
+                if (!response.IsSuccess)
+                    throw new Exception(response.Error!.ToString());
+
+                foreach (T document in response.Value!.Documents)
                 {
                     try
                     {
@@ -132,11 +144,11 @@ namespace MMIv8_Ktype.AccessMdb.Operations
                 }
                 page++;
             }
-            while (response.HasNextPage);
+            while (response.Value!.HasNextPage);
 
             CommitChanges(tableName, log);
 
-            log.Information("Loaded {tableCount} / {apicount} records into {table}", dataTable.Rows.Count, response.TotalDocuments, tableName);
+            log.Information("Loaded {tableCount} / {apicount} records into {table}", dataTable.Rows.Count, response.Value!.TotalDocuments, tableName);
         }
 
         public async Task GenerateTable<T, TObjType>(
@@ -151,16 +163,18 @@ namespace MMIv8_Ktype.AccessMdb.Operations
                 DropTable(tableName, log);
 
             var response = await getDocumentsFunc();
+            if (!response.IsSuccess)
+                throw new Exception(response.Error!.ToString());
 
-            if (response is null or { Count: 0 })
+            if (response.Value is null or { Count: 0 })
                 return;
-            if (response is null || response.Count == 0)
+            if (response.Value is null || response.Value!.Count == 0)
                 throw new Exception("Pattern Matching didn't work");
 
 
-            DataTable dataTable = AddNewTableToDataSet(convertToRow(response!.FirstOrDefault()!)!, tableName, primaryKeys, log) ?? throw new NoNullAllowedException();
+            DataTable dataTable = AddNewTableToDataSet(convertToRow(response!.Value.FirstOrDefault()!)!, tableName, primaryKeys, log) ?? throw new NoNullAllowedException();
 
-            foreach (T document in response)
+            foreach (T document in response.Value!)
             {
                 try
                 {
@@ -176,7 +190,7 @@ namespace MMIv8_Ktype.AccessMdb.Operations
 
             CommitChanges(tableName, log);
 
-            log.Information("Loaded {tableCount} / {apicount} records into {table}", dataTable.Rows.Count, response.Count, tableName);
+            log.Information("Loaded {tableCount} / {apicount} records into {table}", dataTable.Rows.Count, response.Value!.Count, tableName);
         }
 
         public OleDbConnection DBConnection()
@@ -646,7 +660,10 @@ namespace MMIv8_Ktype.AccessMdb.Operations
             {
                 var objectId = ObjectId.Parse(DocumentId);
                 var matchEntity = await MatchEntityEndpoints.GetById(objectId);
-                var matchEntityExpando = new ExpandoObject().BuildExpando(matchEntity);
+                if (!matchEntity.IsSuccess)
+                    throw new Exception(matchEntity.Error!.ToString());
+
+                var matchEntityExpando = new ExpandoObject().BuildExpando(matchEntity.Value);
 
                 DataTable dataTable = AddNewTableToDataSet(matchEntityExpando, tableName, [ nameof(MatchEntity.DocumentId) ], log) ?? throw new NoNullAllowedException();
 

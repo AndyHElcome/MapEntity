@@ -6,6 +6,7 @@ using MMIv8_Ktype.Models.Attributes;
 using MMIv8_Ktype.Models.Collections;
 using MMIv8_Ktype.Models.Indexes;
 using MongoDB.Bson;
+using MongoDB.Driver;
 using Refit;
 
 namespace MMIv8_Ktype.Api.Endpoints
@@ -14,27 +15,27 @@ namespace MMIv8_Ktype.Api.Endpoints
     public interface IMatchMakeModelEndpoints : IEndpoint
     {
         [Get("")]
-        Task<PagedCursorResponse<MatchMakeModel>> GetAll([FromQuery] string? cursor = null, [FromQuery] int PageSize = 0);
+        Task<SerializableResult<PagedCursorResponse<MatchMakeModel>>> GetAll([FromQuery] string? cursor = null, [FromQuery] int PageSize = 0);
 
         [Get("/{MatchID}")]
         Task<SerializableResult<MatchMakeModel>> GetMakeModelMatchById(ObjectId MatchID);
 
         [Get("/GetByModels")]
-        Task<MatchMakeModel?> GetMakeModelMatch([FromQuery] string TD_SourceEntityModelHash, [FromQuery] string MMI_SourceEntityModelHash);
+        Task<SerializableResult<MatchMakeModel>> GetMakeModelMatch([FromQuery] string TD_SourceEntityModelHash, [FromQuery] string MMI_SourceEntityModelHash);
 
         [Get("/{SourceIndex}/{SourceEntityModelHash}")]
-        Task<List<MatchMakeModel>> GetByModelId(SourceIndex SourceIndex, string SourceEntityModelHash);
+        Task<SerializableResult<List<MatchMakeModel>>> GetByModelId(SourceIndex SourceIndex, string SourceEntityModelHash);
 
         [Post("/GenerateModelMatch")]
-        Task<List<MatchMakeModel>> GenerateMakeModelMatch();
+        Task<SerializableResult<List<MatchMakeModel>>> GenerateMakeModelMatch();
 
         [Put("/Create")]
-        Task CreateMakeModelMatch(MatchMakeModelRequest request);
+        Task<Result> CreateMakeModelMatch(string TD_SourceEntityModelHash, string MMI_SourceEntityModelHash);
 
         [Delete("/{MatchID}")]
-        Task DeleteMakeModelMatch(ObjectId MatchID);
+        Task<Result> DeleteMakeModelMatch(ObjectId MatchID);
 
         [Delete("/Debug/DeleteAll")]
-        Task DeleteAll();
+        Task<SerializableResult<DeleteResult>> DeleteAll();
     }
 }

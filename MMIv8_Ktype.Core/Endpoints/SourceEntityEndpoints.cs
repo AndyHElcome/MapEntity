@@ -25,7 +25,7 @@ namespace MMIv8_Ktype.Core.Endpoints
                                           ISourceEntityUpdateService<T> updateService) : ISourceEntityEndpoints<T>
         where T : SourceEntity
     {
-        public async Task<PagedCursorResponse<T>> GetAll(string? Cursor, int PageSize)
+        public async Task<SerializableResult<PagedCursorResponse<T>>> GetAll(string? Cursor, int PageSize)
         {
             var objectId = ObjectId.TryParse(Cursor, out var objectid) ? objectid : ObjectId.Empty;
             return await sourceEntityService.PaginateDocumentsByCursor<T, ObjectId>(cursor: objectId, pageSize: PageSize);
@@ -41,24 +41,24 @@ namespace MMIv8_Ktype.Core.Endpoints
             return await sourceEntityService.GetByExternalId(ExternalId);
         }
 
-        public async Task UpdateEntity(T sourceEntity)
+        public async Task<Result> UpdateEntity(T sourceEntity)
         {
-            await updateService.UpdateEntity(sourceEntity);
+            return await updateService.UpdateEntity(sourceEntity);
         }
 
-        public async Task Create(T sourceEntity)
+        public async Task<Result> Create(T sourceEntity)
         {
-            await sourceEntityService.Create(sourceEntity);
+            return await sourceEntityService.Create(sourceEntity);
         }
 
-        public async Task Bulkload(T[] sourceEntities)
+        public async Task<Result> Bulkload(T[] sourceEntities)
         {
-            await sourceEntityService.Create(sourceEntities);
+            return await sourceEntityService.Create(sourceEntities);
         }
 
-        public async Task DeleteAll()
+        public async Task<SerializableResult<DeleteResult>> DeleteAll()
         {
-            await sourceEntityService.DeleteAll();
+            return await sourceEntityService.DeleteAll();
         }
     }
 }

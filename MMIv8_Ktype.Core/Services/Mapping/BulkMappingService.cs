@@ -12,6 +12,7 @@ using MongoDB.Driver;
 using Serilog;
 using System.Diagnostics;
 using System.Globalization;
+using System.Reflection.Metadata;
 using System.Text;
 
 namespace MMIv8_Ktype.Core.Services.Mapping
@@ -25,41 +26,39 @@ namespace MMIv8_Ktype.Core.Services.Mapping
                                     IVersionProvider versionProvider) 
     {
         #region Match Make Model
-
-        public async Task<List<MatchMakeModel>> GenerateMakeModelMatch()//TODO Use Linq query builder could be endpoint
+        public async Task<Result<List<MatchMakeModel>>> GenerateMakeModelMatch()//TODO Use Linq query builder could be endpoint
         {
-            List<MatchMakeModel> currentMatch = await MatchMakeModelService.GetFindFluent().ToListAsync();
+            try
+            {
+                List<MatchMakeModel> currentMatch = await MatchMakeModelService.GetFindFluent().ToListAsync();
 
-            var MMIv8Models = await SourceMMIv8EntityModelService.GetByNotId(currentMatch.Select(m => m.MMIv8Model.DocumentId).ToArray());
+                var MMIv8Models = await SourceMMIv8EntityModelService.GetByNotId(currentMatch.Select(m => m.MMIv8Model.DocumentId).ToArray());
+                if (!MMIv8Models.IsSuccess && MMIv8Models.Error!.Type != ErrorType.NoContent)
+                    return MMIv8Models.Error;
+                var MMINoMatches = MMIv8Models.Value.ToList().Select(m => new MatchMakeModel(tecDocModel: new(), mmiv8Model: m, versionProvider)).ToList();
 
-            var MMINoMatches = MMIv8Models.ToList().Select(m =>
-                new MatchMakeModel(tecDocModel: new(), mmiv8Model: m, versionProvider)).ToList();
+                var TecDocPCModels = await SourceTecDocEntityModelService.GetByNotId(currentMatch.Select(m => m.TecDocModel.DocumentId).ToArray());
+                if (!TecDocPCModels.IsSuccess && TecDocPCModels.Error!.Type != ErrorType.NoContent)
+                    return TecDocPCModels.Error;
+                var TecDocNoMatches = TecDocPCModels.Value.ToList().Select(m => new MatchMakeModel(tecDocModel: m, mmiv8Model: new(), versionProvider)).ToList();
 
+                List<MatchMakeModel> matchMakeModels = currentMatch
+                                                            .Union(MMINoMatches)
+                                                            .Union(TecDocNoMatches)
+                                                            .GroupBy(i => new { mmiHash = i.MMIv8Model.DocumentId, tdHash = i.TecDocModel.DocumentId })
+                                                            .Select(g => g.First())
+                                                            .OrderBy(o => string.Concat(o.MMIv8Model.Make, o.TecDocModel.Make))
+                                                            .ThenBy(o => string.Concat(o.MMIv8Model.Model, o.TecDocModel.Model))
+                                                            .ToList();
 
-            var TecDocPCModels = await SourceTecDocEntityModelService.GetByNotId(currentMatch.Select(m => m.TecDocModel.DocumentId).ToArray());
-
-            var TecDocNoMatches = TecDocPCModels.ToList().Select(m =>
-                new MatchMakeModel(tecDocModel: m, mmiv8Model: new(), versionProvider)).ToList();
-
-            List<MatchMakeModel> matchMakeModels = currentMatch
-                                                        .Union(MMINoMatches)
-                                                        .Union(TecDocNoMatches)
-                                                        .GroupBy(i => new { mmiHash = i.MMIv8Model.DocumentId, tdHash = i.TecDocModel.DocumentId })
-                                                        .Select(g => g.First())
-                                                        .OrderBy(o => String.Concat(o.MMIv8Model.Make, o.TecDocModel.Make))
-                                                        .ThenBy(o  => String.Concat(o.MMIv8Model.Model, o.TecDocModel.Model))
-                                                        .ToList();
-            return matchMakeModels;
+                return matchMakeModels is { Count: > 0} ? matchMakeModels : Error.NoContent("MatchMakeModel.NoContent", "No content found when trying to GenerateMakeModelMatch");
+            }
+            catch (Exception ex)
+            {
+                Log.Error(ex, "Error getting Documents for GenerateMakeModelMatch");
+                return Error.Failure($"MatchMakeModel.GenerateMakeModelMatchFailure", $"Error getting Documents. Error: {ex.Message}");
+            }
         }
-
-        public async Task UpdateCheckedStatus()
-        {
-            var builder = Builders<MatchMakeModel>.Filter;
-            var updateFilter = builder.Eq(x => x.Status.Current.Status, Status.Check);
-
-            await MatchMakeModelService.UpdateStatus(updateFilter, Status.Checked);
-        }
-
         #endregion
 
         #region Match Entity
@@ -92,115 +91,6 @@ namespace MMIv8_Ktype.Core.Services.Mapping
             sw.Stop();
             Log.Information("Complete {count} {TotalTime}", i, sw);
         }
-
-        #endregion
-
-        #region Entity Loading
-
-        //public async Task ReloadTecDocPCEntities(string path)
-        //{
-        //    await SourceTecDocPCService.DeleteAll();
-
-        //    List<MongoSourceTecDocPC> entities = [];
-        //    // using (var reader = new StreamReader(path, Encoding.UTF8))
-        //    // using (var csv = new CsvReader(reader, CultureInfo.InvariantCulture))
-        //    // {
-        //    //     csv.Context.RegisterClassMap<MongoSourceTecDocPCMap>();
-        //    //     entities = csv.GetRecords<MongoSourceTecDocPC>().ToList();
-        //    // }
-
-        //    await SourceTecDocPCService.CreateBulk(entities);
-        //}
-
-        //public async Task UpdateTecDocPCEntities(string path)
-        //{
-        //    List<MongoSourceTecDocPC> entities = [];
-        //    // using (var reader = new StreamReader(path, Encoding.UTF8))
-        //    // using (var csv = new CsvReader(reader, CultureInfo.InvariantCulture))
-        //    // {
-        //    //     csv.Context.RegisterClassMap<MongoSourceTecDocPCMap>();
-        //    //     entities = csv.GetRecords<MongoSourceTecDocPC>().ToList();
-        //    // }
-
-        //    var filterBuilder = Builders<MongoSourceTecDocPC>.Filter;
-        //    var filter = filterBuilder.Empty;
-
-        //    filter = filterBuilder.Nin(c => c.KTypNr, entities.Select(c => c.KTypNr));
-        //    var result = await SourceTecDocPCService.DeleteAll(filter);
-
-        //    if (result.IsAcknowledged)
-        //        Log.Information("Deleted {DeletedCount} vehicles no longer present", result.DeletedCount);
-
-        //    foreach (var entity in entities)
-        //    {
-        //        await MappingService.UpdateEntity(entity);
-        //    }
-        //}
-
-        //public async Task ReloadMMIv8Entities(string path)
-        //{
-        //    await SourceMMIv8Service.DeleteAll();
-
-        //    List<MongoSourceMMIv8> entities = [];
-        //    // using (var reader = new StreamReader(path, Encoding.UTF8))
-        //    // using (var csv = new CsvReader(reader, CultureInfo.InvariantCulture))
-        //    // {
-        //    //     csv.Context.RegisterClassMap<MongoSourceMMIv8Map>();
-        //    //     entities = csv.GetRecords<MongoSourceMMIv8>().ToList();
-        //    // }
-
-        //    await SourceMMIv8Service.CreateBulk(entities);
-        //}
-
-        //public async Task UpdateMMIv8Entities(string path)
-        //{
-        //    List<MongoSourceMMIv8> entities = [];
-        //    // using (var reader = new StreamReader(path, Encoding.UTF8))
-        //    // using (var csv = new CsvReader(reader, CultureInfo.InvariantCulture))
-        //    // {
-        //    //     csv.Context.RegisterClassMap<MongoSourceMMIv8Map>();
-        //    //     entities = csv.GetRecords<MongoSourceMMIv8>().ToList();
-        //    // }
-
-        //    var filterBuilder = Builders<MongoSourceMMIv8>.Filter;
-        //    var filter = filterBuilder.Empty;
-
-        //    filter = filterBuilder.Nin(c => c.MMI_V8_Key, entities.Select(c => c.MMI_V8_Key));
-        //    var result = await SourceMMIv8Service.DeleteAll(filter);
-
-        //    if (result.IsAcknowledged)
-        //        Log.Information("Deleted {DeletedCount} vehicles no longer present", result.DeletedCount);
-
-        //    foreach (var entity in entities)
-        //    {
-        //        await MappingService.UpdateEntity(entity);
-        //    }
-        //}
-
-        //public async Task UpdateMMIv8Entity(SourceEntity sourceEntity)
-        //{
-        //    List<MongoSourceMMIv8> entities = [];
-        //    // using (var reader = new StreamReader(path, Encoding.UTF8))
-        //    // using (var csv = new CsvReader(reader, CultureInfo.InvariantCulture))
-        //    // {
-        //    //     csv.Context.RegisterClassMap<MongoSourceMMIv8Map>();
-        //    //     entities = csv.GetRecords<MongoSourceMMIv8>().ToList();
-        //    // }
-
-        //    var filterBuilder = Builders<MongoSourceMMIv8>.Filter;
-        //    var filter = filterBuilder.Empty;
-
-        //    filter = filterBuilder.Nin(c => c.MMI_V8_Key, entities.Select(c => c.MMI_V8_Key));
-        //    var result = await SourceMMIv8Service.DeleteAll(filter);
-
-        //    if (result.IsAcknowledged)
-        //        Log.Information("Deleted {DeletedCount} vehicles no longer present", result.DeletedCount);
-
-        //    foreach (var entity in entities)
-        //    {
-        //        await MappingService.UpdateEntity(entity);
-        //    }
-        //}
 
         #endregion
     }

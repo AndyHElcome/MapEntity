@@ -117,7 +117,11 @@ namespace MMIv8_Ktype.Core.Services.Mapping
                 if (currentEntityResult.Value.EntityHash == sourceEntity.EntityHash)
                     return Error.Validation($"{typeof(TEntity).Name}.UpdateValidation", "No changes detected");
 
-                sourceEntity = await SourceEntityService.UpdateDifferences(currentEntityResult.Value, sourceEntity);
+                var updateEntityResult = await SourceEntityService.UpdateDifferences(currentEntityResult.Value, sourceEntity);
+                if (!updateEntityResult.IsSuccess)
+                    return updateEntityResult;
+
+                sourceEntity = updateEntityResult.Value;
 
                 if (currentEntityResult.Value.SourceEntityModelHash == sourceEntity.SourceEntityModelHash)
                 {
@@ -127,7 +131,8 @@ namespace MMIv8_Ktype.Core.Services.Mapping
                 }
                 else
                 {
-                    var currentMakeModelMatches = await MatchMakeModelService.GetByModelId(currentEntityResult.Value.SourceIndex, currentEntityResult.Value.SourceEntityModelHash, true);
+                    var currentMakeModelMatchesResult = await MatchMakeModelService.GetByModelId(currentEntityResult.Value.SourceIndex, currentEntityResult.Value.SourceEntityModelHash, true);
+                    var currentMakeModelMatches = currentMakeModelMatchesResult.IsSuccess ? currentMakeModelMatchesResult.Value : new();
 
                     foreach (var currentMakeModelMatch in currentMakeModelMatches)
                     {
@@ -155,7 +160,8 @@ namespace MMIv8_Ktype.Core.Services.Mapping
                     if (orphanedCount > 0)
                         Log.Error("{count} MatchEntities left oprhaned for entity {@sourceEntity}", orphanedCount, sourceEntity);
 
-                    newMatchesToCreate = await MatchMakeModelService.GetByModelId(sourceEntity.SourceIndex, sourceEntity.SourceEntityModelHash, true);
+                    var sourceMakeModelMatchesResult = await MatchMakeModelService.GetByModelId(sourceEntity.SourceIndex, sourceEntity.SourceEntityModelHash, true);
+                    newMatchesToCreate = sourceMakeModelMatchesResult.IsSuccess ? sourceMakeModelMatchesResult.Value : new();
                 }
             }
             else if (currentEntityResult.Error!.Type == ErrorType.NotFound) //Entity doesnt exist -> create entity
@@ -165,7 +171,8 @@ namespace MMIv8_Ktype.Core.Services.Mapping
                 if (!createEntityResult.IsSuccess)
                     return createEntityResult;
 
-                newMatchesToCreate = await MatchMakeModelService.GetByModelId(sourceEntity.SourceIndex, sourceEntity.SourceEntityModelHash, true);
+                var sourceMakeModelMatchesResult = await MatchMakeModelService.GetByModelId(sourceEntity.SourceIndex, sourceEntity.SourceEntityModelHash, true);
+                newMatchesToCreate = sourceMakeModelMatchesResult.IsSuccess ? sourceMakeModelMatchesResult.Value : new();
             }
             else //Entity result threw something unexpected
             {

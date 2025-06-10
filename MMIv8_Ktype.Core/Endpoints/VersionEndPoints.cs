@@ -40,7 +40,7 @@ namespace MMIv8_Ktype.Core.Endpoints
             if (TecdocEntityVersion is null && MMIv8EntityVersion is null && UserName is null)
             {
                 Log.Error("No updates given for Version {versionNumber}", VersionNumber);
-                return Result<Version>.Failure<Version>(Error.Validation("Version.UpdateValidation", $"No updates given for Version {VersionNumber}"));
+                return Error.Validation("Version.UpdateValidation", $"No updates given for Version {VersionNumber}");
             }
 
             return await mappingService.UpdateVersion(VersionNumber, TecdocEntityVersion, MMIv8EntityVersion, UserName);

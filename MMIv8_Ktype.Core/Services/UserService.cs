@@ -12,9 +12,18 @@ namespace MMIv8_Ktype.Core.Services
     {
         public async Task<Result<User>> GetByName(string userName)
         {
-            var filter = Builders<User>.Filter.Eq(e => e.Name, userName);
-            var user = await base.GetFindFluent(filter).FirstOrDefaultAsync();
-            return user is not null ? user : Error.NotFound("User.NotFoundByUserName", $"No User exists with UserName {userName}");
+            try
+            {
+                var filter = Builders<User>.Filter.Eq(e => e.Name, userName);
+                var user = await base.GetFindFluent(filter).FirstOrDefaultAsync();
+
+                return user is not null ? user : Error.NotFound("User.NotFoundByUserName", $"No User exists with UserName {userName}");
+            }
+            catch (Exception ex)
+            {
+                Log.Error(ex, "Error retrieving User with UserName {@userName}", userName);
+                return Error.Failure($"User.GetCurrentVersionFailure", $"Error getting User with UserName {userName}. Error: {ex.Message}");
+            }
         }
 
         public async Task<Result<User>> Create(string newUserName)
@@ -25,7 +34,7 @@ namespace MMIv8_Ktype.Core.Services
             User user = new(newUserName);
             var userResult = await base.Create(user);
 
-            return userResult.IsSuccess? user : userResult.Error!;
+            return userResult.IsSuccess? user : Result.Failure<User>(userResult.Error!);
         }
 
         public async Task<Result<DeleteResult>> DeleteByName(string userName)

@@ -62,8 +62,7 @@ namespace MMIv8_Ktype.Models
             Success(value);
 
         public static implicit operator Result<TValue>(Error error) =>
-            Failure<TValue>(error);
-
+            Failure<TValue>(error); 
     }
 
     public interface IResultWrapper
@@ -77,6 +76,9 @@ namespace MMIv8_Ktype.Models
         public required bool IsSuccess { get; init; }
         public T? Value { get; init; }
         public Error? Error { get; init; }
+
+        public static implicit operator SerializableResult<T>(Error error) =>
+            Result.Failure<T>(error);
 
         public static implicit operator SerializableResult<T>(Result<T> result) => new()
         {
@@ -100,6 +102,8 @@ namespace MMIv8_Ktype.Models
         public static Error NotFound(string Code, string description) => new(ErrorType.NotFound, Code, description);
         public static Error NoContent(string Code, string description) => new(ErrorType.NoContent, Code, description);
         public static Error Conflict(string Code, string description) => new(ErrorType.Conflict, Code, description);
+
+        public override string ToString() => $"[{Type.ToString()}] {Code} ({Description})";
     }
 
     public enum ErrorType

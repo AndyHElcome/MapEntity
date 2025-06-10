@@ -51,12 +51,12 @@ namespace MMIv8_Ktype.Core.Controllers
             return Ok("updated");
         }
 
-        [HttpPost("Entity/BulkRevalidateFailures")]
-        public async Task<IActionResult> BulkRevalidateFailures()
-        {
-            await MatchEntityService.RevalidateFailures();
-            return Ok("updated");
-        }
+        //[HttpPost("Entity/BulkRevalidateFailures")]
+        //public async Task<IActionResult> BulkRevalidateFailures()
+        //{
+        //    await MatchEntityService.RevalidateFailures();
+        //    return Ok("updated");
+        //}
 
         [HttpPost("Entity/BulkUpdateMatchRefine")]
         public async Task<IActionResult> BulkUpdateMatchRefine(int MMI_V8_Key)
@@ -84,12 +84,12 @@ namespace MMIv8_Ktype.Core.Controllers
             return Ok("updated");
         }
 
-        [HttpPost("MakeModel/UpdateCheckedStatus")]
-        public async Task<IActionResult> UpdateCheckedStatus()
-        {
-            await BulkMappingService.UpdateCheckedStatus();
-            return Ok("updated");
-        }
+        //[HttpPost("MakeModel/UpdateCheckedStatus")]
+        //public async Task<IActionResult> UpdateCheckedStatus()
+        //{
+        //    await BulkMappingService.UpdateCheckedStatus();
+        //    return Ok("updated");
+        //}
 
         [HttpPost("Indexes/RegenerateIndexes")]
         public IActionResult RegenerateIndexes()
