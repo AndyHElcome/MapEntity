@@ -6,6 +6,7 @@ using MMIv8_Ktype.Api.Requests;
 using MMIv8_Ktype.Api.Responses;
 using MMIv8_Ktype.Core.Services.Mapping;
 using MMIv8_Ktype.Core.Services.Match;
+using MMIv8_Ktype.Models;
 using MMIv8_Ktype.Models.Collections;
 using MMIv8_Ktype.Models.Outputs;
 using MMIv8_Ktype.Models.Status;
@@ -59,12 +60,12 @@ namespace MMIv8_Ktype.Core.Endpoints
             return filter;
         }
 
-        public async Task<MatchEntity> GetById(ObjectId DocumentId)
+        public async Task<SerializableResult<MatchEntity>> GetById(ObjectId DocumentId)
         {
             return await matchEntityService.GetById(DocumentId);
         }
 
-        public async Task<PagedCursorResponse<MatchEntity>> GetAll(
+        public async Task<SerializableResult<PagedCursorResponse<MatchEntity>>> GetAll(
             string? cursor = null,
             int PageSize = 100,
             string? MakeModelMatchId = null,
@@ -82,7 +83,7 @@ namespace MMIv8_Ktype.Core.Endpoints
             return await matchEntityService.PaginateDocumentsByCursor<MatchEntity, ObjectId>(filter: filter, cursor: objectId, pageSize: PageSize);
         }
 
-        public async Task<PagedCursorResponse<MatchEntitySummary>> GetAllMatchEntitySummary(
+        public async Task<SerializableResult<PagedCursorResponse<MatchEntitySummary>>> GetAllMatchEntitySummary(
             string? cursor = null,
             int PageSize = 100,
             string? MakeModelMatchId = null,
@@ -110,7 +111,7 @@ namespace MMIv8_Ktype.Core.Endpoints
                     c.MatchRefine.Difference,
                     c.MatchRefine.BestScore,
                     c.ScoreSum,
-                    c.IsBest,
+                    c.MatchRefine.BestScore != null && c.ScoreSum == c.MatchRefine.BestScore, //c.IsBest,
                     c.Matched,
                     c.MatchDetail,
                     c.Status.Current.Status)
@@ -119,7 +120,7 @@ namespace MMIv8_Ktype.Core.Endpoints
             return await matchEntityService.PaginateDocumentsByCursor<MatchEntitySummary, ObjectId>(filter: filter, cursor: objectId, pageSize: PageSize, projection: projection);
         }
 
-        public async Task<List<MatchRefine>> GetAllMatchRefine(
+        public async Task<SerializableResult<List<MatchRefine>>> GetAllMatchRefine(
             string? MakeModelMatchId = null,
             string? TecDocEntityId = null,
             string? MMIv8EntityId = null,
@@ -134,7 +135,7 @@ namespace MMIv8_Ktype.Core.Endpoints
             return await matchEntityService.GetDistinctDocuments<MatchRefine>(nameof(MatchEntity.MatchRefine), filter);
         }
 
-        public async Task<PagedCursorResponse<MatchEntityBackup>> GetMatchEntityBackup(string? cursor = null, int PageSize = 100)
+        public async Task<SerializableResult<PagedCursorResponse<MatchEntityBackup>>> GetMatchEntityBackup(string? cursor = null, int PageSize = 100)
         {
             var filterBuilder = Builders<MatchEntity>.Filter;
             var filter = filterBuilder.Eq(c => c.Matched, true)
@@ -155,39 +156,39 @@ namespace MMIv8_Ktype.Core.Endpoints
             return await matchEntityService.PaginateDocumentsByCursor<MatchEntityBackup, ObjectId>(filter: filter, cursor: objectId, pageSize: PageSize, projection: projection);
         }
 
-        public async Task<MatchEntity?> GetMatchEntity(MatchEntityByExternalRequest request)
+        public async Task<SerializableResult<MatchEntity>> GetMatchEntity(int KtypNr, int MMI_V8_Key)
         {
-            return await matchEntityService.GetByExternalIds(request.KtypNr, request.MMI_V8_Key);
+            return await matchEntityService.GetByExternalIds(KtypNr, MMI_V8_Key);
         }
 
-        public async Task UpdateMatchedFlag(UpdateFlagRequest request)
+        public async Task<SerializableResult<MatchEntity>> CheckEntityMatch(int KtypNr, int MMI_V8_Key)
         {
-            await mappingService.UpdateMatchedFlag(request);
+            return await mappingService.CheckMatchVadlidity(KtypNr, MMI_V8_Key);
         }
 
-        public async Task UpdateFailedFlag(UpdateFlagRequest request)
+        public async Task<Result> UpdateMatchedFlag(UpdateFlagRequest request)
         {
-            await mappingService.UpdateFailedFlag(request);
+            return await mappingService.UpdateMatchedFlag(request);
         }
 
-        public async Task UpdateMatchRefineStatus(int MMI_V8_Key)
+        public async Task<Result> UpdateFailedFlag(UpdateFlagRequest request)
         {
-            await mappingService.UpdateMatchRefineStatus(MMI_V8_Key);
+            return await mappingService.UpdateFailedFlag(request);
         }
 
-        public async Task ResetMatchResult(int MMI_V8_Key)
+        public async Task<Result> UpdateMatchRefineStatus(int MMI_V8_Key)
         {
-            await mappingService.ResetMatchResult(MMI_V8_Key);
+            return await mappingService.UpdateMatchRefineStatus(MMI_V8_Key);
         }
 
-        public async Task<MatchEntity?> CheckEntityMatch(MatchEntityByExternalRequest request)
+        public async Task<Result> ResetMatchResult(int MMI_V8_Key)
         {
-            return await mappingService.CheckMatchVadlidity(request.KtypNr, request.MMI_V8_Key);
+            return await mappingService.ResetMatchResult(MMI_V8_Key);
         }
 
-        public async Task DeleteAll()
+        public async Task<SerializableResult<DeleteResult>> DeleteAll()
         {
-            await matchEntityService.DeleteAll();
+            return await matchEntityService.DeleteAll();
         }
     }
 }

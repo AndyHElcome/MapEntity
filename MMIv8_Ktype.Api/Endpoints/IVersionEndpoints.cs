@@ -5,6 +5,10 @@ using Version = MMIv8_Ktype.Models.Collections.Version;
 using Refit;
 using Microsoft.AspNetCore.Mvc;
 using MMIv8_Ktype.Models.Collections;
+using Microsoft.AspNetCore.Http.HttpResults;
+using System.Threading.Tasks;
+using MongoDB.Driver;
+using MMIv8_Ktype.Models;
 
 namespace MMIv8_Ktype.Api.Endpoints
 {
@@ -12,24 +16,21 @@ namespace MMIv8_Ktype.Api.Endpoints
     public interface IVersionEndpoints : IEndpoint
     {
         [Get("")]
-        Task<List<Version>> GetAll();
+        Task<SerializableResult<List<Version>>> GetAll();
 
         [Get("/{VersionNumber}")]
-        Task<Version?> GetByVersion(int VersionNumber);
-
-        [Get("/CurrentVersionID")]
-        Task<ObjectId?> GetCurrentVersionID();
+        Task<SerializableResult<Version>> GetByVersion(int VersionNumber);
 
         [Get("/CurrentVersion")]
-        Task<Version?> GetCurrentVersion();
+        Task<SerializableResult<Version>> GetCurrentVersion();
 
         [Put("/Create")]
-        Task<Version> CreateVersion(CreateVersionRequest request);
+        Task<SerializableResult<Version>> CreateVersion(string TecDocEntityVersion, string MMIv8EntityVersion, string UserName);
 
         [Patch("/{VersionNumber}")]
-        Task<Version?> UpdateVersion([FromHeader] int VersionNumber, [FromQuery] string? TecdocEntityVersion = null, [FromQuery] string? MMIv8EntityVersion = null, [FromQuery] string? UserName = null);
+        Task<SerializableResult<Version>> UpdateVersion([FromHeader] int VersionNumber, [FromQuery] string? TecdocEntityVersion = null, [FromQuery] string? MMIv8EntityVersion = null, [FromQuery] string? UserName = null);
 
         [Delete("/Debug/DeleteAll")]
-        Task DeleteAll();
+        Task<SerializableResult<DeleteResult>> DeleteAll();
     }
 }

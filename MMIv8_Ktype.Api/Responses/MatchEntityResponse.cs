@@ -1,4 +1,5 @@
 ﻿using MMIv8_Ktype.Api.Requests;
+using MMIv8_Ktype.Models;
 using MMIv8_Ktype.Models.Collections;
 using MMIv8_Ktype.Models.Status;
 using MongoDB.Bson;

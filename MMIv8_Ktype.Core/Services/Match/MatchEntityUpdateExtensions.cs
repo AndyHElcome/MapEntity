@@ -58,6 +58,12 @@ namespace MMIv8_Ktype.Core.Services.Match
             return update;
         }
 
+        public static UpdateDefinition<MatchEntity> UpdateMakeModelMatch(this UpdateDefinition<MatchEntity> update, MatchMakeModel matchMakeModel) // TODO Check this works
+        {
+            update = update.Set(c => c.MatchMakeModelMatchID, matchMakeModel.DocumentId);
+            return update;
+        }
+
         [Obsolete("not in use?")]
         public static UpdateDefinition<MatchEntity> UpdateEntity(this UpdateDefinition<MatchEntity> update, SourceTecDocPC sourceEntity)
         {

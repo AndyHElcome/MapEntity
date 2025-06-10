@@ -83,7 +83,7 @@ namespace MMIv8_Ktype.CSV.Operations
             using (var csvWriter = new CsvWritingStream(filepath).CsvWriter)
             {
                 csvWriter.Context.RegisterClassMap<MatchMakeModelMap>();
-                csvWriter.WriteRecords(await matchMakeModel.GenerateMakeModelMatch());
+                csvWriter.WriteRecords((await matchMakeModel.GenerateMakeModelMatch()).Value!);
             }
             log.Information("Created file for Match Make Model {path}", filepath);
 
@@ -96,7 +96,7 @@ namespace MMIv8_Ktype.CSV.Operations
 
                 using (var csvWriter = new CsvWritingStream(filepath).CsvWriter)
                 {
-                    csvWriter.WriteRecords(matchBases.Documents.Select(c => c.BuildCsvObject()));
+                    csvWriter.WriteRecords(matchBases.Value!.Documents.Select(c => c.BuildCsvObject()));
                 }
 
                 log.Information("Created file for Match {matchBaseType} {path}", matchBaseType.ToString(), filepath);
@@ -109,16 +109,18 @@ namespace MMIv8_Ktype.CSV.Operations
             {
                 string? cursor = null;
                 int page = 1;
-                PagedCursorResponse<MatchEntityBackup> response;
+                SerializableResult<PagedCursorResponse<MatchEntityBackup>> response;
 
                 do
                 {
                     response = await matchEntity.GetMatchEntityBackup(cursor, 1000);
-                    csvWriter.WriteRecords(response.Documents);
+                    if (!response.IsSuccess)
+                        throw new Exception(response.Error!.ToString());
+                    csvWriter.WriteRecords(response.Value!.Documents);
                     page++;
-                    cursor = response.Cursor;
+                    cursor = response.Value!.Cursor;
                 }
-                while (response.HasNextPage);
+                while (response.Value!.HasNextPage);
             }
             log.Information("Created file for Match Entity {path}", filepath);
 
@@ -128,7 +130,9 @@ namespace MMIv8_Ktype.CSV.Operations
             using (var csvWriter = new CsvWritingStream(filepath).CsvWriter)
             {
                 var response = await entityRelation.GetCurrentEntityRelations();
-                csvWriter.WriteRecords(response.Documents);
+                if (!response.IsSuccess)
+                    throw new Exception(response.Error!.ToString());
+                csvWriter.WriteRecords(response.Value!.Documents);
             }
             log.Information("Created file for Current Relations {path}", filepath);
 
@@ -136,7 +140,9 @@ namespace MMIv8_Ktype.CSV.Operations
             using (var csvWriter = new CsvWritingStream(filepath).CsvWriter)
             {
                 var response = await entityRelation.GetPreviousEntityRelations();
-                csvWriter.WriteRecords(response.Documents);
+                if (!response.IsSuccess)
+                    throw new Exception(response.Error!.ToString());
+                csvWriter.WriteRecords(response.Value!.Documents);
             }
             log.Information("Created file for Previous Relations {path}", filepath);
         }
@@ -161,8 +167,8 @@ namespace MMIv8_Ktype.CSV.Operations
             string filepath;
 
             await deleteVersionTask;
-            var legacyversion = await client.CreateService<IVersionEndpoints>().CreateVersion(new CreateVersionRequest("Legacy", "Legacy", "Admin"));
-            var currentversion = await client.CreateService<IVersionEndpoints>().CreateVersion(new CreateVersionRequest("0", "0", "Admin"));
+            var legacyversion = await client.CreateService<IVersionEndpoints>().CreateVersion("Legacy", "Legacy", "Admin");
+            var currentversion = await client.CreateService<IVersionEndpoints>().CreateVersion("0", "0", "Admin");
 
 
             filepath = Path.IsPathRooted(MMIv8Path) ? MMIv8Path : Path.Combine(path, MMIv8Path);
@@ -173,7 +179,7 @@ namespace MMIv8_Ktype.CSV.Operations
 
             await Task.WhenAll(deleteEntityRelationTask, deleteMatchEntityTask);
             filepath = Path.IsPathRooted(EntityRelationPath) ? EntityRelationPath : Path.Combine(path, EntityRelationPath);
-            Task loadEntityRelationTask = new LoadEntityRelation(filepath, legacyversion.VersionNumber).ExecuteOperation(log);
+            Task loadEntityRelationTask = new LoadEntityRelation(filepath, legacyversion.Value.VersionNumber).ExecuteOperation(log);
 
             await Task.WhenAll(deleteMatchMakeModelTask, loadMMITask, loadTDTask, loadEntityRelationTask);
             filepath = Path.Combine(path, "MatchMakeModel.csv");
@@ -409,7 +415,7 @@ namespace MMIv8_Ktype.CSV.Operations
                 while (csvReader.Read())
                 {
                     var record = csvReader.GetRecord<MatchMakeModelRequest>();
-                    await matchMakeModelEndpoints.CreateMakeModelMatch(record);
+                    await matchMakeModelEndpoints.CreateMakeModelMatch(record.TD_SourceEntityModelHash, record.MMI_SourceEntityModelHash);
                     //tasks.Add( matchMakeModelEndpoints.CreateMakeModelMatch(record));
                     count++;
                 }
@@ -433,10 +439,10 @@ namespace MMIv8_Ktype.CSV.Operations
             using (var csvWriter = CsvStream.CsvWriter)
             {
                 csvWriter.Context.RegisterClassMap<MatchMakeModelMap>();
-                csvWriter.WriteRecords(matchMakeModels);
+                csvWriter.WriteRecords(matchMakeModels.Value!);
             }
 
-            log.Information("Created file: {CSVPath} ({count} records)", CSVPath, matchMakeModels.Count);
+            log.Information("Created file: {CSVPath} ({count} records)", CSVPath, matchMakeModels.Value!.Count);
         }
     }
 }

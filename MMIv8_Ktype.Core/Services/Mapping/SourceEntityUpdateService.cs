@@ -1,10 +1,12 @@
-﻿using MMIv8_Ktype.Core.Services.Match;
+﻿using MMIv8_Ktype.Core.Contexts;
+using MMIv8_Ktype.Core.Services.Match;
 using MMIv8_Ktype.Core.Services.Source;
 using MMIv8_Ktype.Models;
 using MMIv8_Ktype.Models.Collections;
 using MMIv8_Ktype.Models.Indexes;
 using MMIv8_Ktype.Models.Status;
 using MongoDB.Driver;
+using Serilog;
 using System.Threading.Tasks;
 
 namespace MMIv8_Ktype.Core.Services.Mapping
@@ -42,7 +44,7 @@ namespace MMIv8_Ktype.Core.Services.Mapping
     public interface ISourceEntityUpdateService<TEntity>
         where TEntity : SourceEntity
     {
-        Task UpdateEntity(TEntity sourceEntity, string? detail = null);
+        Task<Result> UpdateEntity(TEntity sourceEntity, string? detail = null);
     }
 
     public class SourceEntityUpdateService<TEntity, TOther>(MatchMakeModelService MatchMakeModelService,
@@ -64,7 +66,7 @@ namespace MMIv8_Ktype.Core.Services.Mapping
         //    };
         //}
 
-        public FilterDefinition<MatchEntity> SourceMatchEntityFilter(SourceEntity sourceEntity) //TODO check this is still updating properly
+        public FilterDefinition<MatchEntity> SourceEntityFilter(SourceEntity sourceEntity) //TODO check this is still updating properly
         {
             var filterBuilder = Builders<MatchEntity>.Filter;
             return typeof(TEntity) switch
@@ -75,63 +77,127 @@ namespace MMIv8_Ktype.Core.Services.Mapping
             };
         }
 
-        public async Task<List<TIdx>> GetEntities<TIdx>(string sourceEntityModelHash) //TODO check this is still updating properly
+        /// <summary>
+        /// Checks if Provided Type is the Source Entity Type, if so returns the source Entity, if not returns all of the other index entities.
+        /// </summary>
+        /// <typeparam name="TIdx"></typeparam>
+        /// <param name="sourceEntity"></param>
+        /// <param name="sourceEntityModelHash"></param>
+        /// <returns></returns>
+        /// <exception cref="NotImplementedException"></exception>
+        public async Task<List<TIdx>> GetEntities<TIdx>(SourceEntity sourceEntity, string sourceEntityModelHash) //TODO check this is still updating properly
+            where TIdx : SourceEntity
         {
-            IAsyncCursor<TIdx> entities = typeof(TEntity) switch
+            if (typeof(TEntity) == typeof(TIdx)) // Source Index -> just return the source Entity 
             {
-                Type t when t == typeof(TIdx) => (IAsyncCursor<TIdx>)await SourceEntityService.GetByModelId(sourceEntityModelHash),
-                Type t when t != typeof(TIdx) => (IAsyncCursor<TIdx>)await OtherSourceEntityService.GetByModelId(sourceEntityModelHash),
-                _ => throw new NotImplementedException()
-            };
+                return [ (TIdx)sourceEntity ];
+            }
+            else //Other index -> get other Entities under each MakeModelMatch
+            {
+                var otherIndexEntities = await OtherSourceEntityService.GetByModelId(sourceEntityModelHash);
 
-            return await entities.ToListAsync();
+                if (otherIndexEntities.IsSuccess)
+                    return [ .. otherIndexEntities.Value.Cast<TIdx>() ];
+            }
+
+            return new();
         }
 
-        public async Task UpdateEntity(TEntity sourceEntity, string? detail = null) // TODO get all entities and filter where Hash is different to rule out nonchanges
+        public async Task<Result> UpdateEntity(TEntity sourceEntity, string? detail = null) // TODO get all entities and filter where Hash is different to rule out nonchanges
         {
-            var currentEntity = await SourceEntityService.GetByExternalId(sourceEntity.ExternalId);
+            var currentEntityResult = await SourceEntityService.GetByExternalId(sourceEntity.ExternalId);
 
-            if (currentEntity is not null && currentEntity.EntityHash == sourceEntity.EntityHash)
-                return;
+            var matchEntityFilterSourceEntity = SourceEntityFilter(sourceEntity);
+            List <MatchMakeModel> newMatchesToCreate = new();
 
-            if (currentEntity is null)
+            var bulkCombinationUpdate = MatchEntityService.CreateBulkCombinationUpdate();
+
+            if (currentEntityResult.IsSuccess) //Entity does exist -> update entity
             {
-                await SourceEntityService.CreateAndValidate(sourceEntity);
-            }
-            else
-            {
-                sourceEntity = await SourceEntityService.UpdateDifferences(currentEntity, sourceEntity);
-            }
+                if (currentEntityResult.Value.EntityHash == sourceEntity.EntityHash)
+                    return Error.Validation($"{typeof(TEntity).Name}.UpdateValidation", "No changes detected");
 
-            var filter = SourceMatchEntityFilter(sourceEntity);
+                var updateEntityResult = await SourceEntityService.UpdateDifferences(currentEntityResult.Value, sourceEntity);
+                if (!updateEntityResult.IsSuccess)
+                    return updateEntityResult;
 
-            if (currentEntity is null || currentEntity.SourceEntityModelHash != sourceEntity.SourceEntityModelHash)
-            {
-                await MatchEntityService.DeleteByFilter(filter); //TODO Create previous match collection and then keep these updated
+                sourceEntity = updateEntityResult.Value;
 
-                var makeModelMatches = await MatchMakeModelService.GetByModelId(sourceEntity.SourceIndex, sourceEntity.SourceEntityModelHash);
-                foreach (var makeModelMatch in makeModelMatches)
+                if (currentEntityResult.Value.SourceEntityModelHash == sourceEntity.SourceEntityModelHash)
                 {
-                    var tecdocEntities = await GetEntities<SourceTecDocPC>(makeModelMatch.TecDocModel.DocumentId);
-                    var mmiEntities = await GetEntities<SourceMMIv8>(makeModelMatch.MMIv8Model.DocumentId);
+                    var matchEntityUpdate = MatchEntityService.Update(matchEntityFilterSourceEntity).AppendUpdate(c => c.UpdateEntity(sourceEntity)) //TODO check this is still updating properly
+                                                                                                    .AppendPipeline(c => c.AppendStatus(versionProvider.NewStatus(Status.Check, $"Updated {typeof(TEntity).Name} Entity")));
+                    var matchEntityResult = await matchEntityUpdate.UpdateDocuments();
+                }
+                else
+                {
+                    var currentMakeModelMatchesResult = await MatchMakeModelService.GetByModelId(currentEntityResult.Value.SourceIndex, currentEntityResult.Value.SourceEntityModelHash, true);
+                    var currentMakeModelMatches = currentMakeModelMatchesResult.IsSuccess ? currentMakeModelMatchesResult.Value : new();
 
-                    await foreach (var newMatch in MappingService.GenerateEntityMatch(tecdocEntities, mmiEntities, makeModelMatch.DocumentId))
+                    foreach (var currentMakeModelMatch in currentMakeModelMatches)
                     {
-                        await MappingService.BulkCreateEntityMatch(newMatch.ToList());
+                        var matchMakeModelFilter = Builders<MatchEntity>.Filter.Eq(c => c.MatchMakeModelMatchID, currentMakeModelMatch.DocumentId);
+
+                        var deleteResult = await MatchEntityService.DeleteByFilter(matchMakeModelFilter & matchEntityFilterSourceEntity);
+
+                        if (!deleteResult.IsSuccess)
+                            return deleteResult;
+
+                        if (deleteResult.Value.IsAcknowledged && deleteResult.Value.DeletedCount > 0)
+                        {
+                            var matchEntityUpdate = MatchEntityService.Update(matchMakeModelFilter).AppendPipeline(c => c.AppendStatus(versionProvider.NewStatus(Status.Check, $"Deleted {typeof(TEntity).Name} Entity {sourceEntity.DocumentId} as it changes it's MakeModel")));
+                            var matchEntityResult = await matchEntityUpdate.UpdateDocuments();
+
+                            bulkCombinationUpdate.Combine(await MatchEntityService.BulkCombinationUpdateMatchRefine(matchMakeModelFilter));
+                        }
                     }
+
+                    var bulkCombinationResult = await bulkCombinationUpdate.CommitBulkWrite();
+
+                    // Delete MatchEntity records with source entity
+                    var orphanedCount = await MatchEntityService.CountByFilter(matchEntityFilterSourceEntity);
+
+                    if (orphanedCount > 0)
+                        Log.Error("{count} MatchEntities left oprhaned for entity {@sourceEntity}", orphanedCount, sourceEntity);
+
+                    var sourceMakeModelMatchesResult = await MatchMakeModelService.GetByModelId(sourceEntity.SourceIndex, sourceEntity.SourceEntityModelHash, true);
+                    newMatchesToCreate = sourceMakeModelMatchesResult.IsSuccess ? sourceMakeModelMatchesResult.Value : new();
+                }
+            }
+            else if (currentEntityResult.Error!.Type == ErrorType.NotFound) //Entity doesnt exist -> create entity
+            {
+                var createEntityResult = await SourceEntityService.Create(sourceEntity);
+
+                if (!createEntityResult.IsSuccess)
+                    return createEntityResult;
+
+                var sourceMakeModelMatchesResult = await MatchMakeModelService.GetByModelId(sourceEntity.SourceIndex, sourceEntity.SourceEntityModelHash, true);
+                newMatchesToCreate = sourceMakeModelMatchesResult.IsSuccess ? sourceMakeModelMatchesResult.Value : new();
+            }
+            else //Entity result threw something unexpected
+            {
+                throw new NotImplementedException();
+            }
+
+            foreach (var makeModelMatch in newMatchesToCreate)
+            {
+                var tecdocEntities = await GetEntities<SourceTecDocPC>(sourceEntity, makeModelMatch.TecDocModel.DocumentId);
+                var mmiEntities = await GetEntities<SourceMMIv8>(sourceEntity, makeModelMatch.MMIv8Model.DocumentId);
+
+                await foreach (var newMatch in MappingService.GenerateEntityMatch(tecdocEntities, mmiEntities, makeModelMatch.DocumentId))
+                {
+                    await MappingService.BulkCreateEntityMatch(newMatch.ToList());
                 }
 
-                var matchEntityResult = MatchEntityService.UpdateStatus(filter, Status.Check, $"Updated {typeof(TEntity).Name} Entity");
-                await MappingService.RecalculateMatchBase(filter);
-            }
-            else
-            {
-                var matchEntityUpdate = MatchEntityService.Update(filter).AppendUpdate(c => c.UpdateEntity(sourceEntity)) //TODO check this is still updating properly
-                                                                         .AppendPipeline(c => c.AppendStatus(versionProvider.NewStatus(Status.Check, $"Updated {typeof(TEntity).Name} Entity")));
-                var matchEntityResult = await matchEntityUpdate.UpdateDocuments();
-                await MappingService.RecalculateMatchBase(filter);
-            }
-        }
+                var matchMakeModelFilter = Builders<MatchEntity>.Filter.Eq(c => c.MatchMakeModelMatchID, makeModelMatch.DocumentId);
 
+                var matchEntityResult = MatchEntityService.UpdateStatus(matchMakeModelFilter, Status.Check, $"Updated {typeof(TEntity).Name} Entity");
+            }
+
+            await MappingService.RecalculateMatchBase(matchEntityFilterSourceEntity);
+
+            Log.Information("Updated Entity");
+            return Result.Success();
+        }
     }
 }

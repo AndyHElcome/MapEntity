@@ -4,6 +4,7 @@ using MMIv8_Ktype.Api.Responses;
 using MMIv8_Ktype.Core.Services;
 using MMIv8_Ktype.Core.Services.Mapping;
 using MMIv8_Ktype.Core.Services.Match;
+using MMIv8_Ktype.Models;
 using MMIv8_Ktype.Models.Collections;
 using MMIv8_Ktype.Models.Indexes;
 using MongoDB.Bson;
@@ -15,45 +16,45 @@ namespace MMIv8_Ktype.Core.Endpoints
                                          MappingService mappingService,
                                          BulkMappingService bulkMappingService) : IMatchMakeModelEndpoints
     {
-        public async Task<PagedCursorResponse<MatchMakeModel>> GetAll(string? cursor = null, int PageSize = 100) //TODO Fix large gets
+        public async Task<SerializableResult<PagedCursorResponse<MatchMakeModel>>> GetAll(string? cursor = null, int PageSize = 100) //TODO Fix large gets
         {
             var objectId = ObjectId.TryParse(cursor, out var objectid) ? objectid : ObjectId.Empty;
             return await matchMakeModelService.PaginateDocumentsByCursor<MatchMakeModel, ObjectId>(cursor: objectId, pageSize: PageSize);
         }
 
-        public async Task<List<MatchMakeModel>> GenerateMakeModelMatch()
+        public async Task<SerializableResult<List<MatchMakeModel>>> GenerateMakeModelMatch()
         {
             return await bulkMappingService.GenerateMakeModelMatch();
         }
 
-        public async Task<MatchMakeModel?> GetMakeModelMatch(string TD_SourceEntityModelHash, string MMI_SourceEntityModelHash)
+        public async Task<SerializableResult<MatchMakeModel>> GetMakeModelMatch(string TD_SourceEntityModelHash, string MMI_SourceEntityModelHash)
         {
-            return await matchMakeModelService.GetByModelIds(new(TD_SourceEntityModelHash, MMI_SourceEntityModelHash));
+            return await matchMakeModelService.GetByModelIds(TD_SourceEntityModelHash, MMI_SourceEntityModelHash);
         }
 
-        public async Task<List<MatchMakeModel>> GetByModelId(SourceIndex SourceIndex, string SourceEntityModelHash)
+        public async Task<SerializableResult<List<MatchMakeModel>>> GetByModelId(SourceIndex SourceIndex, string SourceEntityModelHash)
         {
             return await matchMakeModelService.GetByModelId(SourceIndex, SourceEntityModelHash);
         }
 
-        public async Task<MatchMakeModel?> GetMakeModelMatchById(ObjectId MatchID)
+        public async Task<SerializableResult<MatchMakeModel>> GetMakeModelMatchById(ObjectId MatchID)
         {
             return await matchMakeModelService.GetById(MatchID);
         }
 
-        public async Task CreateMakeModelMatch(MatchMakeModelRequest request)
+        public async Task<Result> CreateMakeModelMatch(string TD_SourceEntityModelHash, string MMI_SourceEntityModelHash)
         {
-            _ = await mappingService.CreateMakeModelMatch(request);
+            return await mappingService.CreateMakeModelMatch(TD_SourceEntityModelHash, MMI_SourceEntityModelHash);
         }
 
-        public async Task DeleteMakeModelMatch(ObjectId MatchID)
+        public async Task<Result> DeleteMakeModelMatch(ObjectId MatchID)
         {
-            _ = await mappingService.DeleteMakeModelMatch(MatchID);
+            return await mappingService.DeleteMakeModelMatch(MatchID);
         }
 
-        public async Task DeleteAll()
+        public async Task<SerializableResult<DeleteResult>> DeleteAll()
         {
-            _ = await matchMakeModelService.DeleteAll();
+            return await matchMakeModelService.DeleteAll();
         }
     }
 }

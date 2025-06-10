@@ -13,12 +13,27 @@ using System.Reflection;
 using MMIv8_Ktype.Models.Util;
 using MMIv8_Ktype.Api.Endpoints;
 using MongoDB.Bson.IO;
+using MMIv8_Ktype.Core.Exceptions;
+using MMIv8_Ktype.Api;
 
 internal class Program
 {
     private static void Main(string[] args)
     {
         var builder = WebApplication.CreateBuilder(args);
+
+        Log.Logger = new LoggerConfiguration() // Move to App settings
+            .MinimumLevel.Debug()
+            .WriteTo.Console(outputTemplate: "[{Level:u3}] {Message:l}{NewLine}{Exception}")
+            .WriteTo.File($"..\\MMIv8_Ktype.Core\\Logs\\Log.txt",
+                          rollOnFileSizeLimit: true,
+                          fileSizeLimitBytes: 1048576,
+                          shared: true,
+                          outputTemplate: "{Timestamp:yyyy-MM-dd HH:mm:ss.fff zzz} [{Level:u3}] {Message:l}{NewLine}{Exception}",
+                          restrictedToMinimumLevel: LogEventLevel.Information)
+            .CreateLogger();
+
+        builder.Services.AddSingleton(Log.Logger);
 
         //BsonDefaults.GuidRepresentationMode = GuidRepresentationMode.V3;
         JsonWriterSettings.Defaults.OutputMode = JsonOutputMode.Shell;
@@ -35,6 +50,9 @@ internal class Program
         builder.Services.AddControllers().AddJsonOptions(opts => opts.JsonSerializerOptions.GetJsonSerializerOptions()); // Not required if not controllers
 
         builder.Services.Configure<Microsoft.AspNetCore.Http.Json.JsonOptions>(opts => opts.SerializerOptions.GetJsonSerializerOptions());
+
+        builder.Services.AddProblemDetails();
+        builder.Services.AddExceptionHandler<GlobalExceptionHandler>();
 
         builder.Services.AddSingleton<MongoDBContext>();
 
@@ -63,18 +81,7 @@ internal class Program
         builder.Services.AddEndpointsApiExplorer();
         builder.Services.AddSwaggerGen();
 
-        Log.Logger = new LoggerConfiguration() // Move to App settings
-            .MinimumLevel.Debug()
-            .WriteTo.Console(outputTemplate: "[{Level:u3}] {Message:l}{NewLine}{Exception}")
-            .WriteTo.File($"..\\MMIv8_Ktype.Core\\Logs\\Log.txt",
-                          rollOnFileSizeLimit: true,
-                          fileSizeLimitBytes: 1048576,
-                          shared: true,
-                          outputTemplate: "{Timestamp:yyyy-MM-dd HH:mm:ss.fff zzz} [{Level:u3}] {Message:l}{NewLine}{Exception}",
-                          restrictedToMinimumLevel: LogEventLevel.Information)
-            .CreateLogger();
 
-        builder.Services.AddSingleton(Log.Logger);
 
         builder.Services.AddEndpoints(Assembly.GetExecutingAssembly());
 
@@ -97,8 +104,9 @@ internal class Program
 
         app.UseHttpsRedirection();
 
-        app.UseAuthorization();
+        app.UseExceptionHandler();
 
+        app.UseAuthorization();
 
         app.MapControllers();
         app.MapEndpoints();

@@ -243,9 +243,13 @@ namespace MMIv8_Ktype.Core.Contexts
             var matchBaseIndexBuilder = Builders<MatchBase>.IndexKeys;
             var matchBaseIndexModels = new List<CreateIndexModel<MatchBase>>
             { //TODO Stopped Working
-                //new (matchBaseIndexBuilder.Ascending(c => c.MatchBaseType),
-                //     new() { Name = "MatchBaseType", Unique = false, Background = true }
-                //),
+                new (matchBaseIndexBuilder.Ascending(c => c.MatchBaseType),
+                     new() { Name = "MatchBaseType", Unique = false, Background = true }
+                ),
+                new (matchBaseIndexBuilder.Ascending(c => c.MatchBaseType)
+                                          .Ascending(c => c.MatchBaseMethod),
+                     new() { Name = "MatchBaseType_MatchBaseMethod", Unique = false, Background = true }
+                ),
                 new (matchBaseIndexBuilder.Ascending(c => c.Status.Current.Status),
                      new() { Name = "Status.Current.Status", Unique = false, Background = true }
                 ),
@@ -258,6 +262,10 @@ namespace MMIv8_Ktype.Core.Contexts
             var matchMakeModelIndexBuilder = Builders<MatchMakeModel>.IndexKeys;
             var matchMakeModelIndexModels = new List<CreateIndexModel<MatchMakeModel>>
             {
+                new (matchMakeModelIndexBuilder.Ascending(c => c.MMIv8Model.DocumentId)
+                                               .Ascending(c => c.TecDocModel.DocumentId),
+                     new() { Name = "MMIv8Model.SourceEntityModelHash_TecDocModel.SourceEntityModelHash", Unique = true, Background = true }
+                ),
                 new (matchMakeModelIndexBuilder.Ascending(c => c.MMIv8Model.DocumentId),
                      new() { Name = "MMIv8Model.SourceEntityModelHash", Unique = false, Background = true }
                 ),
@@ -323,6 +331,30 @@ namespace MMIv8_Ktype.Core.Contexts
             };
 
             CreateIndex(SourceMMIv8, sourceMMIv8IndexModels, regenerate);
+            #endregion
+
+            #region Version
+            var versionIndexBuilder = Builders<Models.Collections.Version>.IndexKeys;
+            var versionIndexModels = new List<CreateIndexModel<Models.Collections.Version>>
+            {
+                new (versionIndexBuilder.Ascending(c => c.VersionNumber),
+                     new() { Name = "VersionNumber", Unique = true, Background = true }
+                ),
+            };
+
+            CreateIndex(Version, versionIndexModels, regenerate);
+            #endregion
+
+            #region Version
+            var userIndexBuilder = Builders<User>.IndexKeys;
+            var userIndexModels = new List<CreateIndexModel<User>>
+            {
+                new (userIndexBuilder.Ascending(c => c.Name),
+                     new() { Name = "Name", Unique = true, Background = true }
+                ),
+            };
+
+            CreateIndex(Version, versionIndexModels, regenerate);
             #endregion
         }
 

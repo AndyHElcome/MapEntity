@@ -1,4 +1,5 @@
 ﻿@MMIv8_Ktype.Core_HostAddress = https://localhost:44304
+@MMIv8_Ktype.Core_HostAddress = http://dev-sql:5700
 
 
 POST {{MMIv8_Ktype.Core_HostAddress}}/MatchMakeModel/GetByModels
@@ -31,5 +32,13 @@ GET {{MMIv8_Ktype.Core_HostAddress}}/MatchEntity/GetAll?Page={{Page}}&PageSize={
 ###
 
 GET {{MMIv8_Ktype.Core_HostAddress}}/MatchEntity/MatchRefine
+
+###
+
+GET {{MMIv8_Ktype.Core_HostAddress}}/Version/{{VersionNumber}}
+
+###
+
+GET {{MMIv8_Ktype.Core_HostAddress}}/Version/CurrentVersion
 
 ###

@@ -1,4 +1,5 @@
 ﻿using Microsoft.AspNetCore.Authentication;
+using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Rewrite;
 using MMIv8_Ktype.Api.Endpoints;
 using MMIv8_Ktype.Api.Requests;
@@ -20,12 +21,12 @@ using System.Collections;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
+using System.Xml;
 using Version = MMIv8_Ktype.Models.Collections.Version;
 
 namespace MMIv8_Ktype.Core.Services.Mapping
 {
-    public class MappingService(MongoDBContext MMIv8_Ktype,
-                                MatchMakeModelService MatchMakeModelService,
+    public class MappingService(MatchMakeModelService MatchMakeModelService,
                                 SourceMMIv8EntityModelService SourceMMIv8EntityModelService,
                                 SourceTecDocEntityModelService SourceTecDocEntityModelService,
                                 MatchEntityService MatchEntityService,
@@ -38,180 +39,71 @@ namespace MMIv8_Ktype.Core.Services.Mapping
                                 IVersionProvider versionProvider)
     {
         #region Match Make Model
-        [Obsolete("Not in use?")]
-        public async Task CreateModelMatch(List<MatchMakeModelRequest> matchMakeModels)
+        public async Task<Result> CreateMakeModelMatch(string TD_SourceEntityModelHash, string MMI_SourceEntityModelHash)
         {
-            List<ObjectId> createdMakeModels = new();
-            List<Task> tasks = new();
+            MongoSourceEntityModel tecdocModel = new();
+            MongoSourceEntityModel mmiv8Model = new();
 
-            foreach (var matchMakeModel in matchMakeModels)
-            {
-                var existingModelMatch = await MatchMakeModelService.GetByModelIds(matchMakeModel);
+            if (TD_SourceEntityModelHash != string.Empty && await SourceTecDocEntityModelService.GetById(TD_SourceEntityModelHash) is var tecdocSourceEntityModelResult && tecdocSourceEntityModelResult.IsSuccess)
+                tecdocModel = tecdocSourceEntityModelResult.Value;
 
-                if (existingModelMatch is not null)
-                {
-                    Log.Information("MakeModelMatch already exists, skipping match: TD '{TD_SourceEntityModelHash}' MMI '{MMI_SourceEntityModelHash}'", matchMakeModel.TD_SourceEntityModelHash, matchMakeModel.MMI_SourceEntityModelHash);
-                    continue;
-                }
+            if (MMI_SourceEntityModelHash != string.Empty && await SourceMMIv8EntityModelService.GetById(MMI_SourceEntityModelHash) is var mmiv8SourceEntityModelResult && mmiv8SourceEntityModelResult.IsSuccess)
+                mmiv8Model = mmiv8SourceEntityModelResult.Value;
 
-                MatchMakeModel newMatchMakeModel = new(
-                    tecDocModel: matchMakeModel.TD_SourceEntityModelHash == string.Empty ? new() : await SourceTecDocEntityModelService.GetById(matchMakeModel.TD_SourceEntityModelHash) ?? new(),
-                    mmiv8Model: matchMakeModel.MMI_SourceEntityModelHash == string.Empty ? new() : await SourceMMIv8EntityModelService.GetById(matchMakeModel.MMI_SourceEntityModelHash) ?? new(),
-                    versionProvider
-                    );
+            MatchMakeModel newMatchMakeModel = new(tecdocModel, mmiv8Model, versionProvider);
 
-                createdMakeModels.Add(newMatchMakeModel.DocumentId);
-                await MatchMakeModelService.Create(newMatchMakeModel);
+            var createResult = await MatchMakeModelService.Create(newMatchMakeModel);
+            if (!createResult.IsSuccess)
+                return createResult;
 
-                if (newMatchMakeModel.TecDocModel.DocumentId is not null && newMatchMakeModel.MMIv8Model.DocumentId is not null)
-                {
-                    tasks.Add(StoreEntityMatch(newMatchMakeModel));
-                }
-            }
+            if (newMatchMakeModel is { TecDocModel: { DocumentId: not null }, MMIv8Model: { DocumentId: not null } })
+                return await StoreEntityMatch(newMatchMakeModel);
+            if (newMatchMakeModel.TecDocModel.DocumentId is not null || newMatchMakeModel.MMIv8Model.DocumentId is not null)
+                throw new Exception("Bad pattern matching");
 
-            await Task.WhenAll(tasks);
+            return Result.Success();
         }
 
-        public async Task<ObjectId> CreateMakeModelMatch(MatchMakeModelRequest matchMakeModel)
+        public async Task<Result> DeleteMakeModelMatch(ObjectId documentId)
         {
-            var existingModelMatch = await MatchMakeModelService.GetByModelIds(matchMakeModel);
+            var deleteMatchMakeModel = await MatchMakeModelService.DeleteById(documentId);
+            if (!deleteMatchMakeModel.IsSuccess)
+                return deleteMatchMakeModel;
 
-            if (existingModelMatch is not null)
-            {
-                Log.Information("MakeModelMatch already exists, skipping match: TD '{TD_SourceEntityModelHash}' MMI '{MMI_SourceEntityModelHash}'", matchMakeModel.TD_SourceEntityModelHash, matchMakeModel.MMI_SourceEntityModelHash);
-                return existingModelMatch.DocumentId;
-            }
+            var filter = Builders<MatchEntity>.Filter.Eq(c => c.MatchMakeModelMatchID, deleteMatchMakeModel.Value.DocumentId);
+            var deleteMatchEntityResult = await MatchEntityService.DeleteByFilter(filter);
+            if (!deleteMatchEntityResult.IsSuccess)
+                return deleteMatchEntityResult;
 
-            MatchMakeModel newMatchMakeModel = new(
-                tecDocModel: matchMakeModel.TD_SourceEntityModelHash == string.Empty ? new() : await SourceTecDocEntityModelService.GetById(matchMakeModel.TD_SourceEntityModelHash) ?? new(),
-                mmiv8Model: matchMakeModel.MMI_SourceEntityModelHash == string.Empty ? new() : await SourceMMIv8EntityModelService.GetById(matchMakeModel.MMI_SourceEntityModelHash) ?? new(),
-                versionProvider
-                );
-
-            await MatchMakeModelService.Create(newMatchMakeModel);
-
-            if (newMatchMakeModel.TecDocModel.DocumentId is not null && newMatchMakeModel.MMIv8Model.DocumentId is not null)
-            {
-                await StoreEntityMatch(newMatchMakeModel);
-            }
-
-            return newMatchMakeModel.DocumentId;
-        }
-
-        public async Task DeleteModelMatch(List<MatchMakeModelRequest> matchMakeModels)
-        {
-            foreach (var matchMakeModel in matchMakeModels)
-            {
-                var modelMatch = await MatchMakeModelService.GetByModelIds(matchMakeModel);
-
-                if (modelMatch is null)
-                {
-                    Log.Information("MakeModelMatch does not exist, skipping deletion: TD '{TD_SourceEntityModelHash}' MMI '{MMI_SourceEntityModelHash}'", matchMakeModel.TD_SourceEntityModelHash, matchMakeModel.MMI_SourceEntityModelHash);
-                    continue;
-                }
-
-                await MatchMakeModelService.Delete(modelMatch);
-
-                var filterBuilder = Builders<MatchEntity>.Filter;
-                var filter = filterBuilder.Eq(c => c.MatchMakeModelMatchID, modelMatch.DocumentId);
-
-                await MatchEntityService.DeleteByFilter(filter);
-            }
-        }
-
-        public async Task<ObjectId?> DeleteMakeModelMatch(MatchMakeModelRequest matchMakeModel)
-        {
-            var modelMatch = await MatchMakeModelService.GetByModelIds(matchMakeModel);
-
-            if (modelMatch is null)
-            {
-                Log.Information("MakeModelMatch does not exist, skipping deletion: TD '{TD_SourceEntityModelHash}' MMI '{MMI_SourceEntityModelHash}'", matchMakeModel.TD_SourceEntityModelHash, matchMakeModel.MMI_SourceEntityModelHash);
-                return null;
-            }
-
-            await MatchMakeModelService.Delete(modelMatch);
-
-            var filterBuilder = Builders<MatchEntity>.Filter;
-            var filter = filterBuilder.Eq(c => c.MatchMakeModelMatchID, modelMatch.DocumentId);
-
-            await MatchEntityService.DeleteByFilter(filter);
-
-            return modelMatch.DocumentId;
-        }
-
-        public async Task<ObjectId?> DeleteMakeModelMatch(ObjectId matchID)
-        {
-            var modelMatch = await MatchMakeModelService.GetById(matchID);
-
-            if (modelMatch is null)
-            {
-                Log.Information("MakeModelMatch does not exist {matchID}", matchID);
-                return null;
-            }
-
-            await MatchMakeModelService.Delete(modelMatch);
-
-            var filterBuilder = Builders<MatchEntity>.Filter;
-            var filter = filterBuilder.Eq(c => c.MatchMakeModelMatchID, modelMatch.DocumentId);
-
-            await MatchEntityService.DeleteByFilter(filter);
-
-            return modelMatch.DocumentId;
+            return deleteMatchMakeModel;
         }
         #endregion
 
         #region Match Base
-        public async Task UpdateMatchScore(MatchBaseType matchBaseType, string matchHash, decimal newScore) // could be endpoint?
+        public async Task<Result> UpdateMatchScore(MatchBaseType matchBaseType, string matchHash, decimal newScore) // could be endpoint?
         {
-            try
-            {
-                var sw = Stopwatch.StartNew(); 
+            var sw = Stopwatch.StartNew();
 
-                var updateMatch = await MatchBaseService.GetById(matchHash) ?? throw new Exception("Match does not exist");
+            var updateMatchResult = await MatchBaseService.UpdateScore(matchHash, newScore);
+            if (!updateMatchResult.IsSuccess)
+                return updateMatchResult;
 
-                if (updateMatch.Score != newScore)
-                {
-                    CombinationPipeline<MatchBase> matchBaseUpdate = MatchBaseService.UpdateScore(updateMatch, newScore);
-                    updateMatch = await matchBaseUpdate.FindAndUpdateDocument();
+            CombinationPipeline<MatchEntity> matchEntityUpdate = MatchEntityService.UpdateMatchBaseScoreMatchResult(updateMatchResult.Value); //TODO this might need to be recalculate
+            var matchEntityResult = await matchEntityUpdate.UpdateDocuments();
+            Log.Debug("Match Entities {time}", sw);
+            if (!matchEntityResult.IsSuccess)
+                return matchEntityResult;
 
-                    CombinationPipeline<MatchEntity> matchEntityUpdate = MatchEntityService.UpdateMatchBaseScoreMatchResult(updateMatch); //TODO this might need to be recalculate
-                    var matchEntityResult = await matchEntityUpdate.UpdateDocuments();
-                    Log.Debug("Match Entities {time}", sw);
+            BulkCombinationUpdate matchRefineUpdate = await MatchEntityService.BulkCombinationUpdateMatchRefine(matchEntityUpdate.Filter);
+            var matchRefineResult = await matchRefineUpdate.CommitBulkWrite();
+            Log.Debug("Match Refine {time}", sw);
+            if (!matchRefineResult.IsSuccess)
+                return matchRefineResult;
 
-                    BulkCombinationUpdate matchRefineUpdate = await MatchEntityService.BulkCombinationUpdateMatchRefine(matchEntityUpdate.Filter);
-                    var matchRefineResult = await matchRefineUpdate.CommitBulkWrite();
-                    Log.Debug("Match Refine {time}", sw);
+            sw.Stop();
+            Log.Information("Updated {updateMatch} in {time} ({matchEntitiesCount} MatchEntities) ({matchRefineCount} MatchRefine) ", updateMatchResult.Value.ToString(), sw, matchEntityResult.Value.IsAcknowledged ? matchEntityResult.Value.ModifiedCount : "notAcknowledged", matchRefineResult.Value.Acknowledged ? matchRefineResult.Value.ModifiedCount : "notAcknowledged");
 
-                    sw.Stop();
-                    Log.Information("Updated {updateMatch} in {time} ({matchEntitiesCount} MatchEntities) ({matchRefineCount} MatchRefine) ", updateMatch.ToString(), sw, matchEntityResult.IsAcknowledged ? matchEntityResult.ModifiedCount : "notAcknowledged", matchRefineResult.Acknowledged ? matchRefineResult.ModifiedCount : "notAcknowledged");
-
-                }
-                else if (updateMatch.Status.Current.Status == Status.Check) //Move this into a update status call
-                {
-                    CombinationPipeline<MatchBase> matchBaseUpdate = MatchBaseService.Update(updateMatch).AppendPipeline(c => c.AppendStatus(versionProvider.NewStatus(Status.Checked)));
-                    var matchBaseResult = await matchBaseUpdate.UpdateDocuments();
-
-                    sw.Stop();
-                    Log.Information("Updated {updateMatch} Status to Checked in {time}", updateMatch.ToString(), matchBaseResult?.ModifiedCount ?? 0, sw);
-                }
-            }
-            catch (Exception ex)
-            {
-                Log.Error(ex, "Cannot update score match {matchBaseType} {matchHash}", matchBaseType, matchHash);
-            }
-        }
-
-        public async Task CheckMatchBaseDeprecated()//TODO Utilise Deprecate Match Base
-        {
-            var currentMatch = await MatchBaseService.GetFindFluent(batchSize: 1000).ToCursorAsync();
-
-            while (await currentMatch.MoveNextAsync())
-            {
-                foreach (var matchBase in currentMatch.Current)
-                {
-                    await DeprecateMatchBase(matchBase);
-                }
-            }
+            return Result.Success();
         }
 
         /// <summary>
@@ -237,19 +129,22 @@ namespace MMIv8_Ktype.Core.Services.Mapping
             return isMissing;
         }
 
-        public async Task RecalculateMatchBase(FilterDefinition<MatchEntity> filter, MatchBaseType matchBaseType)
+        public async Task<Result> RecalculateMatchBase(FilterDefinition<MatchEntity> filter, MatchBaseType matchBaseType)
         {
             Log.Debug($"Gathering MatchBases for Recalculation");
 
             var matchEntityManual = await MatchEntityService.GetMatchBaseByType(matchBaseType, [ MatchBaseMethod.Manual, MatchBaseMethod.Partial ], null, false, filter);
-            Dictionary<MatchBaseType, IEnumerable<MatchBase>> matchBaseDict = new() { { matchBaseType, await matchEntityManual.ToListAsync() } };
+            if (!matchEntityManual.IsSuccess)
+                return matchEntityManual;
+
+            Dictionary<MatchBaseType, IEnumerable<MatchBase>> matchBaseDict = new() { { matchBaseType, matchEntityManual.Value } };
 
             Log.Debug("Retrived {Count} for {MatchBaseType}", matchBaseDict[ matchBaseType ].Count(), matchBaseType);
 
-            await CalculateMatchBase(matchBaseDict, filter);
+            return await CalculateMatchBase(matchBaseDict, filter);
         }
 
-        public async Task RecalculateMatchBase(FilterDefinition<MatchEntity> filter)
+        public async Task<Result> RecalculateMatchBase(FilterDefinition<MatchEntity> filter)
         {
             Log.Debug($"Gathering MatchBases for Recalculation");
 
@@ -257,14 +152,15 @@ namespace MMIv8_Ktype.Core.Services.Mapping
             foreach (MatchBaseType matchBaseType in (MatchBaseType[])Enum.GetValues(typeof(MatchBaseType)))
             {
                 var matchEntityManual = await MatchEntityService.GetMatchBaseByType(matchBaseType, [ MatchBaseMethod.Manual, MatchBaseMethod.Partial ], null, false, filter);
-                matchBaseDict.Add(matchBaseType, matchEntityManual.ToList());
+                if (matchEntityManual.IsSuccess)
+                    matchBaseDict.Add(matchBaseType, matchEntityManual.Value);
 
                 Log.Debug("Retrived {Count} for {MatchBaseType}", matchBaseDict[ matchBaseType ].Count(), matchBaseType);
             }
-            await CalculateMatchBase(matchBaseDict, filter);
+            return await CalculateMatchBase(matchBaseDict, filter);
         }
 
-        public async Task RecalculateMatchBase()
+        public async Task<Result> RecalculateMatchBase()
         {
             Log.Debug($"Gathering MatchBases for Recalculation");
 
@@ -272,15 +168,19 @@ namespace MMIv8_Ktype.Core.Services.Mapping
             foreach (MatchBaseType matchBaseType in (MatchBaseType[])Enum.GetValues(typeof(MatchBaseType)))
             {
                 var matchEntityManual = await MatchEntityService.GetMatchBaseByType(matchBaseType, [ MatchBaseMethod.Manual ], null, false);
-                var matchBasePartial = await MatchBaseService.GetByTypeAndMethod(matchBaseType, MatchBaseMethod.Partial, Builders<MatchBase>.Filter.Ne(x => x.Status.Current.Status, Status.Deprecated));
-                matchBaseDict.Add(matchBaseType, [ .. matchEntityManual.ToList(), .. matchBasePartial ]);
+                if (matchEntityManual.IsSuccess)
+                    matchBaseDict.Add(matchBaseType, matchEntityManual.Value);
+
+                var matchBasePartialResult = await MatchBaseService.GetByTypeAndMethod(matchBaseType, MatchBaseMethod.Partial, Builders<MatchBase>.Filter.Ne(x => x.Status.Current.Status, Status.Deprecated));
+                if (matchBasePartialResult.IsSuccess)
+                    matchBaseDict.Add(matchBaseType, matchBasePartialResult.Value);
 
                 Log.Debug("Retrived {Count} for {MatchBaseType}", matchBaseDict[ matchBaseType ].Count(), matchBaseType);
             }
-            await CalculateMatchBase(matchBaseDict);
+            return await CalculateMatchBase(matchBaseDict);
         }
 
-        public async Task CalculateMatchBase(Dictionary<MatchBaseType, IEnumerable<MatchBase>> matchBaseDict, FilterDefinition<MatchEntity>? filter = null)
+        public async Task<Result> CalculateMatchBase(Dictionary<MatchBaseType, IEnumerable<MatchBase>> matchBaseDict, FilterDefinition<MatchEntity>? filter = null)
         {
             filter ??= Builders<MatchEntity>.Filter.Empty;
 
@@ -290,12 +190,12 @@ namespace MMIv8_Ktype.Core.Services.Mapping
             {
                 Log.Debug("Starting {MatchBaseType} {time}", groupedMatchBase.Key, sw);
 
-                var existingMatchBases = await MatchBaseService.GetByMatchBaseType(groupedMatchBase.Key);
+                var existingMatchBasesResult = await MatchBaseService.GetByMatchBaseType(groupedMatchBase.Key);
+                if (!existingMatchBasesResult.IsSuccess)
+                    return existingMatchBasesResult;
 
-                existingMatchBases = existingMatchBases.IntersectBy(groupedMatchBase.Value.Select(c => c.DocumentId), c => c.DocumentId).ToList();
-                var newMatchBases = groupedMatchBase.Value.Where(c => c.MatchBaseMethod == MatchBaseMethod.Manual).ExceptBy(existingMatchBases.Select(c => c.DocumentId), c => c.DocumentId);
-
-                if (existingMatchBases.Any())
+                var existingMatchBases = existingMatchBasesResult.Value.IntersectBy(groupedMatchBase.Value.Select(c => c.DocumentId), c => c.DocumentId).ToList();
+                if (existingMatchBases is { Count: >0 })
                 {
                     List<BulkWriteModel> bulks = new();
                     foreach (var existingMatchBase in existingMatchBases)
@@ -304,9 +204,8 @@ namespace MMIv8_Ktype.Core.Services.Mapping
                         if (existingMatchBase.Status.Current.Status == Status.Deprecated)
                         {
                             var matchBaseUpdate = MatchBaseService.Update(existingMatchBase).AppendPipeline(c => c.RemoveStatus(Status.Deprecated));
-                            var matchBaseResult = await matchBaseUpdate.UpdateDocuments();
-
-                            newMatchBase = await MatchBaseService.GetById(existingMatchBase.DocumentId) ?? existingMatchBase;
+                            var newMatchBaseResult = await matchBaseUpdate.FindAndUpdateDocument();
+                            newMatchBase = newMatchBaseResult.Value;
                         }
 
                         CombinationPipeline<MatchEntity> matchEntityUpdate = MatchEntityService.UpdateMissingMatchBase(newMatchBase, filter);
@@ -314,6 +213,7 @@ namespace MMIv8_Ktype.Core.Services.Mapping
                     }
                 }
 
+                var newMatchBases = groupedMatchBase.Value.Where(c => c.MatchBaseMethod == MatchBaseMethod.Manual).ExceptBy(existingMatchBases.Select(c => c.DocumentId), c => c.DocumentId);
                 if (newMatchBases.Any())
                 {
                     await MatchBaseService.Create(newMatchBases.ToArray());
@@ -330,6 +230,8 @@ namespace MMIv8_Ktype.Core.Services.Mapping
             var validationResult = await new CombinationPipeline<MatchEntity>(MatchEntityService.Collection, filter)
                                                             .AppendPipeline(c => c.UpdateScoreMatchResult())
                                                             .UpdateDocuments();
+            if (!validationResult.IsSuccess)
+                return validationResult;
             Log.Debug("Finished Revalidation {time}", sw);
 
 
@@ -337,121 +239,83 @@ namespace MMIv8_Ktype.Core.Services.Mapping
 
             BulkCombinationUpdate bulkMatchRefineUpdate = await MatchEntityService.BulkCombinationUpdateMatchRefine(filter);
             var bulkMatchRefineResult = await bulkMatchRefineUpdate.CommitBulkWrite();
+            if (!bulkMatchRefineResult.IsSuccess)
+                return bulkMatchRefineResult;
 
-            Log.Information("Updated Match Refine for {count} matches {time}", bulkMatchRefineResult.Acknowledged ? bulkMatchRefineResult.ModifiedCount : "notAcknowledged", sw);
+            Log.Information("Updated Match Refine for {count} matches {time}", bulkMatchRefineResult.Value.Acknowledged ? bulkMatchRefineResult.Value.ModifiedCount : "notAcknowledged", sw);
+
+            return Result.Success();
         }
 
-        //public async Task CalculateMatchBase(Dictionary<MatchBaseType, IEnumerable<MatchBase>> matchBaseDict, FilterDefinition<MatchEntity>? filter = null)
-        //{
-        //    filter ??= Builders<MatchEntity>.Filter.Empty;
-        //    bool revalidateFailures = false;
-
-        //    foreach (var groupedMatchBase in matchBaseDict.Where(c => c.Value.Any()))
-        //    {
-        //        Log.Debug("Starting {MatchBaseType}", groupedMatchBase.Key);
-
-        //        var existingMatchBases = (await MatchBaseService.GetAll(groupedMatchBase.Key)).ToList();
-
-        //        existingMatchBases = existingMatchBases.IntersectBy(groupedMatchBase.Value.Select(c => c.MatchHash), c => c.MatchHash).ToList();
-        //        var newMatchBases = groupedMatchBase.Value.Where(c => c.MatchBaseMethod == MatchBaseMethod.Manual).ExceptBy(existingMatchBases.Select(c => c.MatchHash), c => c.MatchHash);
-
-        //        Log.Information("Recalculating {MatchBaseType} {ExistsCount} existing to check, {NewCount} new to create", groupedMatchBase.Key, existingMatchBases.Count(), newMatchBases.Count());
-
-        //        if (existingMatchBases.Any())
-        //        {
-        //            List<BulkWriteModel> bulks = new();
-        //            foreach (var existingMatchBase in existingMatchBases)
-        //            {
-        //                if (existingMatchBase.Status.Current.Status == Status.Deprecated)
-        //                {
-        //                    await MatchBaseService.RemoveStatus(existingMatchBase, Status.Deprecated);
-        //                    existingMatchBase.Status.History.Pop();
-        //                }
-
-        //                var result = await MatchEntityService.UpdateMatchBase(existingMatchBase, filter);
-        //                revalidateFailures = revalidateFailures || result?.ModifiedCount > 0;
-        //            }
-
-        //        }
-
-        //        if (newMatchBases.Any())
-        //        {
-        //            await MatchBaseService.CreateBulk(newMatchBases.ToList());
-        //        }
-        //    }
-
-        //    if (revalidateFailures)
-        //    {
-        //        await MatchEntityService.RevalidateFailures(filter);
-        //    }
-        //}
-
-        public async Task StorePartialMatchBase(MatchBaseType matchBaseType, string matchHash, decimal? newScore = null) // could be end point
+        public async Task<Result> StorePartialMatchBase(MatchBaseType matchBaseType, string matchHash, decimal? newScore = null) // could be end point
         {
-            var matchEntityPartials = await MatchEntityService.GetMatchBaseByType(matchBaseType, [ MatchBaseMethod.Partial ], matchHash);
+            var matchEntityPartialResult = await MatchEntityService.GetMatchBaseByType(matchBaseType, [ MatchBaseMethod.Partial ], matchHash);
+            if (!matchEntityPartialResult.IsSuccess)
+                return matchEntityPartialResult;
 
-            var matchEntityPartial = matchEntityPartials.ToList().FirstOrDefault();
+            var matchEntityPartial = matchEntityPartialResult.Value.First();
 
-            if (matchEntityPartial is null)
-                return;
-
-            await MatchBaseService.CreateAndValidate(matchEntityPartial);
+            var createResult = await MatchBaseService.Create(matchEntityPartial);
+            if (!createResult.IsSuccess)
+                return createResult;
 
             if (newScore is not null)
-                await UpdateMatchScore(matchBaseType, matchHash, newScore ?? 0);
+              return await UpdateMatchScore(matchBaseType, matchHash, newScore ?? 0);
+            else
+                return Result.Success();
         }
 
-        public async Task RemovePartialMatchBase(MatchBaseType matchBaseType, string matchHash) // could be end point
+        public async Task<Result> RemovePartialMatchBase(MatchBaseType matchBaseType, string matchHash) // could be end point
         {
-            var matchEntityPartial = await MatchBaseService.GetById(matchHash);
+            var matchEntityPartialResult = await MatchBaseService.GetById(matchHash);
+            if (!matchEntityPartialResult.IsSuccess)
+                return matchEntityPartialResult;
 
-            if (matchEntityPartial is null)
-                return;
+            var deleteResult = await MatchBaseService.DeleteById(matchHash);
+            if (!deleteResult.IsSuccess)
+                return deleteResult;
 
+            var updateResult = await UpdateMatchScore(matchBaseType, matchHash, matchEntityPartialResult.Value.Reset(versionProvider).Score);
+            if (!updateResult.IsSuccess)
+                return updateResult;
 
-            await UpdateMatchScore(matchBaseType, matchHash, matchEntityPartial.Reset(versionProvider).Score);
-
-            await MatchBaseService.DeleteById(matchHash);
+            return Result.Success();
         }
         #endregion
 
         #region Match Entity
-        public async Task<MatchEntity> CheckMatchVadlidity(int KtypNr, int MMI_V8_Key)
+        public async Task<Result<MatchEntity>> CheckMatchVadlidity(int KtypNr, int MMI_V8_Key)
         {
             var currentMatch = await MatchEntityService.GetByExternalIds(KtypNr, MMI_V8_Key);
-            if (currentMatch is not null)
+            if (currentMatch.IsSuccess)
                 return currentMatch;
 
-            var tecdocEntity = await SourceTecDocPCService.GetByExternalId(KtypNr);
-            var mmiEntity = await SourceMMIv8Service.GetByExternalId(MMI_V8_Key);
+            var tecdocEntityResult = await SourceTecDocPCService.GetByExternalId(KtypNr);
+            if (!tecdocEntityResult.IsSuccess)
+                return tecdocEntityResult.Error!;
 
-            if (tecdocEntity is null || mmiEntity is null)
-                throw new Exception($"Couldn't find Entities, found Ktype {tecdocEntity is not null} / MMI {mmiEntity is not null}");
+            var mmiEntityResult = await SourceMMIv8Service.GetByExternalId(MMI_V8_Key);
+            if (!mmiEntityResult.IsSuccess)
+                return mmiEntityResult.Error!;
 
-            MatchMakeModelRequest makeModel = new( tecdocEntity.SourceEntityModelHash, mmiEntity.SourceEntityModelHash );
-            var makeModelMatch = await MatchMakeModelService.GetByModelIds(makeModel);
+            ObjectId makeModelMatchID = ObjectId.Empty;
+            var makeModelMatchResult = await MatchMakeModelService.GetByModelIds(tecdocEntityResult.Value.SourceEntityModelHash, mmiEntityResult.Value.SourceEntityModelHash);
 
-            ObjectId makeModelMatchID = new();
-
-            if (makeModelMatch is null)
-            {
+            if (makeModelMatchResult.IsSuccess)
+                makeModelMatchID = makeModelMatchResult.Value.DocumentId;
+            else if (makeModelMatchResult.Error!.Type == ErrorType.NoContent)
                 Log.Warning("Make Model Match doesn't exist");
-            }
             else
-            {
-                makeModelMatchID = makeModelMatch.DocumentId;
-            }
+                return makeModelMatchResult.Error!;
 
-            var newMatch = new MatchEntity(versionProvider, tecdocEntity, mmiEntity, makeModelMatchID);
+            var newMatch = new MatchEntity(versionProvider, tecdocEntityResult.Value, mmiEntityResult.Value, makeModelMatchID);
 
             foreach (var matchBase in newMatch.EntityComparison.Values.Where(c => c.MatchBaseMethod == MatchBaseMethod.Manual || c.MatchBaseMethod == MatchBaseMethod.Partial))
             {
                 var currentMatchBase = await MatchBaseService.GetById(matchBase.DocumentId);
 
-                if (currentMatchBase is null)
-                    continue;
-                
-                newMatch.EntityComparison[ matchBase.MatchBaseType ] = currentMatchBase;
+                if (currentMatchBase.IsSuccess)
+                    newMatch.EntityComparison[ matchBase.MatchBaseType ] = currentMatchBase.Value;
             }
 
             newMatch.UpdateScore();
@@ -459,52 +323,64 @@ namespace MMIv8_Ktype.Core.Services.Mapping
             return newMatch;
         }
 
-        public async Task BulkCreateEntityMatch(List<MatchEntity> newMatches)
+        public async Task<Result> BulkCreateEntityMatch(List<MatchEntity> newMatches)
         {
             var sw = Stopwatch.StartNew();
 
             var newMatchesList = newMatches.Select(c => (c.TecDocEntity.KTypNr, c.MMIv8Entity.MMI_V8_Key)).ToList();
-            Task<List<EntityRelation>?> checkTask = CheckPreviousMatchedFlag(newMatchesList);
+            Task<Result<List<EntityRelation>>> checkTask = this.CheckPreviousMatchedFlag(newMatchesList);
 
-            await MatchEntityService.Create([ .. newMatches ]);
+            var createResult = await MatchEntityService.Create([ .. newMatches ]);
+            if (!createResult.IsSuccess)
+                return createResult;
 
-            var checkedEntityRelations = await checkTask;
-            if (checkedEntityRelations is not null)
-            { 
-                var bulk = MatchEntityService.BulkCombinationUpdatePreviousMatchedFlag(checkedEntityRelations);
-                var bulkresult = await bulk.CommitBulkWrite();
+            var checkedEntityRelationsResult = await checkTask;
+            if (checkedEntityRelationsResult.IsSuccess )
+            {
+                var bulkCombinationUpdateResult = await MatchEntityService.BulkCombinationUpdatePreviousMatchedFlag(checkedEntityRelationsResult.Value).CommitBulkWrite();
 
                 sw.Stop();
-                Log.Information("Bulk Created {created} with {count} from Previous Match in {time}", newMatches.Count, bulkresult.Acknowledged ? bulkresult.MatchedCount : "0", sw);
+                Log.Information("Bulk Created {created} with {count} from Previous Match in {time}", newMatches.Count, bulkCombinationUpdateResult.Value.Acknowledged ? bulkCombinationUpdateResult.Value.MatchedCount : "0", sw);
+                return bulkCombinationUpdateResult;
             }
-            else
+            else if (checkedEntityRelationsResult.Error.Type == ErrorType.NoContent)
             {
                 sw.Stop();
                 Log.Information("Bulk Created {created} in {time} (no previous match found)", newMatches.Count, sw);
+                return Result.Success();
+            }
+            else
+            { 
+                return checkedEntityRelationsResult; 
             }
         }
 
-        public async Task StoreEntityMatch(MatchMakeModel makeModelMatch) // memory heavy
+        public async Task<Result> StoreEntityMatch(MatchMakeModel makeModelMatch) // memory heavy
         {
             var sw = Stopwatch.StartNew();
 
             List<Task> createTasks = new();
-            using (var tecdocEntities = await SourceTecDocPCService.GetByModelId(makeModelMatch.TecDocModel.DocumentId))
-            using (var mmiEntities = await SourceMMIv8Service.GetByModelId(makeModelMatch.MMIv8Model.DocumentId))
+            var tecdocEntities = await SourceTecDocPCService.GetByModelId(makeModelMatch.TecDocModel.DocumentId);
+            if (!tecdocEntities.IsSuccess)
+                return tecdocEntities;
+            
+            var mmiEntities = await SourceMMIv8Service.GetByModelId(makeModelMatch.MMIv8Model.DocumentId);
+            if (!mmiEntities.IsSuccess)
+                return mmiEntities;
+
+            var newMatches = GenerateEntityMatch(tecdocEntities.Value, mmiEntities.Value, makeModelMatch.DocumentId);
+            await foreach (var match in newMatches)
             {
-                var newMatches = GenerateEntityMatch(await tecdocEntities.ToListAsync(), await mmiEntities.ToListAsync(), makeModelMatch.DocumentId);
-
-                await foreach (var match in newMatches)
-                {
-                    if (match.Any())
-                        createTasks.Add(this.BulkCreateEntityMatch(match.ToList()));
-                }
+                if (match.Any())
+                    createTasks.Add(this.BulkCreateEntityMatch(match.ToList()));
             }
-
+            
             Task.WaitAll(createTasks.ToArray());
 
             var filter = Builders<MatchEntity>.Filter.Eq(c => c.MatchMakeModelMatchID, makeModelMatch.DocumentId);
             await this.RecalculateMatchBase(filter);
+
+            return Result.Success();
         }
 
         public async IAsyncEnumerable<IEnumerable<MatchEntity>> GenerateEntityMatch(IEnumerable<SourceTecDocPC> tecdocEntities, IEnumerable<SourceMMIv8> mmiEntities, ObjectId MakeModelMatchID)
@@ -517,10 +393,9 @@ namespace MMIv8_Ktype.Core.Services.Mapping
             }
         }
 
-        public async Task UpdateFailedFlag(UpdateFlagRequest request)
+        public async Task<Result> UpdateFailedFlag(UpdateFlagRequest request)
         {
             var sw = Stopwatch.StartNew();
-
             var filterBuilder = Builders<MatchEntity>.Filter;
             var filter = filterBuilder.Eq(c => c.TecDocEntity.ExternalId, request.KTypNr)
                        & filterBuilder.Eq(c => c.MMIv8Entity.ExternalId, request.MMI_V8_Key);
@@ -529,15 +404,21 @@ namespace MMIv8_Ktype.Core.Services.Mapping
                 new CombinationPipeline<MatchEntity>(MatchEntityService.Collection, filter).AppendUpdate(c => c.SetFailedFlag(request.Flag))
                                                                                            .AppendPipeline(c => c.AppendStatus(versionProvider.NewStatus(Status.Checked, $"Updated Failed Flag {request.Detail}")));
             var combinationFlagResult = await combinationFlagUpdate.UpdateDocuments();
+            if (!combinationFlagResult.IsSuccess)
+                return combinationFlagResult;
 
             var bulkMatchRefineUpdate = await MatchEntityService.BulkCombinationUpdateMatchRefine([ request.MMI_V8_Key ]);
             var bulkMatchRefineResult = await bulkMatchRefineUpdate.CommitBulkWrite();
+            if (!bulkMatchRefineResult.IsSuccess)
+                return bulkMatchRefineResult;
 
             sw.Stop();
-            Log.Information("Updated Failed Flag {flagUpdate}; {count} MatchRefines in {time}", combinationFlagResult.IsAcknowledged ? combinationFlagResult.ModifiedCount : "notAcknowledged", bulkMatchRefineResult.Acknowledged ? bulkMatchRefineResult.ModifiedCount : "notAcknowledged", sw);
+            Log.Information("Updated Failed Flag {flagUpdate}; {count} MatchRefines in {time}", combinationFlagResult.Value.IsAcknowledged ? combinationFlagResult.Value.ModifiedCount : "notAcknowledged", bulkMatchRefineResult.Value.Acknowledged ? bulkMatchRefineResult.Value.ModifiedCount : "notAcknowledged", sw);
+
+            return Result.Success();
         }
 
-        public async Task UpdateMatchedFlag(UpdateFlagRequest request)
+        public async Task<Result> UpdateMatchedFlag(UpdateFlagRequest request)
         {
             var sw = Stopwatch.StartNew();
             var filterBuilder = Builders<MatchEntity>.Filter;
@@ -548,15 +429,21 @@ namespace MMIv8_Ktype.Core.Services.Mapping
                 new CombinationPipeline<MatchEntity>(MatchEntityService.Collection, filter).AppendUpdate(c => c.SetMatchedFlag(request.Flag))
                                                                                            .AppendPipeline(c => c.AppendStatus(versionProvider.NewStatus(Status.Checked, $"Updated Match Flag {request.Detail}")));
             var combinationFlagResult = await combinationFlagUpdate.UpdateDocuments();
+            if (!combinationFlagResult.IsSuccess)
+                return combinationFlagResult;
 
             var bulkMatchRefineUpdate = await MatchEntityService.BulkCombinationUpdateMatchRefine([request.MMI_V8_Key]);
             var bulkMatchRefineResult = await bulkMatchRefineUpdate.CommitBulkWrite();
+            if (!bulkMatchRefineResult.IsSuccess)
+                return bulkMatchRefineResult;
 
             sw.Stop();
-            Log.Information("Updated Match Flag {flagUpdate}; {count} MatchRefines in {time}", combinationFlagResult.IsAcknowledged ? combinationFlagResult.ModifiedCount : "notAcknowledged", bulkMatchRefineResult.Acknowledged ? bulkMatchRefineResult.ModifiedCount : "notAcknowledged", sw);
+            Log.Information("Updated Match Flag {flagUpdate}; {count} MatchRefines in {time}", combinationFlagResult.Value.IsAcknowledged ? combinationFlagResult.Value.ModifiedCount : "notAcknowledged", bulkMatchRefineResult.Value.Acknowledged ? bulkMatchRefineResult.Value.ModifiedCount : "notAcknowledged", sw);
+
+            return Result.Success();
         }
 
-        public async Task UpdateMatchRefineStatus(int mmi_V8_Key)
+        public async Task<Result> UpdateMatchRefineStatus(int mmi_V8_Key)
         {
             var sw = Stopwatch.StartNew();
             var filter = Builders<MatchEntity>.Filter.Eq(c => c.MMIv8Entity.ExternalId, mmi_V8_Key)
@@ -564,15 +451,21 @@ namespace MMIv8_Ktype.Core.Services.Mapping
 
             var matchEntityUpdate = new CombinationPipeline<MatchEntity>(MatchEntityService.Collection, filter).AppendPipeline(c => c.AppendStatus(versionProvider.NewStatus(Status.Checked, $"Checked Match Refine")));
             var matchEntityResult = await matchEntityUpdate.UpdateDocuments();
+            if (!matchEntityResult.IsSuccess)
+                return matchEntityResult;
 
             var bulkMatchRefineUpdate = await MatchEntityService.BulkCombinationUpdateMatchRefine([ mmi_V8_Key ]);
             var bulkMatchRefineResult = await bulkMatchRefineUpdate.CommitBulkWrite();
+            if (!bulkMatchRefineResult.IsSuccess)
+                return bulkMatchRefineResult;
 
             sw.Stop();
-            Log.Information("Updated Checked Status {matchEntityCount} MatchEntities; {matchRefineCount} MatchRefines in {time}", matchEntityResult.IsAcknowledged ? matchEntityResult.ModifiedCount : "notAcknowledged", bulkMatchRefineResult.Acknowledged ? bulkMatchRefineResult.ModifiedCount : "notAcknowledged", sw);
+            Log.Information("Updated Checked Status {matchEntityCount} MatchEntities; {matchRefineCount} MatchRefines in {time}", matchEntityResult.Value.IsAcknowledged ? matchEntityResult.Value.ModifiedCount : "notAcknowledged", bulkMatchRefineResult.Value.Acknowledged ? bulkMatchRefineResult.Value.ModifiedCount : "notAcknowledged", sw);
+
+            return Result.Success();
         }
 
-        public async Task ResetMatchResult(int mmi_V8_Key)
+        public async Task<Result> ResetMatchResult(int mmi_V8_Key)
         {
             var sw = Stopwatch.StartNew();
             var filter = Builders<MatchEntity>.Filter.Eq(c => c.MMIv8Entity.ExternalId, mmi_V8_Key);
@@ -581,111 +474,155 @@ namespace MMIv8_Ktype.Core.Services.Mapping
                                                                                                                .AppendPipeline(c => c.UpdateScoreMatchResult())
                                                                                                                .AppendPipeline(c => c.RemoveStatus(Status.Checked));
             var matchEntityResult = await matchEntityUpdate.UpdateDocuments();
+            if (!matchEntityResult.IsSuccess)
+                return matchEntityResult;
 
             var bulkMatchRefineUpdate = await MatchEntityService.BulkCombinationUpdateMatchRefine([ mmi_V8_Key ]);
             var bulkMatchRefineResult = await bulkMatchRefineUpdate.CommitBulkWrite();
+            if (!bulkMatchRefineResult.IsSuccess)
+                return bulkMatchRefineResult;
 
             sw.Stop();
-            Log.Information("Updated Checked Status {matchEntityCount} MatchEntities; {matchRefineCount} MatchRefines in {time}", matchEntityResult.IsAcknowledged ? matchEntityResult.ModifiedCount : "notAcknowledged", bulkMatchRefineResult.Acknowledged ? bulkMatchRefineResult.ModifiedCount : "notAcknowledged", sw);
+            Log.Information("Updated Checked Status {matchEntityCount} MatchEntities; {matchRefineCount} MatchRefines in {time}", matchEntityResult.Value.IsAcknowledged ? matchEntityResult.Value.ModifiedCount : "notAcknowledged", bulkMatchRefineResult.Value.Acknowledged ? bulkMatchRefineResult.Value.ModifiedCount : "notAcknowledged", sw);
+
+            return Result.Success();
         }
         #endregion
 
-
         #region Version
-        public async Task<Version> CreateVersion(CreateVersionRequest request)
+        public async Task<Result<Version>> CreateVersion(string tecdocEntityVersion, string mmiv8EntityVersion, string userName)
         {
-            var user = await UserService.CreateAndReturn(request.UserName);
-            return await VersionService.Create(request.TecDocEntityVersion, request.MMIv8EntityVersion, user);
+            var userResult = await UserService.GetByName(userName);
+            if (!userResult.IsSuccess)
+                return Result.Failure<Version>(userResult.Error!);
+
+            return await VersionService.Create(tecdocEntityVersion, mmiv8EntityVersion, userResult.Value);
         }
 
-        public async Task<Version?> UpdateVersion(int versionNumber, string? tecdocEntityVersion = null, string? mmiv8EntityVersion = null, string? userName = null)
+        public async Task<Result<Version>> UpdateVersion(int versionNumber, string? tecdocEntityVersion = null, string? mmiv8EntityVersion = null, string? userName = null)
         {
-            User? user = userName is null ? null : await UserService.CreateAndReturn(userName);
-            return await VersionService.Update(versionNumber, tecdocEntityVersion, mmiv8EntityVersion, user);
+            var versionResult = await VersionService.GetByVersion(versionNumber);
+            if (!versionResult.IsSuccess)
+                return versionResult;
+
+            User? user = null;
+            if (userName is not null)
+            {
+                var userResult = await UserService.GetByName(userName);
+                if (!userResult.IsSuccess)
+                    return userResult.Error!;
+                user = userResult.Value;
+            }
+
+            var versionUpdate = VersionService.Update(versionResult.Value).AppendUpdate(c => c.UpdateVersionTecdocEntityVersion(tecdocEntityVersion)
+                                                                                              .UpdateVersionMMIv8EntityVersion(mmiv8EntityVersion)
+                                                                                              .UpdateVersionUser(user));
+
+            return await versionUpdate.FindAndUpdateDocument();
         }
         #endregion
 
         #region EntityRelation
-        public async Task CreateEntityRelation(int versionNumber, List<PutEntityRelationRequest> entityRelationsRequest) //TODO Change this to allow not updating the Matchentities if not last version // This could be an endpoint
+        public async Task<Result> CreateEntityRelation(int versionNumber, List<PutEntityRelationRequest> entityRelationsRequest) //TODO Change this to allow not updating the Matchentities if not last version // This could be an endpoint
         {
             var sw = Stopwatch.StartNew();
 
-            Version? version = await VersionService.GetByVersion(versionNumber);
-            var entityRelations = entityRelationsRequest.ConvertAll(c => new EntityRelation(version.DocumentId, c.MMI_V8_Key, c.KTypNr, c.Comment, c.VersionNumber));
+            var versionResult = await VersionService.GetByVersion(versionNumber);
+            if (!versionResult.IsSuccess)
+                return versionResult;
 
-            await EntityRelationService.Create([ .. entityRelations ]);
+            var entityRelations = entityRelationsRequest.ConvertAll(c => new EntityRelation(versionResult.Value.DocumentId, c.MMI_V8_Key, c.KTypNr, c.Comment, c.VersionNumber));
+
+            var createResult = await EntityRelationService.Create([ .. entityRelations ]);
+            if (!createResult.IsSuccess)
+                return createResult;
 
             var bulkPreviousFlagUpdate = MatchEntityService.BulkCombinationUpdatePreviousMatchedFlag(entityRelations);
             var bulkPreviousFlagResult = await bulkPreviousFlagUpdate.CommitBulkWrite();
+            if (!bulkPreviousFlagResult.IsSuccess)
+                return bulkPreviousFlagResult;
 
             var bulkMatchRefineUpdate = await MatchEntityService.BulkCombinationUpdateMatchRefine(entityRelations.Select(c => c.MMI_V8_Key).Distinct());
             var bulkMatchRefineResult = await bulkMatchRefineUpdate.CommitBulkWrite();
+            if (!bulkMatchRefineResult.IsSuccess)
+                return bulkMatchRefineResult;
 
             sw.Stop();
-            Log.Information("Created {entityRelationCount} EntityRelations; Updated MatchEntities: {previousFlagCount} Previous Flags; {count} MatchRefines in {time}", entityRelations.Count, bulkPreviousFlagResult.Acknowledged ? bulkPreviousFlagResult.ModifiedCount : "notAcknowledged", bulkMatchRefineResult.Acknowledged ? bulkMatchRefineResult.ModifiedCount : "notAcknowledged", sw);
+            Log.Information("Created {entityRelationCount} EntityRelations; Updated MatchEntities: {previousFlagCount} Previous Flags; {count} MatchRefines in {time}", entityRelations.Count, bulkPreviousFlagResult.Value.Acknowledged ? bulkPreviousFlagResult.Value.ModifiedCount : "notAcknowledged", bulkMatchRefineResult.Value.Acknowledged ? bulkMatchRefineResult.Value.ModifiedCount : "notAcknowledged", sw);
+
+            return Result.Success();
         }
 
-        public async Task DeleteEntityRelation(List<EntityRelation> entityRelations) //TODO Change this to allow not updating the Matchentities if not last version // This could be an endpoint
+        public async Task<Result> DeleteEntityRelation(List<EntityRelation> entityRelations) //TODO Change this to allow not updating the Matchentities if not last version // This could be an endpoint
         {
             var sw = Stopwatch.StartNew();
 
-            await EntityRelationService.Delete([ .. entityRelations ]);
+            await EntityRelationService.Delete([ .. entityRelations ]); //TODO Use a different call here or put the foreach here
 
             var bulkPreviousFlagUpdate = MatchEntityService.BulkCombinationUpdatePreviousMatchedFlag(entityRelations, false);
             var bulkPreviousFlagResult = await bulkPreviousFlagUpdate.CommitBulkWrite();
+            if (!bulkPreviousFlagResult.IsSuccess)
+                return bulkPreviousFlagResult;
 
             var bulkMatchRefineUpdate = await MatchEntityService.BulkCombinationUpdateMatchRefine(entityRelations.Select(c => c.MMI_V8_Key));
             var bulkMatchRefineResult = await bulkMatchRefineUpdate.CommitBulkWrite();
+            if (!bulkMatchRefineResult.IsSuccess)
+                return bulkMatchRefineResult;
 
             sw.Stop();
-            Log.Information("Deleted {entityRelationCount} EntityRelations; Updated MatchEntities: {previousFlagCount} Previous Flags; {count} MatchRefines in {time}", entityRelations.Count, bulkPreviousFlagResult.Acknowledged ? bulkPreviousFlagResult.ModifiedCount : "notAcknowledged", bulkMatchRefineResult.Acknowledged ? bulkMatchRefineResult.ModifiedCount : "notAcknowledged", sw);
+            Log.Information("Deleted {entityRelationCount} EntityRelations; Updated MatchEntities: {previousFlagCount} Previous Flags; {count} MatchRefines in {time}", entityRelations.Count, bulkPreviousFlagResult.Value.Acknowledged ? bulkPreviousFlagResult.Value.ModifiedCount : "notAcknowledged", bulkMatchRefineResult.Value.Acknowledged ? bulkMatchRefineResult.Value.ModifiedCount : "notAcknowledged", sw);
+
+            return Result.Success();
         }
 
-        public async Task<Version> GetPreviousVersionIDWithEntityRelations()
+        public async Task<Result<Version>> GetPreviousVersionIDWithEntityRelations()
         {
             var entityRelationVersionIDs = await EntityRelationService.GetQueryable().Select(c => c.VersionID).Distinct().ToListAsync();
 
-            ObjectId currentVersionID = await VersionService.GetCurrentVersionID();
+            var currentVersionIDResult = await VersionService.GetCurrentVersion();
+
+            if (!currentVersionIDResult.IsSuccess)
+                return currentVersionIDResult;
+
             Version version = await VersionService.GetQueryable()
-                                                  .Where(c => entityRelationVersionIDs.Contains(c.DocumentId) && c.DocumentId != currentVersionID)
+                                                  .Where(c => entityRelationVersionIDs.Contains(c.DocumentId) && c.DocumentId != currentVersionIDResult.Value.DocumentId)
                                                   .OrderByDescending(c => c.VersionNumber)
                                                   .FirstOrDefaultAsync();
-            return version;
+
+            return version is not null ? version : Error.NotFound("EntityRelation.NotFoundByPreviousVersionIDWithEntityRelations", "Cannot find Version with EntityRelations previous to current");
         }
 
-        public async Task<List<EntityRelation>?> CheckPreviousMatchedFlag(List<(int KTypNr, int MMI_V8_Key)> entityRelations)
+        public async Task<Result<List<EntityRelation>>> CheckPreviousMatchedFlag(List<(int KTypNr, int MMI_V8_Key)> entityRelations)
         {
-            var previousVersion = await GetPreviousVersionIDWithEntityRelations();
+            var previousVersionResult = await GetPreviousVersionIDWithEntityRelations();
 
-            if (previousVersion is null)
-                return null;
-                //throw new Exception("Exception with CheckPreviousMatchedFlag previousVersion is null");
+            if (!previousVersionResult.IsSuccess)
+                return previousVersionResult.Error!;
 
-            var query = EntityRelationService.GetQueryable().Where(c => c.VersionID == previousVersion.DocumentId && entityRelations.Contains(new(c.KTypNr, c.MMI_V8_Key)));
+            var previousEntityRelations = await EntityRelationService.GetQueryable()
+                                                   .Where(c => c.VersionID == previousVersionResult.Value.DocumentId && entityRelations.Contains(new(c.KTypNr, c.MMI_V8_Key)))
+                                                   .ToListAsync();
 
-            return await query.ToListAsync();
+            return previousEntityRelations is { Count: > 0 } ? previousEntityRelations : Error.NoContent("EntityRelation.NotContentByPreviousRelations", "No previous relations for supplied list");
         }
         #endregion
 
         #region User
-        public async Task DeleteUser(string userName)
+        public async Task<Result<DeleteResult>> DeleteUser(string userName)
         {
-            var user = await UserService.GetByName(userName);
+            var userResult = await UserService.GetByName(userName);
+            if (!userResult.IsSuccess)
+                return Result.Failure<DeleteResult>(userResult.Error!);
 
-            if (user is null)
-            {
-                Log.Error("User not found for deletion");
-                return;
-            }
+            var versionResult = await VersionService.GetByUser(userName);
 
-            var versions = await VersionService.GetByUser(userName);
-            if (versions.Count > 0)
-            {
-                Log.Error("Cannot Delete user as it's in use");
-                return;
-            }
-
-            await UserService.DeleteByFilter(userName);
+            if (versionResult.IsSuccess && versionResult.Value.Count != 0)
+                return Error.Validation("User.DeletionValidation", $"Cannot Delete user {userName} as it's in use");
+            
+            if (!versionResult.IsSuccess && versionResult.Error!.Type == ErrorType.NoContent)
+                return await UserService.DeleteByName(userName);
+                
+            throw new NotImplementedException();
         }
         #endregion
     }

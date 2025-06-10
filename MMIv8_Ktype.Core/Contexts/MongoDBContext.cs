@@ -15,7 +15,7 @@ namespace MMIv8_Ktype.Core.Contexts
         }
 
         //const string connectionUri = "mongodb+srv://AndyH:s2mQ2bw8cknbs89M@cluster0.bldu0.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0";
-        const string connectionUri = "mongodb://admin:elcome_b055@10.0.0.10:27017/?retryWrites=true&w=majority";
+        const string connectionUri = "mongodb://admin:elcome_b055@10.0.0.10:27017/";
 
         protected readonly IConfiguration Configuration;
         protected readonly IMongoDatabase MongoDatabase;
@@ -25,6 +25,9 @@ namespace MMIv8_Ktype.Core.Contexts
         public MongoClient CreateClient()
         {
             var settings = MongoClientSettings.FromConnectionString(connectionUri);
+            settings.RetryWrites = true;
+            settings.WriteConcern = WriteConcern.WMajority;
+            settings.MaxConnectionPoolSize = 200;
 
             //settings.LinqProvider = LinqProvider.V3;
             // Set the ServerApi field of the settings object to set the version of the Stable API on the client
