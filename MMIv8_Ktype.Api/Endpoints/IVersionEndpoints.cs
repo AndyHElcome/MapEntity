@@ -31,6 +31,6 @@ namespace MMIv8_Ktype.Api.Endpoints
         Task<SerializableResult<Version>> UpdateVersion([FromHeader] int VersionNumber, [FromQuery] string? TecdocEntityVersion = null, [FromQuery] string? MMIv8EntityVersion = null, [FromQuery] string? UserName = null);
 
         [Delete("/Debug/DeleteAll")]
-        Task<SerializableResult<DeleteResult>> DeleteAll();
+        Task<Result> DeleteAll();
     }
 }

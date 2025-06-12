@@ -50,6 +50,9 @@ namespace MMIv8_Ktype.Core.Services.Mapping
             if (MMI_SourceEntityModelHash != string.Empty && await SourceMMIv8EntityModelService.GetById(MMI_SourceEntityModelHash) is var mmiv8SourceEntityModelResult && mmiv8SourceEntityModelResult.IsSuccess)
                 mmiv8Model = mmiv8SourceEntityModelResult.Value;
 
+            if (tecdocModel.DocumentId is null && mmiv8Model.DocumentId is null)
+                return Error.NotFound("MatchMatchModel.EntitiesNotFound", $"No SourceEntityModels found for either \"{@TD_SourceEntityModelHash}\" or \"{@MMI_SourceEntityModelHash}\"");
+
             MatchMakeModel newMatchMakeModel = new(tecdocModel, mmiv8Model, versionProvider);
 
             var createResult = await MatchMakeModelService.Create(newMatchMakeModel);
@@ -58,8 +61,9 @@ namespace MMIv8_Ktype.Core.Services.Mapping
 
             if (newMatchMakeModel is { TecDocModel: { DocumentId: not null }, MMIv8Model: { DocumentId: not null } })
                 return await StoreEntityMatch(newMatchMakeModel);
-            if (newMatchMakeModel.TecDocModel.DocumentId is not null || newMatchMakeModel.MMIv8Model.DocumentId is not null)
+            if (newMatchMakeModel.TecDocModel.DocumentId is not null && newMatchMakeModel.MMIv8Model.DocumentId is not null)
                 throw new Exception("Bad pattern matching");
+
 
             return Result.Success();
         }
@@ -80,11 +84,18 @@ namespace MMIv8_Ktype.Core.Services.Mapping
         #endregion
 
         #region Match Base
-        public async Task<Result> UpdateMatchScore(MatchBaseType matchBaseType, string matchHash, decimal newScore) // could be endpoint?
+        public async Task<Result> UpdateMatchScore(MatchBaseType matchBaseType, string matchHash, decimal newScore, bool force = false) // could be endpoint?
         {
             var sw = Stopwatch.StartNew();
 
-            var updateMatchResult = await MatchBaseService.UpdateScore(matchHash, newScore);
+            var matchBaseResult = await MatchBaseService.GetById(matchHash);
+            if (!matchBaseResult.IsSuccess)
+                return matchBaseResult.Error!;
+
+            if (matchBaseResult.Value.Score == newScore && !force)
+                return Error.Validation("MatchBase.UpdateScoreValidation", "No change in score, nothing to update");
+
+            var updateMatchResult = await MatchBaseService.CombinationUpdateMatchBaseScore(matchBaseResult.Value, newScore).FindAndUpdateDocument();
             if (!updateMatchResult.IsSuccess)
                 return updateMatchResult;
 
@@ -129,6 +140,44 @@ namespace MMIv8_Ktype.Core.Services.Mapping
             return isMissing;
         }
 
+        public async Task<Result> RecalculateAutomaticMatchBaseScore(FilterDefinition<MatchEntity> filter, MatchBaseType matchBaseType)
+        {
+            var sw = Stopwatch.StartNew();
+
+            Log.Debug($"Gathering MatchBases for Recalculation");
+
+            var matchBaseAutomatic = await MatchEntityService.GetMatchBaseByType(matchBaseType, [ MatchBaseMethod.Automatic ], null, false, filter);
+            if (!matchBaseAutomatic.IsSuccess)
+                return matchBaseAutomatic;
+
+            Log.Debug("Retrived {Count} for {MatchBaseType} in {time}", matchBaseAutomatic.Value.Count(), matchBaseType, sw);
+
+            foreach(var matchBase in matchBaseAutomatic.Value)
+            {
+                sw.Restart();
+
+                CombinationPipeline<MatchEntity> matchEntityUpdate = MatchEntityService.UpdateMatchBaseScoreMatchResult(matchBase.Reset(versionProvider), filter); //TODO this might need to be recalculate
+                var matchEntityResult = await matchEntityUpdate.UpdateDocuments();
+                Log.Debug("Match Entities {time}", sw);
+                if (!matchEntityResult.IsSuccess)
+                    return matchEntityResult;
+
+                Log.Information("Updated {updateMatch} in {time} ({matchEntitiesCount} MatchEntities)", matchBase.ToString(), sw, matchEntityResult.Value.IsAcknowledged ? matchEntityResult.Value.ModifiedCount : "notAcknowledged");
+            }
+            sw.Restart();
+
+            BulkCombinationUpdate matchRefineUpdate = await MatchEntityService.BulkCombinationUpdateMatchRefine(filter);
+            var matchRefineResult = await matchRefineUpdate.CommitBulkWrite();
+            Log.Debug("Match Refine {time}", sw);
+            if (!matchRefineResult.IsSuccess)
+                return matchRefineResult;
+
+            sw.Stop();
+            Log.Information("Updated {updateMatch} in {time} ({matchEntitiesCount} MatchEntities) ({matchRefineCount} MatchRefine)", matchRefineResult.Value.Acknowledged ? matchRefineResult.Value.ModifiedCount : "notAcknowledged", sw);
+
+            return Result.Success();
+        }
+
         public async Task<Result> RecalculateMatchBase(FilterDefinition<MatchEntity> filter, MatchBaseType matchBaseType)
         {
             Log.Debug($"Gathering MatchBases for Recalculation");
@@ -153,9 +202,10 @@ namespace MMIv8_Ktype.Core.Services.Mapping
             {
                 var matchEntityManual = await MatchEntityService.GetMatchBaseByType(matchBaseType, [ MatchBaseMethod.Manual, MatchBaseMethod.Partial ], null, false, filter);
                 if (matchEntityManual.IsSuccess)
+                {
                     matchBaseDict.Add(matchBaseType, matchEntityManual.Value);
-
-                Log.Debug("Retrived {Count} for {MatchBaseType}", matchBaseDict[ matchBaseType ].Count(), matchBaseType);
+                    Log.Debug("Retrived {Count} for {MatchBaseType}", matchBaseDict[ matchBaseType ].Count(), matchBaseType);
+                }
             }
             return await CalculateMatchBase(matchBaseDict, filter);
         }
@@ -175,7 +225,8 @@ namespace MMIv8_Ktype.Core.Services.Mapping
                 if (matchBasePartialResult.IsSuccess)
                     matchBaseDict.Add(matchBaseType, matchBasePartialResult.Value);
 
-                Log.Debug("Retrived {Count} for {MatchBaseType}", matchBaseDict[ matchBaseType ].Count(), matchBaseType);
+                if (matchEntityManual.IsSuccess || matchBasePartialResult.IsSuccess)
+                    Log.Debug("Retrived {Count} for {MatchBaseType}", matchBaseDict[ matchBaseType ].Count(), matchBaseType);
             }
             return await CalculateMatchBase(matchBaseDict);
         }
@@ -190,11 +241,15 @@ namespace MMIv8_Ktype.Core.Services.Mapping
             {
                 Log.Debug("Starting {MatchBaseType} {time}", groupedMatchBase.Key, sw);
 
+                List<MatchBase> existingMatchBases;
                 var existingMatchBasesResult = await MatchBaseService.GetByMatchBaseType(groupedMatchBase.Key);
-                if (!existingMatchBasesResult.IsSuccess)
+                if (existingMatchBasesResult.IsSuccess)
+                    existingMatchBases = existingMatchBasesResult.Value.IntersectBy(groupedMatchBase.Value.Select(c => c.DocumentId), c => c.DocumentId).ToList();
+                else if (existingMatchBasesResult.Error!.Type == ErrorType.NoContent)
+                    existingMatchBases = new();
+                else
                     return existingMatchBasesResult;
 
-                var existingMatchBases = existingMatchBasesResult.Value.IntersectBy(groupedMatchBase.Value.Select(c => c.DocumentId), c => c.DocumentId).ToList();
                 if (existingMatchBases is { Count: >0 })
                 {
                     List<BulkWriteModel> bulks = new();

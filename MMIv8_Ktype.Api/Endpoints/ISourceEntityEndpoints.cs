@@ -35,7 +35,7 @@ namespace MMIv8_Ktype.Api.Endpoints
         Task<Result> Bulkload(T[] sourceEntities);
 
         [Delete("/Debug/DeleteAll")]
-        Task<SerializableResult<DeleteResult>> DeleteAll();
+        Task<Result> DeleteAll();
     }
 
     [GroupName("SourceMMIv8Entity")]

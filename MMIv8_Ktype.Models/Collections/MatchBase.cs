@@ -315,7 +315,10 @@ namespace MMIv8_Ktype.Models.Collections
                 matchEntity.MMIv8Entity.BHP
             });
 
-        public override decimal CalculateScore() => MatchBaseScoreExtensions.CalculateScoreGradient(TecDocEntity[nameof(MatchEntity.TecDocEntity.Calc_BHP)] - MMIEntity[nameof(MatchEntity.MMIv8Entity.BHP)], 12, 0.85);
+        public override decimal CalculateScore()
+            => TecDocEntity[ nameof(MatchEntity.TecDocEntity.Calc_BHP) ] == 0 || MMIEntity[ nameof(MatchEntity.MMIv8Entity.BHP) ] == 0
+            ? Convert.ToDecimal(DefaultScore)
+            : MatchBaseScoreExtensions.CalculateScoreGradient(TecDocEntity[nameof(MatchEntity.TecDocEntity.Calc_BHP)] - MMIEntity[nameof(MatchEntity.MMIv8Entity.BHP)], 12, 0.85);
     }
 
     public class MatchKW(IVersionProvider versionProvider, MatchEntity matchEntity) : MatchBase(versionProvider, matchEntity, MatchBaseType.KW, MatchBaseMethod.Automatic, 0.95)
@@ -332,7 +335,10 @@ namespace MMIv8_Ktype.Models.Collections
                 matchEntity.MMIv8Entity.KW
             });
 
-        public override decimal CalculateScore() => MatchBaseScoreExtensions.CalculateScoreGradient(TecDocEntity[nameof(MatchEntity.TecDocEntity.KW)] - MMIEntity[nameof(MatchEntity.MMIv8Entity.KW)], 15, 0.85);
+        public override decimal CalculateScore() 
+            => TecDocEntity[ nameof(MatchEntity.TecDocEntity.KW) ] == 0 || MMIEntity[ nameof(MatchEntity.MMIv8Entity.KW) ] == 0 
+            ? Convert.ToDecimal(DefaultScore) 
+            : MatchBaseScoreExtensions.CalculateScoreGradient(TecDocEntity[nameof(MatchEntity.TecDocEntity.KW)] - MMIEntity[nameof(MatchEntity.MMIv8Entity.KW)], 15, 0.85);
     }
 
     public class MatchDate(IVersionProvider versionProvider, MatchEntity matchEntity) : MatchBase(versionProvider, matchEntity, MatchBaseType.Date, MatchBaseMethod.Automatic, 1)

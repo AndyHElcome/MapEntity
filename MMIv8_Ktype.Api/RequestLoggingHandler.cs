@@ -1,5 +1,9 @@
-﻿using Serilog;
+﻿using Microsoft.AspNetCore.Mvc;
+using MMIv8_Ktype.Models;
+using Serilog;
 using System.Net;
+using System.Net.Http.Json;
+using System.Text.Json;
 
 namespace MMIv8_Ktype.Api
 {
@@ -9,9 +13,15 @@ namespace MMIv8_Ktype.Api
         {
             try
             {
-                Log.Information("Sending {Method} Request {RequestUri}", request.Method, request.RequestUri);
+                Log.Debug("Sending {Method} Request {RequestUri}", request.Method, request.RequestUri);
                 var response = await base.SendAsync(request, cancellationToken).ConfigureAwait(false);
-                response.EnsureSuccessStatusCode();
+
+                if (response.IsSuccessStatusCode)
+                    Log.Information("Sent {Method} Request {RequestUri} {StatusCode}", request.Method, request.RequestUri, response.StatusCode);
+                else
+                    Log.Warning("Sent {Method} Request {RequestUri} {StatusCode} {@content}", request.Method, request.RequestUri, response.StatusCode, await response.Content.ReadAsStringAsync(cancellationToken));
+                
+                //response.EnsureSuccessStatusCode();
                 return response;
             }
             catch (TaskCanceledException ex) //when (!cancellationToken.IsCancellationRequested)
@@ -21,8 +31,8 @@ namespace MMIv8_Ktype.Api
             }
             catch (Exception ex)
             {
-                Log.Error(ex, "Error making {Method} call to {RequestUri} {@options}", request.Method, request.RequestUri, request.Options);
-                return new HttpResponseMessage(System.Net.HttpStatusCode.InternalServerError);
+                Log.Error(ex, "Error making {Method} call to {RequestUri}", request.Method, request.RequestUri);
+                return new HttpResponseMessage(HttpStatusCode.InternalServerError);
             }
         }
     }

@@ -186,7 +186,7 @@ namespace MMIv8_Ktype.Core.Endpoints
             return await mappingService.ResetMatchResult(MMI_V8_Key);
         }
 
-        public async Task<SerializableResult<DeleteResult>> DeleteAll()
+        public async Task<Result> DeleteAll()
         {
             return await matchEntityService.DeleteAll();
         }

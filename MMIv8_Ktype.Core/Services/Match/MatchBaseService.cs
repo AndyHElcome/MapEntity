@@ -48,19 +48,7 @@ namespace MMIv8_Ktype.Core.Services.Match
             }
         }
 
-        public async Task<Result<MatchBase>> UpdateScore(string matchHash, decimal newScore)
-        { 
-            var updateMatchResult = await base.GetById(matchHash);
-            if (!updateMatchResult.IsSuccess)
-                return updateMatchResult.Error!;
-
-            if (updateMatchResult.Value.Score == newScore)
-                return Error.Validation("MatchBase.UpdateScoreValidation", "No change in score, nothing to update");
-
-            return await this.CombinationUpdateMatchBaseScore(updateMatchResult.Value, newScore).FindAndUpdateDocument();
-        }
-
-        private CombinationPipeline<MatchBase> CombinationUpdateMatchBaseScore(MatchBase matchBase, decimal newScore)
+        public CombinationPipeline<MatchBase> CombinationUpdateMatchBaseScore(MatchBase matchBase, decimal newScore)
         {
             var filter = Builders<MatchBase>.Filter.Eq(c => c.DocumentId, matchBase.DocumentId);
 

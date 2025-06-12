@@ -345,7 +345,7 @@ namespace MMIv8_Ktype.Core.Contexts
             CreateIndex(Version, versionIndexModels, regenerate);
             #endregion
 
-            #region Version
+            #region User
             var userIndexBuilder = Builders<User>.IndexKeys;
             var userIndexModels = new List<CreateIndexModel<User>>
             {
@@ -354,7 +354,7 @@ namespace MMIv8_Ktype.Core.Contexts
                 ),
             };
 
-            CreateIndex(Version, versionIndexModels, regenerate);
+            CreateIndex(User, userIndexModels, regenerate);
             #endregion
         }
 

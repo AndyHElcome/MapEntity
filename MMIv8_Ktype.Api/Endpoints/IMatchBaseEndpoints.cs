@@ -32,6 +32,9 @@ namespace MMIv8_Ktype.Api.Endpoints
         Task<Result> RemovePartialMatchBase([FromRoute] MatchBaseType MatchBaseType, [FromQuery] string MatchHash);
 
         [Delete("/Debug/DeleteAll")]
-        Task<SerializableResult<DeleteResult>> DeleteAll();
+        Task<Result> DeleteAll();
+
+        [Post("/Debug/{MatchBaseType}/RecalculateAutomaticMatchBaseScore")]
+        Task<Result> RecalculateAutomaticMatchBaseScore(MatchBaseType MatchBaseType);
     }
 }

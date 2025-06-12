@@ -16,6 +16,8 @@ namespace MMIv8_Ktype.Models.Util
 
         public static void ApplyRefitSettings(RefitSettings refitSettings)
         {
+            var nullTask = Task.FromResult<Exception>(null); //TODO Properly implement this
+            refitSettings.ExceptionFactory = httpResponse => nullTask;
             refitSettings.ContentSerializer = new SystemTextJsonContentSerializer(new JsonSerializerOptions().GetJsonSerializerOptions());
         }
     }

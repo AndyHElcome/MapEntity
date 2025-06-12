@@ -213,8 +213,8 @@ namespace MMIv8_Ktype.AccessMdb
             return type switch
             {
                 Type t when t == typeof(ObjectId) => c => ObjectId.Parse(c.ToString()),
-                Type t when t.IsArray || t.IsGenericList() => c => JsonSerializer.Deserialize(String.IsNullOrEmpty(c.ToString()) ? "[]" : c.ToString()!, type, JsonSerializerOptions),
-                Type t when t.IsGenericType && t.GetGenericTypeDefinition() == typeof(Nullable<>) => c => String.IsNullOrEmpty(c.ToString()) ? null : Convert.ChangeType(c, Nullable.GetUnderlyingType(type)!),
+                Type t when t.IsArray || t.IsGenericList() => c => JsonSerializer.Deserialize(string.IsNullOrEmpty(c.ToString()) ? "[]" : c.ToString()!, type, JsonSerializerOptions),
+                Type t when t.IsGenericType && t.GetGenericTypeDefinition() == typeof(Nullable<>) => c => string.IsNullOrEmpty(c.ToString()) ? null : Convert.ChangeType(c, Nullable.GetUnderlyingType(type)!),
                 _ => c => Convert.ChangeType(c, type)
             };
         }
@@ -238,9 +238,15 @@ namespace MMIv8_Ktype.AccessMdb
         {
             foreach (var item in dictionary)
             {
-                var typeMap = item.Value.ToAccessTypeConverter();
-
-                dataRow[ item.Key ] = typeMap(item.Value);
+                if (item.Value is null || item.Value is string s && string.IsNullOrWhiteSpace(s))
+                {
+                    dataRow[ item.Key ] = DBNull.Value;
+                }
+                else
+                {
+                    var typeMap = item.Value.ToAccessTypeConverter();
+                    dataRow[ item.Key ] = typeMap(item.Value);
+                }
             }
             return dataRow;
         }
@@ -305,6 +311,7 @@ namespace MMIv8_Ktype.AccessMdb
                     Type t when t == typeof(string) => "TEXT(255)",
                     Type t when t == typeof(DateTime) => "DATETIME",
                     Type t when t == typeof(bool) => "YESNO",
+                    Type t when t == typeof(decimal) => "DECIMAL(20, 10)",
                     _ => "TEXT(255)"
                 };
 

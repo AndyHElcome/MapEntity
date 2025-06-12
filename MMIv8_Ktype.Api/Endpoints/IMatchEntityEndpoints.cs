@@ -76,6 +76,6 @@ namespace MMIv8_Ktype.Api.Endpoints
         Task<SerializableResult<PagedCursorResponse<MatchEntityBackup>>> GetMatchEntityBackup(string? cursor = null, int PageSize = 100);
 
         [Delete("/Debug/DeleteAll")]
-        Task<SerializableResult<DeleteResult>> DeleteAll();
+        Task<Result> DeleteAll();
     }
 }

@@ -114,11 +114,11 @@ namespace MMIv8_Ktype.Core.Services.Match
             var filterBuilder = Builders<MatchMakeModel>.Filter;
 
             var tecdocMatchesResult = await GetByModelId(SourceIndex.TecDocPC, model.TecDocModel.DocumentId);
-            if (!tecdocMatchesResult.IsSuccess)
+            if (!tecdocMatchesResult.IsSuccess && tecdocMatchesResult.Error!.Type != ErrorType.NoContent)
                 return tecdocMatchesResult.Error!;
 
             var mmiMatchesResult = await GetByModelId(SourceIndex.MMIv8, model.MMIv8Model.DocumentId);
-            if (!mmiMatchesResult.IsSuccess)
+            if (!mmiMatchesResult.IsSuccess && mmiMatchesResult.Error!.Type != ErrorType.NoContent)
                 return mmiMatchesResult.Error!;
 
             var updateFilter = filterBuilder.Exists(m => m.TecDocModel.DocumentId) & filterBuilder.Exists(m => m.MMIv8Model.DocumentId);

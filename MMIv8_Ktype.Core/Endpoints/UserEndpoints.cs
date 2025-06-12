@@ -30,12 +30,12 @@ namespace MMIv8_Ktype.Core.Endpoints
             return await userService.Create(UserName);
         }
 
-        public async Task<SerializableResult<DeleteResult>> Delete(string UserName)
+        public async Task<Result> Delete(string UserName)
         {
             return await mappingService.DeleteUser(UserName);
         }
 
-        public async Task<SerializableResult<DeleteResult>> DeleteAll()
+        public async Task<Result> DeleteAll()
         {
             return await userService.DeleteAll();
         }

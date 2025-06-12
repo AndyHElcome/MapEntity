@@ -46,7 +46,7 @@ namespace MMIv8_Ktype.Core.Endpoints
             return await mappingService.UpdateVersion(VersionNumber, TecdocEntityVersion, MMIv8EntityVersion, UserName);
         }
 
-        public async Task<SerializableResult<DeleteResult>> DeleteAll()
+        public async Task<Result> DeleteAll()
         {
             return await versionService.DeleteAll();
         }

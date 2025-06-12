@@ -156,17 +156,18 @@ namespace MMIv8_Ktype.CSV.Operations
         {
             var client = new RefitClient(log, 5);
 
-            Task deleteMatchEntityTask = client.CreateService<IMatchEntityEndpoints>().DeleteAll();
-            Task deleteMatchMakeModelTask = client.CreateService<IMatchMakeModelEndpoints>().DeleteAll();
-            Task deleteEntityRelationTask = client.CreateService<IEntityRelationEndpoints>().DeleteAll();
-            Task deleteMatchBaseTask = client.CreateService<IMatchBaseEndpoints>().DeleteAll();
-            Task deleteVersionTask = client.CreateService<IVersionEndpoints>().DeleteAll();
-            //Task deleteVersionTask = client.CreateService<>().DeleteAll(); //TODO Delete all users
+            var deleteMatchEntityTask = client.CreateService<IMatchEntityEndpoints>().DeleteAll();
+            var deleteMatchMakeModelTask = client.CreateService<IMatchMakeModelEndpoints>().DeleteAll();
+            var deleteEntityRelationTask = client.CreateService<IEntityRelationEndpoints>().DeleteAll();
+            var deleteMatchBaseTask = client.CreateService<IMatchBaseEndpoints>().DeleteAll();
+            var deleteVersionTask = client.CreateService<IVersionEndpoints>().DeleteAll();
+            var deleteUserTask = client.CreateService<IUserEndpoints>().DeleteAll();
 
             var path = Path.GetFullPath(CSVPath);
             string filepath;
 
-            await deleteVersionTask;
+            await Task.WhenAll(deleteVersionTask, deleteUserTask);
+            var user = await client.CreateService<IUserEndpoints>().Create("Admin");
             var legacyversion = await client.CreateService<IVersionEndpoints>().CreateVersion("Legacy", "Legacy", "Admin");
             var currentversion = await client.CreateService<IVersionEndpoints>().CreateVersion("0", "0", "Admin");
 
@@ -211,6 +212,7 @@ namespace MMIv8_Ktype.CSV.Operations
         public async override Task ExecuteOperation(ILogger log)
         {
             var client = new RefitClient(log);
+            client.InitialiseVersionProvider();
             var sourceEntity = client.CreateService<ISourceMMIv8Endpoints>();
 
             await sourceEntity.DeleteAll();
@@ -243,6 +245,7 @@ namespace MMIv8_Ktype.CSV.Operations
         public async override Task ExecuteOperation(ILogger log)
         {
             var client = new RefitClient(log);
+            client.InitialiseVersionProvider();
             var sourceEntity = client.CreateService<ISourceMMIv8Endpoints>();
 
             int count = 0;
@@ -269,6 +272,7 @@ namespace MMIv8_Ktype.CSV.Operations
         public async override Task ExecuteOperation(ILogger log)
         {
             var client = new RefitClient(log);
+            client.InitialiseVersionProvider();
             var sourceEntity = client.CreateService<ISourceTecDocPCEndpoints>();
 
             await sourceEntity.DeleteAll();
@@ -301,6 +305,7 @@ namespace MMIv8_Ktype.CSV.Operations
         public async override Task ExecuteOperation(ILogger log)
         {
             var client = new RefitClient(log);
+            client.InitialiseVersionProvider();
             var sourceEntity = client.CreateService<ISourceTecDocPCEndpoints>();
 
             int count = 0;
@@ -337,7 +342,7 @@ namespace MMIv8_Ktype.CSV.Operations
                 entityRelations = csvReader.GetRecords<PutEntityRelationRequest>().ToList();
             }
 
-            foreach (var batch in entityRelations.Chunk(1000))
+            foreach (var batch in entityRelations.Chunk(500))
             {
                 await entityRelationEndpoints.CreateEntityRelation(VersionNumber, batch.ToList()); //TODO Create return types
             }
@@ -359,9 +364,18 @@ namespace MMIv8_Ktype.CSV.Operations
 
                 csvReader.Read();
                 csvReader.ReadHeader();
+                
                 while (csvReader.Read())
                 {
                     var putMatchBaseRequest = csvReader.GetRecord<PutMatchBaseRequest>();
+                    //try
+                    //{
+                    //    await matchBaseEndpoints.UpdateMatchBaseScore(putMatchBaseRequest.MatchBaseType, putMatchBaseRequest.MatchHash, putMatchBaseRequest.NewScore);
+                    //}
+                    //catch //(Exception ex)
+                    //{
+                    //    //log.Error(ex, "Error with {@putMatchBaseRequest}", putMatchBaseRequest);
+                    //}
 
                     await matchBaseEndpoints.UpdateMatchBaseScore(putMatchBaseRequest.MatchBaseType, putMatchBaseRequest.MatchHash, putMatchBaseRequest.NewScore);
                     count++;
@@ -415,7 +429,9 @@ namespace MMIv8_Ktype.CSV.Operations
                 while (csvReader.Read())
                 {
                     var record = csvReader.GetRecord<MatchMakeModelRequest>();
-                    await matchMakeModelEndpoints.CreateMakeModelMatch(record.TD_SourceEntityModelHash, record.MMI_SourceEntityModelHash);
+
+                    //if (record.MMI_SourceEntityModelHash !="" && record.TD_SourceEntityModelHash !="")
+                    await matchMakeModelEndpoints.CreateMatchMakeModel(record.TD_SourceEntityModelHash, record.MMI_SourceEntityModelHash);
                     //tasks.Add( matchMakeModelEndpoints.CreateMakeModelMatch(record));
                     count++;
                 }

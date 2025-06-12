@@ -57,7 +57,7 @@ namespace MMIv8_Ktype.Core.Endpoints
             return await mappingService.CreateEntityRelation(versionNumber, entityRelationsRequest);
         }
 
-        public async Task<SerializableResult<DeleteResult>> DeleteAll()
+        public async Task<Result> DeleteAll()
         {
             return await entityRelationService.DeleteAll();
         }

@@ -56,7 +56,7 @@ namespace MMIv8_Ktype.Core.Endpoints
             return await sourceEntityService.Create(sourceEntities);
         }
 
-        public async Task<SerializableResult<DeleteResult>> DeleteAll()
+        public async Task<Result> DeleteAll()
         {
             return await sourceEntityService.DeleteAll();
         }

@@ -25,9 +25,9 @@ namespace MMIv8_Ktype.Api.Endpoints
         Task<SerializableResult<User>> Create(string UserName);
 
         [Delete("/{UserName}")]
-        Task<SerializableResult<DeleteResult>> Delete(string UserName);
+        Task<Result> Delete(string UserName);
 
         [Delete("/Debug/DeleteAll")]
-        Task<SerializableResult<DeleteResult>> DeleteAll();
+        Task<Result> DeleteAll();
     }
 }

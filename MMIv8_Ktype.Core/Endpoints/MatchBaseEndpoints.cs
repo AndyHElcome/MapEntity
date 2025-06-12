@@ -56,7 +56,13 @@ namespace MMIv8_Ktype.Core.Endpoints
             return await mappingService.RemovePartialMatchBase(MatchBaseType, MatchHash);
         }
 
-        public async Task<SerializableResult<DeleteResult>> DeleteAll()
+        public async Task<Result> RecalculateAutomaticMatchBaseScore(MatchBaseType MatchBaseType)
+        {
+            var filter = Builders<MatchEntity>.Filter.Empty;
+            return await mappingService.RecalculateAutomaticMatchBaseScore(filter, MatchBaseType);
+        }
+
+        public async Task<Result> DeleteAll()
         {
             return await matchBaseService.DeleteAll();
         }

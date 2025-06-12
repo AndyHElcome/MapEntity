@@ -11,7 +11,7 @@ namespace MMIv8_Ktype.Api
         private readonly ILogger _log;
         private readonly HttpClient _httpClient;
         private readonly RefitSettings _refitSettings = new();
-        public readonly IVersionProvider VersionProvider;
+        public IVersionProvider VersionProvider;
 
         /// <summary>
         /// 
@@ -35,6 +35,11 @@ namespace MMIv8_Ktype.Api
 
             _refitSettings = _refitSettings.GetApplyRefitSettings();
 
+            //VersionProvider = new VersionProviderApi(this);
+        }
+
+        public void InitialiseVersionProvider()
+        {
             VersionProvider = new VersionProviderApi(this);
         }
 
