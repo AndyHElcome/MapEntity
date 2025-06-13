@@ -167,7 +167,9 @@ namespace MMIv8_Ktype.Models
                 if (paramType.IsEnum)
                     parsedArgs[ i ] = Enum.Parse(paramType, arg);
                 else if (arg == "null")
-                   parsedArgs[ i ] = defaultValue;
+                    parsedArgs[ i ] = defaultValue;
+                else if (Nullable.GetUnderlyingType(paramType) == typeof(bool))
+                    parsedArgs[ i ] = bool.Parse(arg);
                 else
                     parsedArgs[ i ] = Convert.ChangeType(arg, paramType);
             }

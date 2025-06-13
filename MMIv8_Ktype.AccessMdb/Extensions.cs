@@ -302,6 +302,7 @@ namespace MMIv8_Ktype.AccessMdb
         public static string BuildCreateTableSql(DataTable table)
         {
             var columns = new List<string>();
+            var primaryKeys = new List<string>();
 
             foreach (DataColumn col in table.Columns)
             {
@@ -318,14 +319,12 @@ namespace MMIv8_Ktype.AccessMdb
                 string columnSql = $"[{col.ColumnName}] {type}";
 
                 if (col.Unique || table.PrimaryKey.Contains(col))
-                {
-                    columnSql += " PRIMARY KEY";
-                }
-
+                    primaryKeys.Add($"[{col.ColumnName}]");
+                
                 columns.Add(columnSql);
             }
 
-            return $"CREATE TABLE [{table.TableName}] ({string.Join(", ", columns)})";
+            return $"CREATE TABLE [{table.TableName}] ({string.Join(", ", columns)} , CONSTRAINT [PrimaryKey] PRIMARY KEY ({string.Join(", ", primaryKeys)}))";
         }
 
         public static string BuildDropTableSql(string tableName)

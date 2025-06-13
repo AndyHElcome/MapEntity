@@ -69,10 +69,11 @@ namespace MMIv8_Ktype.Models.Collections
 
         public override string ToString()
         {
-            string tecdocEntity = string.Join(' ', TecDocEntity.Select(c => c.Value.ToString()).Where(c => !string.IsNullOrWhiteSpace(c)));
-            string mmiEntity = string.Join(' ', MMIEntity.Select(c => c.Value.ToString()).Where(c => !string.IsNullOrWhiteSpace(c)));
+            string tecdocEntity = TecDocEntity.DictToString();
+            string mmiEntity = MMIEntity.DictToString();
             return $"TD: [{tecdocEntity}] MMI: [{mmiEntity}] Score: {Score} [{MatchBaseType}-{DocumentId}]";
         }
+
         public dynamic BuildCsvObject()
         {
             dynamic csvObj = new ExpandoObject();
@@ -97,6 +98,13 @@ namespace MMIv8_Ktype.Models.Collections
         }
     }
 
+    public static class MatchBaseExtentions
+    {
+        public static string DictToString(this Dictionary<string, dynamic> dict, string separator = " ")
+        {
+            return string.Join(separator, dict.Select(c => c.Value.ToString()).Where(c => !string.IsNullOrWhiteSpace(c)));
+        }
+    }
 
     #region Manual Matches
     public class MatchBody(IVersionProvider versionProvider, MatchEntity matchEntity) : MatchBase(versionProvider, matchEntity, MatchBaseType.Body, MatchBaseMethod.Manual)

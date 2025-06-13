@@ -37,23 +37,33 @@ internal class Program
 #if DEBUG
         //args = [ "MMIv8_Ktype.AccessMdb", "StorePartialMatchBase", @"C:\Users\andy.hargreaves\OneDrive - Elcome Ltd\Desktop\NEW MMI TO KTYPE\MMIv8_Ktype_Data.accdb", "API_StorePartialMatchBase", "ApiResponse" ];
 
-        //args = [ "MMIv8_Ktype.AccessMdb", "GenerateMakeModelMatch", @"C:\Users\andy.hargreaves\OneDrive - Elcome Ltd\Desktop\NEW MMI TO KTYPE\MMIv8_Ktype_Data.accdb", "MatchMakeModel" ];
+        args = [ "MMIv8_Ktype.AccessMdb", "GenerateMakeModelMatch", @"C:\Users\andy.hargreaves\OneDrive - Elcome Ltd\Desktop\NEW MMI TO KTYPE\MMIv8_Ktype_Data.accdb", "MatchMakeModel" ];
 
         //args = [ "MMIv8_Ktype.AccessMdb", "LoadPreviousMatches", @"C:\Users\andy.hargreaves\OneDrive - Elcome Ltd\Desktop\NEW MMI TO KTYPE\MMIv8_Ktype_Data.accdb", "LegacyMasterlist", "1" ];
 
         args = [ "MMIv8_Ktype.AccessMdb", "GenerateMatchRefine", @"C:\Users\andy.hargreaves\OneDrive - Elcome Ltd\Desktop\NEW MMI TO KTYPE\MMIv8_Ktype_Data.accdb", "MatchRefine" ];
 
+        args = [ "MMIv8_Ktype.AccessMdb", "GenerateMatchRefine", @"C:\Users\andy.hargreaves\OneDrive - Elcome Ltd\Desktop\NEW MMI TO KTYPE\MMIv8_Ktype_Data.accdb", "MatchRefine", "null", "null", "null", "true", "null", "null", "null", "null", "false" ];
+
         //args = [ "MMIv8_Ktype.AccessMdb", "GenerateMatchSummary", @"C:\Users\andy.hargreaves\OneDrive - Elcome Ltd\Desktop\NEW MMI TO KTYPE\MMIv8_Ktype_Data.accdb", "MatchEntitySummary" ];
+
+        //args = [ "MMIv8_Ktype.AccessMdb", "GenerateMatchSummary", @"C:\Users\andy.hargreaves\OneDrive - Elcome Ltd\Desktop\NEW MMI TO KTYPE\MMIv8_Ktype_Data.accdb", "MatchEntitySummary", "68496378c745bff32b34d8eb", "null", "null", "null", "null", "false", "null", "null", "false" ];
 
         //args = [ "MMIv8_Ktype.AccessMdb", "GenerateMatchEntity", @"C:\Users\andy.hargreaves\OneDrive - Elcome Ltd\Desktop\NEW MMI TO KTYPE\MMIv8_Ktype_Data.accdb", "MatchEntity" ];
 
-        //args = [ "MMIv8_Ktype.AccessMdb", "GenerateMatchEntity", @"C:\Users\andy.hargreaves\OneDrive - Elcome Ltd\Desktop\NEW MMI TO KTYPE\MMIv8_Ktype_Data.accdb", "MatchEntity", "null", "null", "68387beadb32859096003313", "null", "null", "null", "null", "null", "false"];
+        //args = [ "MMIv8_Ktype.AccessMdb", "GenerateMatchEntity", @"C:\Users\andy.hargreaves\OneDrive - Elcome Ltd\Desktop\NEW MMI TO KTYPE\MMIv8_Ktype_Data.accdb", "MatchEntity", "68496378c745bff32b34d8eb", "null", "null", "null", "null", "false", "null", "null", "false"];
+
+        //args = [ "MMIv8_Ktype.AccessMdb", "GenerateMatchComparisons", @"C:\Users\andy.hargreaves\OneDrive - Elcome Ltd\Desktop\NEW MMI TO KTYPE\MMIv8_Ktype_Data.accdb", "MatchEntityComparisons", "68496378c745bff32b34d8eb", "null", "null", "null", "null", "false", "null", "null", "false"];
 
         //args = [ "MMIv8_Ktype.AccessMdb", "GenerateMatchEntityById", @"C:\Users\andy.hargreaves\OneDrive - Elcome Ltd\Desktop\NEW MMI TO KTYPE\MMIv8_Ktype_Data.accdb", "MatchEntity", "68387b61db32859096fa61f4", "true" ];
 
-        //args = [ "MMIv8_Ktype.AccessMdb", "GenerateEntityMatchByIds", @"C:\Users\andy.hargreaves\OneDrive - Elcome Ltd\Desktop\NEW MMI TO KTYPE\MMIv8_Ktype_Data.accdb", "MatchIdsToGenerate", "MatchEntity", "input", "output", "false" ];
+        //args = [ "MMIv8_Ktype.AccessMdb", "GenerateMatchEntityByIds", @"C:\Users\andy.hargreaves\OneDrive - Elcome Ltd\Desktop\NEW MMI TO KTYPE\MMIv8_Ktype_Data.accdb", "MatchIdsToGenerate", "MatchEntity", "input", "output", "false" ];
 
         //args = [ "MMIv8_Ktype.AccessMdb", "UpdateMatchedFlag", @"C:\Users\andy.hargreaves\OneDrive - Elcome Ltd\Desktop\NEW MMI TO KTYPE\MMIv8_Ktype_Data.accdb", "UpdateMatchFlag", "output" ];
+
+        //args = [ "MMIv8_Ktype.AccessMdb", "UpdateMatchRefineStatus", @"C:\Users\andy.hargreaves\OneDrive - Elcome Ltd\Desktop\NEW MMI TO KTYPE\MMIv8_Ktype_Data.accdb", "UpdateMatchRefineStatus", "output" ];
+
+        //args = [ "MMIv8_Ktype.AccessMdb", "ResetMatchResult", @"C:\Users\andy.hargreaves\OneDrive - Elcome Ltd\Desktop\NEW MMI TO KTYPE\MMIv8_Ktype_Data.accdb", "UpdateMatchRefineStatus", "output" ];
 
         //args = [ "MMIv8_Ktype.AccessMdb", "GenerateMMIEntities", @"C:\Users\andy.hargreaves\OneDrive - Elcome Ltd\Desktop\NEW MMI TO KTYPE\MMIv8_Ktype_Data.accdb", "Source_MMIv8" ];
 

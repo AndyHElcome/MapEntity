@@ -19,6 +19,7 @@ using System.Formats.Asn1;
 using System.Reflection.Metadata;
 using System.Security.Cryptography;
 using System.Text.Json;
+using static MMIv8_Ktype.AccessMdb.Operations.AccessDBOperation;
 using static MMIv8_Ktype.AccessMdb.Operations.GenerateMMIEntities;
 
 namespace MMIv8_Ktype.AccessMdb.Operations
@@ -39,7 +40,7 @@ namespace MMIv8_Ktype.AccessMdb.Operations
         public delegate Task<SerializableResult<PagedCursorResponse<T>>> GetPagedDocumentsDelegatev2<T>(string? cursor, int pageSize);
         public delegate Task<SerializableResult<List<T>>> GetDocumentsDelegate<T>();
         public delegate Task<SerializableResult<T>> GetDocumentsByIdDelegate<T, Tid>(Tid documentId);
-        public delegate TOut ConvertDocumentToDataRowObject<T, TOut>(T document);
+        public delegate IEnumerable<TOut> ConvertDocumentToDataRowObject<T, TOut>(T document);
         public delegate TCursor ConvertDocumentIdToCursor<Tid, TCursor>(Tid documentId);
 
         public async Task GenerateTableFromPagedCursor<T, TObjType, TDocumentId>(
@@ -62,10 +63,8 @@ namespace MMIv8_Ktype.AccessMdb.Operations
 
             if (headerDocument.Value is null or { Documents.Count: 0 } or { TotalDocuments: 0 })
                 return;
-            if (headerDocument.Value is null || headerDocument.Value.Documents.Count == 0 || headerDocument.Value.TotalDocuments == 0)
-                throw new Exception("Pattern Matching didn't work");
 
-            DataTable dataTable = AddNewTableToDataSet(convertToRow(headerDocument!.Value.Documents!.FirstOrDefault()!)!, tableName, primaryKeys, log) ?? throw new NoNullAllowedException();
+            DataTable dataTable = AddNewTableToDataSet(convertToRow(headerDocument!.Value.Documents!.FirstOrDefault()!)!.First()!, tableName, primaryKeys, log) ?? throw new NoNullAllowedException();
 
             SerializableResult<PagedCursorResponse<T>> response;
             do
@@ -78,9 +77,12 @@ namespace MMIv8_Ktype.AccessMdb.Operations
                 {
                     try
                     {
-                        var obj = convertToRow(document);
-                        var newRow = dataTable.NewRow().ConvertObjToDataRow(obj);
-                        dataTable.Rows.Add(newRow);
+                        var objs = convertToRow(document);
+                        foreach (var obj in objs)
+                        {
+                            var newRow = dataTable.NewRow().ConvertObjToDataRow(obj);
+                            dataTable.Rows.Add(newRow);
+                        }
                     }
                     catch (Exception ex)
                     {
@@ -115,11 +117,8 @@ namespace MMIv8_Ktype.AccessMdb.Operations
 
             if (headerDocument.Value is null or { Documents.Count: 0 } or { TotalDocuments: 0 })
                 return;
-            if (headerDocument.Value is null || headerDocument.Value.Documents.Count == 0 || headerDocument.Value.TotalDocuments == 0)
-                throw new Exception("Pattern Matching didn't work");
 
-
-            DataTable dataTable = AddNewTableToDataSet(convertToRow(headerDocument!.Value.Documents!.FirstOrDefault()!)!, tableName, primaryKeys, log) ?? throw new NoNullAllowedException();
+            DataTable dataTable = AddNewTableToDataSet(convertToRow(headerDocument!.Value.Documents!.FirstOrDefault()!)!.First()!, tableName, primaryKeys, log) ?? throw new NoNullAllowedException();
 
             int page = 1;
             SerializableResult<PagedResponse<T>> response;
@@ -133,9 +132,12 @@ namespace MMIv8_Ktype.AccessMdb.Operations
                 {
                     try
                     {
-                        var obj = convertToRow(document);
-                        var newRow = dataTable.NewRow().ConvertObjToDataRow(obj);
-                        dataTable.Rows.Add(newRow);
+                        var objs = convertToRow(document);
+                        foreach (var obj in objs)
+                        {
+                            var newRow = dataTable.NewRow().ConvertObjToDataRow(obj);
+                            dataTable.Rows.Add(newRow);
+                        }
                     }
                     catch (Exception ex)
                     {
@@ -168,19 +170,19 @@ namespace MMIv8_Ktype.AccessMdb.Operations
 
             if (response.Value is null or { Count: 0 })
                 return;
-            if (response.Value is null || response.Value!.Count == 0)
-                throw new Exception("Pattern Matching didn't work");
 
-
-            DataTable dataTable = AddNewTableToDataSet(convertToRow(response!.Value.FirstOrDefault()!)!, tableName, primaryKeys, log) ?? throw new NoNullAllowedException();
+            DataTable dataTable = AddNewTableToDataSet(convertToRow(response!.Value.FirstOrDefault()!)!.First()!, tableName, primaryKeys, log) ?? throw new NoNullAllowedException();
 
             foreach (T document in response.Value!)
             {
                 try
                 {
-                    var obj = convertToRow(document);
-                    var newRow = dataTable.NewRow().ConvertObjToDataRow(obj);
-                    dataTable.Rows.Add(newRow);
+                    var objs = convertToRow(document);
+                    foreach (var obj in objs)
+                    {
+                        var newRow = dataTable.NewRow().ConvertObjToDataRow(obj);
+                        dataTable.Rows.Add(newRow);
+                    }
                 }
                 catch (Exception ex)
                 {
@@ -316,17 +318,25 @@ namespace MMIv8_Ktype.AccessMdb.Operations
 
         public void ExecuteSQLQuery(string queryString, ILogger log)
         {
-            using (OleDbConnection conn = DBConnection())
-            using (OleDbCommand cmd = new(queryString, conn))
+            try
             {
-                conn.Open();
+                using (OleDbConnection conn = DBConnection())
+                using (OleDbCommand cmd = new(queryString, conn))
+                {
+                    conn.Open();
 
-                cmd.ExecuteNonQuery();
+                    cmd.ExecuteNonQuery();
 
-                conn.Close();
+                    conn.Close();
+                }
+
+                log.Debug("Ran query: {sql}", queryString);
+
             }
-
-            log.Debug("Ran query: {sql}", queryString);
+            catch (Exception ex)
+            {
+                log.Error(ex, "Error running query: {sql}", queryString);
+            }
         }
 
         public void CommitChanges(string tableName, ILogger log)
@@ -382,6 +392,75 @@ namespace MMIv8_Ktype.AccessMdb.Operations
                     PutMatchBaseRequest putMatchBaseRequest = GlobalHelpers.StringToObject<PutMatchBaseRequest>(args);
 
                     await matchBaseEndpoints.StorePartialMatchBase(putMatchBaseRequest.MatchBaseType, putMatchBaseRequest.MatchHash, putMatchBaseRequest.NewScore); //TODO Create return types
+
+                    row[ OutputColumn ] = "Updated";
+                }
+                catch (Exception ex)
+                {
+                    row[ OutputColumn ] = ex.Message;
+                    log.Error(ex, "Error in {@args}", row.ItemArray);
+                }
+            }
+
+            CommitChanges(TableName, log);
+        }
+    }
+
+    public class UpdateMatchRefineStatus(string dbPath, string tableName, string outputColumn) : AccessDBOperation(dbPath, tableName)
+    {
+        public string OutputColumn = outputColumn;
+
+        public async override Task ExecuteOperation(ILogger log)
+        {
+            IMatchEntityEndpoints matchEntityEndpoints = new RefitClient(log).CreateService<IMatchEntityEndpoints>();
+
+            DataTable dataTable = AddTableToDataSet(TableName, log) ?? throw new NoNullAllowedException();
+
+            foreach (DataRow row in dataTable.Rows)
+            {
+                try
+                {
+                    string[] args = row.ItemArray.Select(c => c?.ToString() ?? string.Empty)
+                                                 .Where(c => c != row[ OutputColumn ].ToString())
+                                                 .ToArray();
+
+                    MMI_V8_Key record = GlobalHelpers.StringToObject<MMI_V8_Key>(args);
+
+                    await matchEntityEndpoints.UpdateMatchRefineStatus(record.ExternalId); //TODO Create return types
+
+                    row[ OutputColumn ] = "Updated";
+                }
+                catch (Exception ex)
+                {
+                    row[ OutputColumn ] = ex.Message;
+                    log.Error(ex, "Error in {@args}", row.ItemArray);
+                }
+            }
+
+            CommitChanges(TableName, log);
+        }
+    }
+    public class ResetMatchResult(string dbPath, string tableName, string outputColumn) : AccessDBOperation(dbPath, tableName)
+    {
+        public string OutputColumn = outputColumn;
+
+        public async override Task ExecuteOperation(ILogger log)
+        {
+            IMatchEntityEndpoints matchEntityEndpoints = new RefitClient(log).CreateService<IMatchEntityEndpoints>();
+
+            DataTable dataTable = AddTableToDataSet(TableName, log) ?? throw new NoNullAllowedException();
+
+            foreach (DataRow row in dataTable.Rows)
+            {
+                try
+                {
+                    string[] args = row.ItemArray.Select(c => c?.ToString() ?? string.Empty)
+                                                 .Where(c => c != row[ OutputColumn ].ToString())
+                                                 .ToArray();
+
+                    MMI_V8_Key record = GlobalHelpers.StringToObject<MMI_V8_Key>(args);
+
+                    await matchEntityEndpoints.ResetMatchResult(record.ExternalId); //TODO Create return types
 
                     row[ OutputColumn ] = "Updated";
                 }
@@ -458,11 +537,11 @@ namespace MMIv8_Ktype.AccessMdb.Operations
         {
             var matchMakeModelEndpoints = new RefitClient(log).CreateService<IMatchMakeModelEndpoints>();
 
-            await base.GenerateTable(
+            await base.GenerateTable<MatchMakeModel, MatchMakeModelRecord>(
                 TableName,
                 log,
                 () => matchMakeModelEndpoints.GenerateMakeModelMatch(),
-                (document) => (MatchMakeModelRecord)document,
+                (document) =>  [ (MatchMakeModelRecord)document ] ,
                 [ nameof(MatchMakeModelRecord.MatchID) ]
                 );
         }
@@ -510,11 +589,11 @@ namespace MMIv8_Ktype.AccessMdb.Operations
         {
             var matchEntityEndpoints = new RefitClient(log).CreateService<IMatchEntityEndpoints>();
 
-            await base.GenerateTable(
+            await base.GenerateTable<MatchRefine, MatchRefine>(
                 TableName,
                 log,
                 () => matchEntityEndpoints.GetAllMatchRefine(MakeModelMatchId, TecDocEntityId, MMIv8EntityId, IsCheck, IsMatched, IsFailed, HasDifference, Status),
-                (document) => document,
+                (document) => [ document ],
                 [ nameof(MatchRefine.DocumentId) ],
                 append: Append
                 );
@@ -567,8 +646,61 @@ namespace MMIv8_Ktype.AccessMdb.Operations
                 TableName,
                 log,
                 (string? cursor, int pageSize) => matchEntityEndpoints.GetAllMatchEntitySummary(cursor, pageSize, MakeModelMatchId, TecDocEntityId, MMIv8EntityId, IsCheck, IsMatched, IsFailed, HasDifference, Status),
-                (document) => document,
+                (document) => [ document ],
                 [ nameof(MatchEntitySummary.DocumentId) ],
+                append: Append
+                );
+        }
+    }
+
+    public class GenerateMatchComparisons : AccessDBOperation
+    {
+        public string? MakeModelMatchId { get; }
+        public string? TecDocEntityId { get; }
+        public string? MMIv8EntityId { get; }
+        public bool? IsCheck { get; }
+        public bool? IsMatched { get; }
+        public bool? IsFailed { get; }
+        public bool? HasDifference { get; }
+        public Status[]? Status { get; }
+        public bool Append { get; }
+
+        public GenerateMatchComparisons(string dbPath, string tableName) : base(dbPath, tableName) { }
+
+        public GenerateMatchComparisons(
+            string dbPath,
+            string tableName,
+            string? makeModelMatchId = null,
+            string? tecDocEntityId = null,
+            string? mmiv8EntityId = null,
+            bool? isCheck = null,
+            bool? isMatched = null,
+            bool? isFailed = null,
+            bool? hasDifference = null,
+            Status[]? status = null,
+            bool append = false) : base(dbPath, tableName)
+        {
+            MakeModelMatchId = makeModelMatchId;
+            TecDocEntityId = tecDocEntityId;
+            MMIv8EntityId = mmiv8EntityId;
+            IsCheck = isCheck;
+            IsMatched = isMatched;
+            IsFailed = isFailed;
+            HasDifference = hasDifference;
+            Status = status;
+            Append = append;
+        }
+
+        public async override Task ExecuteOperation(ILogger log)
+        {
+            var matchEntityEndpoints = new RefitClient(log).CreateService<IMatchEntityEndpoints>();
+
+            await base.GenerateTableFromPagedCursor<MatchEntity, MatchEntityComparisons, ObjectId>(
+                TableName,
+                log,
+                (string? cursor, int pageSize) => matchEntityEndpoints.GetAll(cursor, pageSize, MakeModelMatchId, TecDocEntityId, MMIv8EntityId, IsCheck, IsMatched, IsFailed, HasDifference, Status),
+                (document) => document.EntityComparison.Select(c => new MatchEntityComparisons(document.DocumentId, document.TecDocEntity.DocumentId, document.MMIv8Entity.DocumentId, c.Value.DocumentId, c.Value.MatchBaseType, c.Value.MatchBaseMethod, c.Value.DefaultScore, c.Value.TecDocEntity.DictToString("; "), c.Value.MMIEntity.DictToString("; "), c.Value.Score)),
+                [ nameof(MatchEntityComparisons.DocumentId), nameof(MatchEntityComparisons.MatchBaseType) ],
                 append: Append
                 );
         }
@@ -620,7 +752,7 @@ namespace MMIv8_Ktype.AccessMdb.Operations
                 TableName,
                 log,
                 (string? cursor, int pageSize) => matchEntityEndpoints.GetAll(cursor, pageSize, MakeModelMatchId, TecDocEntityId, MMIv8EntityId, IsCheck, IsMatched, IsFailed, HasDifference, Status),
-                (MatchEntity document) => new ExpandoObject().BuildExpando(document),
+                (MatchEntity document) => [ new ExpandoObject().BuildExpando(document) ],
                 [ nameof(MatchEntity.DocumentId) ], 
                 append: Append
                 );
@@ -679,7 +811,7 @@ namespace MMIv8_Ktype.AccessMdb.Operations
         }
     }
 
-    public class GenerateEntityMatchByIds(string dbPath, string tableName, string outputTableName, string inputColumn, string outputColumn, bool append) : AccessDBOperation(dbPath, tableName)
+    public class GenerateMatchEntityByIds(string dbPath, string tableName, string outputTableName, string inputColumn, string outputColumn, bool append) : AccessDBOperation(dbPath, tableName)
     {
         public string OutputTableName = outputTableName;
         public string OutputColumn = outputColumn;
@@ -724,7 +856,7 @@ namespace MMIv8_Ktype.AccessMdb.Operations
                 TableName,
                 log,
                 (string? cursor, int pageSize) => sourceEntityEndpoints.GetAll(cursor, pageSize),
-                (document) => document,
+                (document) => [ document ],
                 [ nameof(SourceMMIv8.ExternalId) ],
                 10000
                 );
@@ -741,7 +873,7 @@ namespace MMIv8_Ktype.AccessMdb.Operations
                 TableName,
                 log,
                 (string? cursor, int pageSize) => sourceEntityEndpoints.GetAll(cursor, pageSize),
-                (document) => document,
+                (document) => [ document ],
                 [ nameof(SourceTecDocPC.ExternalId) ],
                 10000
                 );
