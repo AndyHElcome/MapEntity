@@ -104,15 +104,22 @@ namespace MMIv8_Ktype.Models
         }
 
 
-        public static Dictionary<string, object> ObjToDictionary(object obj)
+        public static Dictionary<string, object> ObjToDictionary(object obj, bool includeNull = true)
         {
             if (obj is null)
                 throw new NullReferenceException("Object is empty or missing");
 
             try
             {
-                Dictionary<string, object> dict = obj.GetType()
-                              .GetProperties(BindingFlags.Instance | BindingFlags.Public | BindingFlags.FlattenHierarchy)
+                PropertyInfo[] propertyInfo = obj.GetType()
+                              .GetProperties(BindingFlags.Instance | BindingFlags.Public | BindingFlags.FlattenHierarchy);
+
+                if (!includeNull)
+                {
+                    propertyInfo = propertyInfo.Where(c => c.GetValue(obj, null) is not null).ToArray();
+                }
+
+                Dictionary<string, object> dict = propertyInfo
                               .ToDictionary(prop => prop.Name, prop => prop.GetValue(obj, null) ?? string.Empty);
 
                 return dict ?? new();

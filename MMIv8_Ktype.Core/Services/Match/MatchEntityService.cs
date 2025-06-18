@@ -124,7 +124,34 @@ namespace MMIv8_Ktype.Core.Services.Match
             filter &= filterBuilder.Eq($"EntityComparison.{matchBase.MatchBaseType}.MatchBaseMethod", matchBase.MatchBaseMethod.ToString())
                     & filterBuilder.Eq($"EntityComparison.{matchBase.MatchBaseType}._id", matchBase.DocumentId);
 
-            return base.Update(filter).AppendPipeline(c => c.UpdateMatchBase(matchBase).UpdateScoreMatchResult());
+            return base.Update(filter).AppendPipeline(c => c.UpdateMatchBase(matchBase)
+                                                            .UpdateScoreMatchResult());
+        }
+
+        public BulkCombinationUpdate UpdateMatchBaseScoreMatchResultWithContexts(MatchBase matchBase, out FilterDefinition<MatchEntity> matchEntityFilter, FilterDefinition<MatchEntity>? filter = null)// TODO Try and convert to driver based query
+        {
+            var filterBuilder = Builders<MatchEntity>.Filter;
+            filter ??= filterBuilder.Empty;
+            filter &= filterBuilder.Eq($"EntityComparison.{matchBase.MatchBaseType}.MatchBaseMethod", matchBase.MatchBaseMethod.ToString())
+                    & filterBuilder.Eq($"EntityComparison.{matchBase.MatchBaseType}._id", matchBase.DocumentId);
+
+            matchEntityFilter = filter;
+
+            BulkCombinationUpdate bulkCombinationUpdate = new(MMIv8_Ktype, new() { IsOrdered = true });
+
+            bulkCombinationUpdate.AddCombinationUpdate(base.Update(filter).AppendPipeline(c => c.UpdateMatchBase(matchBase)));
+
+            foreach (var matchContext in matchBase.MatchContexts!)
+            {
+                var overrideMatchBase = matchBase;
+                overrideMatchBase.Score = matchContext.ScoreOverride;
+                overrideMatchBase.OverriddenBy = matchContext.ContextId;
+                overrideMatchBase.Overridden = true;
+
+                bulkCombinationUpdate.AddCombinationUpdate(base.Update(filter & matchContext.OverrideFilter).AppendPipeline(c => c.UpdateMatchBase(matchBase)));
+            }
+
+            return bulkCombinationUpdate.AddCombinationUpdate(base.Update(filter).AppendPipeline(c => c.UpdateScoreMatchResult()));
         }
 
         public CombinationPipeline<MatchEntity> CombinationUpdatePreviousMatchedFlag(FilterDefinition<MatchEntity> filter, bool matchFlag)

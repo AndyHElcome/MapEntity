@@ -43,7 +43,15 @@ namespace MMIv8_Ktype.Core.Endpoints
 
         public async Task<Result> UpdateMatchBaseScore(MatchBaseType MatchBaseType, string MatchHash, decimal NewScore)
         {
-            return await mappingService.UpdateMatchScore(MatchBaseType, MatchHash, NewScore);
+            return await mappingService.UpdateMatchScore(MatchHash, NewScore);
+        }
+
+        public async Task<Result> AddMatchBaseContext(string MatchHash, AddMatchContext MatchContext)
+        {
+            if (MatchContext.TecDocEntity is null && MatchContext.MMIEntity is null)
+                return Error.Validation("MatchBase.MatchContext.AddValidation","Both TecDocEntity and MMIEntity are null");
+
+            return await mappingService.AddMatchContext(MatchHash, new MatchContext(MatchContext.TecDocEntity, MatchContext.MMIEntity, MatchContext.ScoreOverride));
         }
 
         public async Task<Result> StorePartialMatchBase(MatchBaseType MatchBaseType, string MatchHash, decimal NewScore)

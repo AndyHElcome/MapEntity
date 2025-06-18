@@ -50,10 +50,16 @@ namespace MMIv8_Ktype.Core.Services.Match
 
         public CombinationPipeline<MatchBase> CombinationUpdateMatchBaseScore(MatchBase matchBase, decimal newScore)
         {
-            var filter = Builders<MatchBase>.Filter.Eq(c => c.DocumentId, matchBase.DocumentId);
-
-            return base.Update(filter).AppendUpdate(c => c.UpdateMatchBaseScore(newScore)) //TODO Should I move this into the query or leave it here as always necessary?
-                                      .AppendPipeline(c => c.AppendStatus(VersionProvider.NewStatus(Status.Updated, $"Score: {newScore.ToString()}")));
+            return base.Update(matchBase).AppendUpdate(c => c.UpdateMatchBaseScore(newScore)) //TODO Should I move this into the query or leave it here as always necessary?
+                                         .AppendPipeline(c => c.AppendStatus(VersionProvider.NewStatus(Status.Updated, $"Score: {newScore.ToString()}")));
         }
+
+        public CombinationPipeline<MatchBase> CombinationUpdateMatchContext(MatchBase matchBase, List<MatchContext>? matchContext, string? detail)
+        {
+            return base.Update(matchBase).AppendUpdate(c => c.SetMatchContext(matchContext)) //TODO Should I move this into the query or leave it here as always necessary?
+                                         .AppendPipeline(c => c.AppendStatus(VersionProvider.NewStatus(Status.Updated, detail)));
+        }
+
+
     }
 }

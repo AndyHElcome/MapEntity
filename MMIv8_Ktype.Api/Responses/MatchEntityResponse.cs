@@ -16,5 +16,5 @@ namespace MMIv8_Ktype.Api.Responses
 
     public record MatchEntitySummary(ObjectId DocumentId, ObjectId MatchMakeModelMatchID, ObjectId TecDocEntityId, ObjectId MMIv8EntityId, bool Failed, string? FailDetail, bool PreviousMatch, bool IsCheck, bool Difference, decimal? BestScore, decimal? ScoreSum, bool IsBest, bool Matched, string? MatchDetail, Status Status) : ICollectionEntity<ObjectId>, IResponse;
     
-    public record MatchEntityComparisons(ObjectId DocumentId, ObjectId TecDocEntityId, ObjectId MMIv8EntityId, string MatchBaseId, MatchBaseType MatchBaseType, MatchBaseMethod MatchBaseMethod, double DefaultScore, string TecDocEntity, string MMIEntity, decimal Score) : ICollectionEntity<ObjectId>, IResponse;
+    public record MatchEntityComparisons(ObjectId DocumentId, ObjectId TecDocEntityId, ObjectId MMIv8EntityId, string MatchBaseId, MatchBaseType MatchBaseType, MatchBaseMethod MatchBaseMethod, double DefaultScore, string TecDocEntity, string MMIEntity, decimal Score, bool? IsOverriden, string? TecDocOverride, string? MMIOverride) : ICollectionEntity<ObjectId>, IResponse;
 }

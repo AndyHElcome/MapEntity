@@ -1,0 +1,8 @@
+{
+  "profiles": {
+    "MMIv8_Ktype.Console": {
+      "commandName": "Project",
+      "commandLineArgs": "\"MMIv8_Ktype.AccessMdb\", \"GenerateMatchEntityAll\", @\"C:\\Users\\andy.hargreaves\\OneDrive - Elcome Ltd\\Desktop\\NEW MMI TO KTYPE\\MMIv8_Ktype_Data.accdb\", \"MatchEntity\", \"MatchEntitySummary\", \"MatchEntityComparisons\", \"6849667ac745bff32b4bfce4\", \"null\", \"null\", \"null\", \"null\", \"null\", \"null\", \"null\", \"true\""
+    }
+  }
+}

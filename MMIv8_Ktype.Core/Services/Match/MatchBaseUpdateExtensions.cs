@@ -10,5 +10,12 @@ namespace MMIv8_Ktype.Core.Services.Match
             update = update.Set(c => c.Score, newScore);
             return update;
         }
+
+        public static UpdateDefinition<MatchBase> SetMatchContext(this UpdateDefinition<MatchBase> update, List<MatchContext>? matchContext)
+        {
+            update = update.Set(c => c.MatchContexts, matchContext);
+            return update;
+        }
+
     }
 }

@@ -12,6 +12,7 @@ using MMIv8_Ktype.Models.Status;
 using MMIv8_Ktype.Models.Util;
 using MongoDB.Bson;
 using Serilog;
+using System.Configuration;
 using System.Data;
 using System.Data.OleDb;
 using System.Dynamic;
@@ -19,6 +20,7 @@ using System.Formats.Asn1;
 using System.Reflection.Metadata;
 using System.Security.Cryptography;
 using System.Text.Json;
+using System.Text.RegularExpressions;
 using static MMIv8_Ktype.AccessMdb.Operations.AccessDBOperation;
 using static MMIv8_Ktype.AccessMdb.Operations.GenerateMMIEntities;
 
@@ -357,11 +359,11 @@ namespace MMIv8_Ktype.AccessMdb.Operations
                 if (DBDataSet.Tables.Contains(tableName))
                 {
                     adapter.Update(DBDataSet, tableName);
-                    Log.Debug("Changes committed to table {tableName}", tableName);
+                    log.Debug("Changes committed to table {tableName}", tableName);
                 }
                 else
                 {
-                    Log.Warning("Table {tableName} not found in DataSet", tableName);
+                    log.Warning("Table {tableName} not found in DataSet", tableName);
                 }
 
                 DBDataSet.AcceptChanges();
@@ -541,9 +543,84 @@ namespace MMIv8_Ktype.AccessMdb.Operations
                 TableName,
                 log,
                 () => matchMakeModelEndpoints.GenerateMakeModelMatch(),
-                (document) =>  [ (MatchMakeModelRecord)document ] ,
+                (document) => [ (MatchMakeModelRecord)document ],
                 [ nameof(MatchMakeModelRecord.MatchID) ]
                 );
+        }
+    }
+
+    public class PartitionMakeModelMatch(string dbPath, string tableName) : AccessDBOperation(dbPath, tableName)
+    {
+        private async Task<SerializableResult<List<GroupedMatchMakeModelRecord>>> GroupMatchMakeModel(ILogger log)
+        {
+            var matchMakeModelEndpoints = new RefitClient(log).CreateService<IMatchMakeModelEndpoints>();
+
+            var matchMakeModelsResult = await matchMakeModelEndpoints.GetAll();
+
+            List<MatchMakeModel> matchMakeModels = matchMakeModelsResult.Value!.Documents.Where(c => c.MMIv8Model.DocumentId is not null && c.TecDocModel.DocumentId is not null).ToList();
+            int i = 1;
+
+            Dictionary<int, List<MatchMakeModel>> GroupedMatchMakeModels = new();
+
+            do
+            {
+                Dictionary<string, bool> TD_MakeModelHashes = new();
+                Dictionary<string, bool> MMI_MakeModelHashes = new();
+
+                List<MatchMakeModel> matchMakeModelsToAdd = [ matchMakeModels.First() ];
+
+                do
+                {
+                    foreach (var matchMakeModel in matchMakeModelsToAdd.Distinct())
+                    {
+                        var newGroup = GroupedMatchMakeModels.TryAdd(i, [ matchMakeModel ]);
+
+                        if (!newGroup)
+                            GroupedMatchMakeModels[ i ].Add(matchMakeModel);
+                        
+
+                        _ = TD_MakeModelHashes.TryAdd(matchMakeModel.TecDocModel.DocumentId, false);
+                        _ = MMI_MakeModelHashes.TryAdd(matchMakeModel.MMIv8Model.DocumentId, false);
+
+                        matchMakeModels.RemoveAll(c => c.DocumentId == matchMakeModel.DocumentId);
+                        //matchMakeModelsToAdd.Remove(matchMakeModel);
+                    }
+
+                    matchMakeModelsToAdd.Clear();
+
+                    var TD_MakeModelHash = TD_MakeModelHashes.FirstOrDefault(c => !c.Value).Key;
+                    if (TD_MakeModelHash != null)
+                    {
+                        matchMakeModelsToAdd.AddRange(matchMakeModels.Where(c => c.TecDocModel.DocumentId == TD_MakeModelHash));
+                        TD_MakeModelHashes[ TD_MakeModelHash ] = true;
+                    }
+
+                    var MMI_MakeModelHash = MMI_MakeModelHashes.FirstOrDefault(c => !c.Value).Key;
+                    if (MMI_MakeModelHash != null)
+                    {
+                        matchMakeModelsToAdd.AddRange(matchMakeModels.Where(c => c.MMIv8Model.DocumentId == MMI_MakeModelHash));
+                        MMI_MakeModelHashes[ MMI_MakeModelHash ] = true;
+                    }
+                }
+                while (TD_MakeModelHashes.Where(c => !c.Value).Any() || MMI_MakeModelHashes.Where(c => !c.Value).Any() || matchMakeModelsToAdd.Any());
+
+                i++;
+            }
+            while (matchMakeModels.Any());
+
+            return Result.Success(GroupedMatchMakeModels.SelectMany(c => c.Value.Select(d => (GroupedMatchMakeModelRecord)(c.Key, d))).ToList());
+        }
+
+        public async override Task ExecuteOperation(ILogger log)
+        {
+            await base.GenerateTable<GroupedMatchMakeModelRecord, GroupedMatchMakeModelRecord>(
+                TableName,
+                log,
+                () => GroupMatchMakeModel(log),
+                (document) => [ document ],
+                [ nameof(GroupedMatchMakeModelRecord.MatchID) ]
+                );
+
         }
     }
 
@@ -587,7 +664,7 @@ namespace MMIv8_Ktype.AccessMdb.Operations
 
         public async override Task ExecuteOperation(ILogger log)
         {
-            var matchEntityEndpoints = new RefitClient(log).CreateService<IMatchEntityEndpoints>();
+            var matchEntityEndpoints = new RefitClient(log, 5).CreateService<IMatchEntityEndpoints>();
 
             await base.GenerateTable<MatchRefine, MatchRefine>(
                 TableName,
@@ -699,7 +776,24 @@ namespace MMIv8_Ktype.AccessMdb.Operations
                 TableName,
                 log,
                 (string? cursor, int pageSize) => matchEntityEndpoints.GetAll(cursor, pageSize, MakeModelMatchId, TecDocEntityId, MMIv8EntityId, IsCheck, IsMatched, IsFailed, HasDifference, Status),
-                (document) => document.EntityComparison.Select(c => new MatchEntityComparisons(document.DocumentId, document.TecDocEntity.DocumentId, document.MMIv8Entity.DocumentId, c.Value.DocumentId, c.Value.MatchBaseType, c.Value.MatchBaseMethod, c.Value.DefaultScore, c.Value.TecDocEntity.DictToString("; "), c.Value.MMIEntity.DictToString("; "), c.Value.Score)),
+                (document) 
+                    => document.EntityComparison.Select(c 
+                        => new MatchEntityComparisons(
+                            document.DocumentId,
+                            document.TecDocEntity.DocumentId,
+                            document.MMIv8Entity.DocumentId,
+                            c.Value.DocumentId,
+                            c.Value.MatchBaseType,
+                            c.Value.MatchBaseMethod,
+                            c.Value.DefaultScore,
+                            c.Value.TecDocEntity.DictToString("; "),
+                            c.Value.MMIEntity.DictToString("; "),
+                            c.Value.Score,
+                            c.Value.Overridden,
+                            c.Value.Overridden ?? false ? c.Value.MatchContexts!.Find(d => d.ContextId == c.Value.OverriddenBy)?.TecDocEntity.DictToString() : string.Empty,
+                            c.Value.Overridden ?? false ? c.Value.MatchContexts!.Find(d => d.ContextId == c.Value.OverriddenBy)?.MMIEntity.DictToString() : string.Empty
+                            )
+                        ),
                 [ nameof(MatchEntityComparisons.DocumentId), nameof(MatchEntityComparisons.MatchBaseType) ],
                 append: Append
                 );
@@ -756,6 +850,60 @@ namespace MMIv8_Ktype.AccessMdb.Operations
                 [ nameof(MatchEntity.DocumentId) ], 
                 append: Append
                 );
+        }
+    }
+
+    public class GenerateMatchEntityAll : IOperation
+    {
+        public string DBPath { get; }
+        public string MatchEntityTableName { get; }
+        public string MatchEntitySummaryTableName { get; }
+        public string MatchEntityComparisonTableName { get; }
+        public string? MakeModelMatchId { get; }
+        public string? TecDocEntityId { get; }
+        public string? MMIv8EntityId { get; }
+        public bool? IsCheck { get; }
+        public bool? IsMatched { get; }
+        public bool? IsFailed { get; }
+        public bool? HasDifference { get; }
+        public Status[]? Status { get; }
+        public bool Append { get; }
+
+        public GenerateMatchEntityAll(
+            string dbPath,
+            string matchEntity,
+            string matchEntitySummary,
+            string matchEntityComparison,
+            string? makeModelMatchId = null,
+            string? tecDocEntityId = null,
+            string? mmiv8EntityId = null,
+            bool? isCheck = null,
+            bool? isMatched = null,
+            bool? isFailed = null,
+            bool? hasDifference = null,
+            Status[]? status = null,
+            bool append = false)
+        {
+            DBPath = dbPath;
+            MatchEntityTableName = matchEntity;
+            MatchEntitySummaryTableName = matchEntitySummary;
+            MatchEntityComparisonTableName = matchEntityComparison;
+            MakeModelMatchId = makeModelMatchId;
+            TecDocEntityId = tecDocEntityId;
+            MMIv8EntityId = mmiv8EntityId;
+            IsCheck = isCheck;
+            IsMatched = isMatched;
+            IsFailed = isFailed;
+            HasDifference = hasDifference;
+            Status = status;
+            Append = append;
+        }
+
+        public async Task ExecuteOperation(ILogger log)
+        {
+            await new GenerateMatchEntity(DBPath, MatchEntityTableName, MakeModelMatchId, TecDocEntityId, MMIv8EntityId, IsCheck, IsMatched, IsFailed, HasDifference, Status, Append).ExecuteOperation(log);
+            await new GenerateMatchSummary(DBPath, MatchEntitySummaryTableName, MakeModelMatchId, TecDocEntityId, MMIv8EntityId, IsCheck, IsMatched, IsFailed, HasDifference, Status, Append).ExecuteOperation(log);
+            await new GenerateMatchComparisons(DBPath, MatchEntityComparisonTableName, MakeModelMatchId, TecDocEntityId, MMIv8EntityId, IsCheck, IsMatched, IsFailed, HasDifference, Status, Append).ExecuteOperation(log);
         }
     }
 

@@ -28,6 +28,12 @@ namespace MMIv8_Ktype.Models.Collections
         [BsonRepresentation(BsonType.Decimal128)]
         public decimal Score { get; set; }
 
+        [BsonDefaultValue(null)]
+        public bool? Overridden { get; set; }
+
+        [BsonDefaultValue(null)]
+        public string? OverriddenBy { get; set; }
+
         [BsonIgnoreIfDefault]
         public List<MatchContext>? MatchContexts { get; set; }
 
@@ -429,19 +435,28 @@ namespace MMIv8_Ktype.Models.Collections
 
     #endregion
 
-    [Obsolete("Use Record")]
-    public class UpdateMatchBase
-    {
-        public string MatchHash { get; set; }
-        public MatchBaseType MatchBaseType { get; set; }
-        public decimal Score { get; set; }
-    }
-
     public class MatchContext
     {
-        public Dictionary<string, dynamic> TecDocEntity { get; set; }
-        public Dictionary<string, dynamic> MMIEntity { get; set; }
-        public IEnumerable<FilterDefinition<MatchEntity>> OverrideFilter => (List<FilterDefinition<MatchEntity>>)[.. TecDocEntity.Select(c => Builders<MatchEntity>.Filter.Eq($"TecDocEntity.{c.Key}", c.Value.ToString())), .. MMIEntity.Select(c => Builders<MatchEntity>.Filter.Eq($"MMIv8Entity.{c.Key}", c.Value.ToString()))];
+        public string ContextId => GlobalHelpers.GenerateKey(new { TecDocEntity, MMIEntity });
+        public Dictionary<string, dynamic> TecDocEntity { get; set; } = new();
+        public Dictionary<string, dynamic> MMIEntity { get; set; } = new();
+
+        [JsonIgnore]
+        [BsonIgnore]
+        public FilterDefinition<MatchEntity> OverrideFilter 
+            => Builders<MatchEntity>.Filter.And([.. TecDocEntity is null ? [ Builders<MatchEntity>.Filter.Empty ] : TecDocEntity.Select(c => Builders<MatchEntity>.Filter.Eq($"TecDocEntity.{c.Key}", c.Value.ToString())), .. MMIEntity is null ? [Builders<MatchEntity>.Filter.Empty] : MMIEntity.Select(c => Builders<MatchEntity>.Filter.Eq($"MMIv8Entity.{c.Key}", c.Value.ToString()))]);
         public decimal ScoreOverride { get; set; }
+
+        public MatchContext(object? tecdocEntityObj, object? mmiEntityObj, decimal scoreOverride)
+        {
+            TecDocEntity = tecdocEntityObj is null ? [] : GlobalHelpers.ObjToDictionary(tecdocEntityObj, false);
+            MMIEntity = mmiEntityObj is null ? [] : GlobalHelpers.ObjToDictionary(mmiEntityObj, false);
+            ScoreOverride = scoreOverride;
+        }
+
+        public MatchContext()
+        {
+        }
     }
+
 }

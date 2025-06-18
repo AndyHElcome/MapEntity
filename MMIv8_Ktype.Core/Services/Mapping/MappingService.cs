@@ -51,7 +51,7 @@ namespace MMIv8_Ktype.Core.Services.Mapping
                 mmiv8Model = mmiv8SourceEntityModelResult.Value;
 
             if (tecdocModel.DocumentId is null && mmiv8Model.DocumentId is null)
-                return Error.NotFound("MatchMatchModel.EntitiesNotFound", $"No SourceEntityModels found for either \"{@TD_SourceEntityModelHash}\" or \"{@MMI_SourceEntityModelHash}\"");
+                return Error.NotFound("MatchMatchModel.EntitiesNotFound", $"No SourceEntityModels found for either \"{@TD_SourceEntityModelHash}\" ({tecdocModel is not null}) or \"{@MMI_SourceEntityModelHash}\" ({mmiv8Model is not null})");
 
             MatchMakeModel newMatchMakeModel = new(tecdocModel, mmiv8Model, versionProvider);
 
@@ -84,7 +84,7 @@ namespace MMIv8_Ktype.Core.Services.Mapping
         #endregion
 
         #region Match Base
-        public async Task<Result> UpdateMatchScore(MatchBaseType matchBaseType, string matchHash, decimal newScore, bool force = false) // could be endpoint?
+        public async Task<Result> UpdateMatchScore(string matchHash, decimal newScore, bool force = false) // could be endpoint?
         {
             var sw = Stopwatch.StartNew();
 
@@ -99,22 +99,68 @@ namespace MMIv8_Ktype.Core.Services.Mapping
             if (!updateMatchResult.IsSuccess)
                 return updateMatchResult;
 
-            CombinationPipeline<MatchEntity> matchEntityUpdate = MatchEntityService.UpdateMatchBaseScoreMatchResult(updateMatchResult.Value); //TODO this might need to be recalculate
-            var matchEntityResult = await matchEntityUpdate.UpdateDocuments();
-            Log.Debug("Match Entities {time}", sw);
-            if (!matchEntityResult.IsSuccess)
-                return matchEntityResult;
+            FilterDefinition<MatchEntity> filter;
+            string matchEntityResultString;
+            if (updateMatchResult.Value.MatchContexts is null)
+            {
+                CombinationPipeline<MatchEntity> matchEntityUpdate = MatchEntityService.UpdateMatchBaseScoreMatchResult(updateMatchResult.Value); //TODO this might need to be recalculate
+                var matchEntityResult = await matchEntityUpdate.UpdateDocuments();
+                Log.Debug("Match Entities {time}", sw);
+                if (!matchEntityResult.IsSuccess)
+                    return matchEntityResult;
 
-            BulkCombinationUpdate matchRefineUpdate = await MatchEntityService.BulkCombinationUpdateMatchRefine(matchEntityUpdate.Filter);
+                filter = matchEntityUpdate.Filter;
+                matchEntityResultString =  matchEntityResult.Value.IsAcknowledged ? matchEntityResult.Value.ModifiedCount.ToString() : "notAcknowledged";
+            }
+            else
+            {
+                BulkCombinationUpdate matchEntityUpdate = MatchEntityService.UpdateMatchBaseScoreMatchResultWithContexts(updateMatchResult.Value, out filter); //TODO this might need to be recalculate
+                var matchEntityResult = await matchEntityUpdate.CommitBulkWrite();
+                Log.Debug("Match Entities with Contexts {time}", sw);
+                if (!matchEntityResult.IsSuccess)
+                    return matchEntityResult;
+
+                matchEntityResultString = matchEntityResult.Value.Acknowledged ? matchEntityResult.Value.ModifiedCount.ToString() : "notAcknowledged";
+            }
+
+            BulkCombinationUpdate matchRefineUpdate = await MatchEntityService.BulkCombinationUpdateMatchRefine(filter);
             var matchRefineResult = await matchRefineUpdate.CommitBulkWrite();
             Log.Debug("Match Refine {time}", sw);
             if (!matchRefineResult.IsSuccess)
                 return matchRefineResult;
 
             sw.Stop();
-            Log.Information("Updated {updateMatch} in {time} ({matchEntitiesCount} MatchEntities) ({matchRefineCount} MatchRefine) ", updateMatchResult.Value.ToString(), sw, matchEntityResult.Value.IsAcknowledged ? matchEntityResult.Value.ModifiedCount : "notAcknowledged", matchRefineResult.Value.Acknowledged ? matchRefineResult.Value.ModifiedCount : "notAcknowledged");
+            Log.Information("Updated {updateMatch} in {time} ({matchEntitiesCount} MatchEntities) ({matchRefineCount} MatchRefine) ", updateMatchResult.Value.ToString(), sw, matchEntityResultString, matchRefineResult.Value.Acknowledged ? matchRefineResult.Value.ModifiedCount : "notAcknowledged");
 
             return Result.Success();
+        }
+
+        public async Task<Result<UpdateResult>> AddMatchContext(string documentId, MatchContext matchContext)
+        {
+            var matchBaseResult = await MatchBaseService.GetById(documentId);
+            if (!matchBaseResult.IsSuccess)
+                return matchBaseResult.Error!;
+
+            matchBaseResult.Value.MatchContexts = new();
+            var currentContext = matchBaseResult.Value.MatchContexts?.Find(c => c.ContextId == matchContext.ContextId);
+
+            if (currentContext is not null && currentContext.ScoreOverride == matchContext.ScoreOverride)
+                return Error.Validation("MatchBase.MatchContext.ScoreOverrideValidation", "MatchContext ScoreOverride has not changed");
+
+            if (currentContext is not null)
+                matchBaseResult.Value.MatchContexts?.RemoveAll(c => c.ContextId == matchContext.ContextId);
+
+            matchBaseResult.Value.MatchContexts.Add(matchContext);
+
+            var combinationUpdateResult = await MatchBaseService.CombinationUpdateMatchContext(matchBaseResult.Value, matchBaseResult.Value.MatchContexts, $"NewContext: {matchContext.ContextId}").UpdateDocuments();
+            if (!combinationUpdateResult.IsSuccess)
+                return combinationUpdateResult;
+
+            var updateScoreResult = await this.UpdateMatchScore(documentId, matchBaseResult.Value.Score, true);
+            if (!updateScoreResult.IsSuccess)
+                return updateScoreResult.Error!;
+
+            return combinationUpdateResult;
         }
 
         /// <summary>
@@ -315,7 +361,7 @@ namespace MMIv8_Ktype.Core.Services.Mapping
                 return createResult;
 
             if (newScore is not null)
-              return await UpdateMatchScore(matchBaseType, matchHash, newScore ?? 0);
+              return await UpdateMatchScore(matchHash, newScore ?? 0);
             else
                 return Result.Success();
         }
@@ -326,13 +372,13 @@ namespace MMIv8_Ktype.Core.Services.Mapping
             if (!matchEntityPartialResult.IsSuccess)
                 return matchEntityPartialResult;
 
+            var updateResult = await UpdateMatchScore(matchHash, matchEntityPartialResult.Value.Reset(versionProvider).Score, true);
+            if (!updateResult.IsSuccess)
+                return updateResult;
+
             var deleteResult = await MatchBaseService.DeleteById(matchHash);
             if (!deleteResult.IsSuccess)
                 return deleteResult;
-
-            var updateResult = await UpdateMatchScore(matchBaseType, matchHash, matchEntityPartialResult.Value.Reset(versionProvider).Score);
-            if (!updateResult.IsSuccess)
-                return updateResult;
 
             return Result.Success();
         }

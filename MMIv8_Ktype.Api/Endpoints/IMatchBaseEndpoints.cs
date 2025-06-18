@@ -25,6 +25,9 @@ namespace MMIv8_Ktype.Api.Endpoints
         [Put("/{MatchBaseType}")]
         Task<Result> UpdateMatchBaseScore([FromRoute] MatchBaseType MatchBaseType, [FromQuery] string MatchHash, [FromQuery] decimal NewScore);
 
+        [Post("/AddContext")]
+        Task<Result> AddMatchBaseContext(string MatchHash, [FromBody] AddMatchContext MatchContext);
+
         [Put("/Partial/{MatchBaseType}")]
         Task<Result> StorePartialMatchBase([FromRoute] MatchBaseType MatchBaseType, [FromQuery] string MatchHash, [FromQuery] decimal NewScore);
 
