@@ -1,6 +1,4 @@
-﻿using Microsoft.AspNetCore.Identity;
-using Microsoft.AspNetCore.Mvc.RazorPages;
-using MMIv8_Ktype.AccessMdb.Maps;
+﻿using MMIv8_Ktype.AccessMdb.Maps;
 using MMIv8_Ktype.Api;
 using MMIv8_Ktype.Api.Endpoints;
 using MMIv8_Ktype.Api.Requests;
@@ -12,15 +10,13 @@ using MMIv8_Ktype.Models.Status;
 using MMIv8_Ktype.Models.Util;
 using MongoDB.Bson;
 using Serilog;
-using System.Configuration;
+using System.Collections.Generic;
 using System.Data;
 using System.Data.OleDb;
 using System.Dynamic;
-using System.Formats.Asn1;
 using System.Reflection.Metadata;
-using System.Security.Cryptography;
 using System.Text.Json;
-using System.Text.RegularExpressions;
+using System.Xml.Linq;
 using static MMIv8_Ktype.AccessMdb.Operations.AccessDBOperation;
 using static MMIv8_Ktype.AccessMdb.Operations.GenerateMMIEntities;
 
@@ -38,129 +34,63 @@ namespace MMIv8_Ktype.AccessMdb.Operations
 
         public abstract Task ExecuteOperation(ILogger log);
 
-        public delegate Task<SerializableResult<PagedResponse<T>>> GetPagedDocumentsDelegate<T>(int page, int pageSize);
-        public delegate Task<SerializableResult<PagedCursorResponse<T>>> GetPagedDocumentsDelegatev2<T>(string? cursor, int pageSize);
+        public delegate Task<SerializableResult<T>> GetDocumentDelegate<T>();
         public delegate Task<SerializableResult<List<T>>> GetDocumentsDelegate<T>();
-        public delegate Task<SerializableResult<T>> GetDocumentsByIdDelegate<T, Tid>(Tid documentId);
-        public delegate IEnumerable<TOut> ConvertDocumentToDataRowObject<T, TOut>(T document);
-        public delegate TCursor ConvertDocumentIdToCursor<Tid, TCursor>(Tid documentId);
+        public delegate Task<SerializableResult<PagedCursorResponse<T>>> GetPagedDocumentsDelegatev2<T>(string? cursor, int pageSize);
+        public delegate IEnumerable<TOut> ConvertDocumentToOutput<T, TOut>(T document);
+        public delegate Dictionary<string, object> ConvertDocumentToDictionary<T>(T document);
 
-        public async Task GenerateTableFromPagedCursor<T, TObjType, TDocumentId>(
+        public async Task GenerateTableFromDocument<T, TOut>(
             string tableName,
             ILogger log,
-            GetPagedDocumentsDelegatev2<T> getPagedDocumentsFunc,
-            ConvertDocumentToDataRowObject<T, TObjType> convertToRow,
+            GetDocumentDelegate<T> getDocumentsFunc,
+            ConvertDocumentToOutput<T, TOut> documentToOutput,
+            ConvertDocumentToDictionary<TOut> outputToDictionary,
             string[] primaryKeys,
-            int pageSize = 1000,
+            int pageSize = 5000,
             bool append = false)
         {
             if (!append)
                 DropTable(tableName, log);
 
-            string? cursor = null;
-            var headerDocument = await getPagedDocumentsFunc(cursor, 1);
+            var response = await getDocumentsFunc();
+            if (!response.IsSuccess)
+                throw new Exception(response.Error!.ToString());
 
-            if (!headerDocument.IsSuccess)
-                throw new Exception(headerDocument.Error!.ToString());
-
-            if (headerDocument.Value is null or { Documents.Count: 0 } or { TotalDocuments: 0 })
+            if (response.Value is null)
                 return;
 
-            DataTable dataTable = AddNewTableToDataSet(convertToRow(headerDocument!.Value.Documents!.FirstOrDefault()!)!.First()!, tableName, primaryKeys, log) ?? throw new NoNullAllowedException();
+            List<TOut> output = [ .. documentToOutput(response.Value) ];
 
-            SerializableResult<PagedCursorResponse<T>> response;
-            do
+            string[] columns = [];
+            if (typeof(TOut) == typeof(ExpandoObject))
             {
-                response = await getPagedDocumentsFunc(cursor, pageSize);
-                if (!response.IsSuccess)
-                    throw new Exception(response.Error!.ToString());
-
-                foreach (T document in response.Value!.Documents)
-                {
-                    try
-                    {
-                        var objs = convertToRow(document);
-                        foreach (var obj in objs)
-                        {
-                            var newRow = dataTable.NewRow().ConvertObjToDataRow(obj);
-                            dataTable.Rows.Add(newRow);
-                        }
-                    }
-                    catch (Exception ex)
-                    {
-                        log.Error(ex, "Error writing {@item}", document);
-                    }
-                }
-
-                cursor = response.Value!.Cursor;
+                var headerDocument = output.First();
+                using var dataTable = AddNewTableToDataSet(outputToDictionary(headerDocument), tableName, primaryKeys, log) ?? throw new NoNullAllowedException();
+                columns = dataTable.Columns.Cast<DataColumn>().Select(c => c.ColumnName).ToArray();
             }
-            while (response.Value!.HasNextPage);
+            else
+            {
+                using var dataTable = AddNewTableToDataSet(typeof(TOut), tableName, primaryKeys, log) ?? throw new NoNullAllowedException();
+                columns = dataTable.Columns.Cast<DataColumn>().Select(c => c.ColumnName).ToArray();
+            }
 
-            CommitChanges(tableName, log);
+            using var connection = DBConnection();
+            connection.Open();
+            this.InsertIntoTable(TableName, connection, log, output, outputToDictionary, columns);
+            connection.Close();
 
-            log.Information("Loaded {tableCount} / {apicount} records into {table}", dataTable.Rows.Count, response.Value!.TotalDocuments, tableName);
+            log.Information("Loaded {tableCount} records into {table}", output.Count, tableName);
         }
 
-        public async Task GenerateTable<T, TObjType>(
-            string tableName,
-            ILogger log,
-            GetPagedDocumentsDelegate<T> getPagedDocumentsFunc,
-            ConvertDocumentToDataRowObject<T, TObjType> convertToRow,
-            string[] primaryKeys,
-            bool append = false)
-        {
-            if (!append)
-                DropTable(tableName, log);
-
-            var headerDocument = await getPagedDocumentsFunc(1, 1);
-
-            if (!headerDocument.IsSuccess)
-                throw new Exception(headerDocument.Error!.ToString());
-
-            if (headerDocument.Value is null or { Documents.Count: 0 } or { TotalDocuments: 0 })
-                return;
-
-            DataTable dataTable = AddNewTableToDataSet(convertToRow(headerDocument!.Value.Documents!.FirstOrDefault()!)!.First()!, tableName, primaryKeys, log) ?? throw new NoNullAllowedException();
-
-            int page = 1;
-            SerializableResult<PagedResponse<T>> response;
-            do
-            {
-                response = await getPagedDocumentsFunc(page, 1000);
-                if (!response.IsSuccess)
-                    throw new Exception(response.Error!.ToString());
-
-                foreach (T document in response.Value!.Documents)
-                {
-                    try
-                    {
-                        var objs = convertToRow(document);
-                        foreach (var obj in objs)
-                        {
-                            var newRow = dataTable.NewRow().ConvertObjToDataRow(obj);
-                            dataTable.Rows.Add(newRow);
-                        }
-                    }
-                    catch (Exception ex)
-                    {
-                        log.Error(ex, "Error writing {@item}", document);
-                    }
-                }
-                page++;
-            }
-            while (response.Value!.HasNextPage);
-
-            CommitChanges(tableName, log);
-
-            log.Information("Loaded {tableCount} / {apicount} records into {table}", dataTable.Rows.Count, response.Value!.TotalDocuments, tableName);
-        }
-
-        public async Task GenerateTable<T, TObjType>(
+        public async Task GenerateTableFromDocuments<T, TOut>(
             string tableName,
             ILogger log,
             GetDocumentsDelegate<T> getDocumentsFunc,
-            ConvertDocumentToDataRowObject<T, TObjType> convertToRow,
+            ConvertDocumentToOutput<T, TOut> documentToOutput,
+            ConvertDocumentToDictionary<TOut> outputToDictionary,
             string[] primaryKeys,
+            int pageSize = 2000,
             bool append = false)
         {
             if (!append)
@@ -173,28 +103,166 @@ namespace MMIv8_Ktype.AccessMdb.Operations
             if (response.Value is null or { Count: 0 })
                 return;
 
-            DataTable dataTable = AddNewTableToDataSet(convertToRow(response!.Value.FirstOrDefault()!)!.First()!, tableName, primaryKeys, log) ?? throw new NoNullAllowedException();
-
-            foreach (T document in response.Value!)
+            string[] columns = [];
+            if (typeof(TOut) == typeof(ExpandoObject))
             {
-                try
-                {
-                    var objs = convertToRow(document);
-                    foreach (var obj in objs)
-                    {
-                        var newRow = dataTable.NewRow().ConvertObjToDataRow(obj);
-                        dataTable.Rows.Add(newRow);
-                    }
-                }
-                catch (Exception ex)
-                {
-                    log.Error(ex, "Error writing {@item}", document);
-                }
+                var headerDocument = documentToOutput(response.Value!.First()).First();
+                using var dataTable = AddNewTableToDataSet(outputToDictionary(headerDocument), tableName, primaryKeys, log) ?? throw new NoNullAllowedException();
+                columns = dataTable.Columns.Cast<DataColumn>().Select(c => c.ColumnName).ToArray();
+            }
+            else
+            {
+                using var dataTable = AddNewTableToDataSet(typeof(TOut), tableName, primaryKeys, log) ?? throw new NoNullAllowedException();
+                columns = dataTable.Columns.Cast<DataColumn>().Select(c => c.ColumnName).ToArray();
             }
 
-            CommitChanges(tableName, log);
+            using var connection = DBConnection();
+            connection.Open();
+            int i = 0;
 
-            log.Information("Loaded {tableCount} / {apicount} records into {table}", dataTable.Rows.Count, response.Value!.Count, tableName);
+            foreach (var batch in response.Value!.Chunk(pageSize))
+            {
+                List<TOut> output = new();
+                foreach (var document in batch)
+                {
+                    output.AddRange(documentToOutput(document));
+                }
+
+                this.InsertIntoTable(TableName, connection, log, output, outputToDictionary, columns);
+                i += output.Count;
+
+                log.Information("Loaded {tableCount} records into {table}", output.Count, tableName);
+            }
+            connection.Close();
+
+            log.Information("Loaded {tableCount} records into {table}", i, tableName);
+        }
+
+        public async Task GenerateTableFromPagedDocuments<T, TOut, TDocumentId>(
+            string tableName,
+            ILogger log,
+            GetPagedDocumentsDelegatev2<T> getDocumentsFunc,
+            ConvertDocumentToOutput<T, TOut> documentToOutput,
+            ConvertDocumentToDictionary<TOut> outputToDictionary,
+            string[] primaryKeys,
+            int pageSize = 1000,
+            bool append = false)
+        {
+            if (!append)
+                DropTable(tableName, log);
+
+            SerializableResult<PagedCursorResponse<T>> response;
+            string[] columns = [];
+            if (typeof(TOut) == typeof(ExpandoObject))
+            {
+                response = await getDocumentsFunc(null, 1);
+                if (!response.IsSuccess)
+                    throw new Exception(response.Error!.ToString());
+
+                var headerDocument = documentToOutput(response.Value!.Documents.First()).First();
+                using var dataTable = AddNewTableToDataSet(outputToDictionary(headerDocument), tableName, primaryKeys, log) ?? throw new NoNullAllowedException();
+                columns = dataTable.Columns.Cast<DataColumn>().Select(c => c.ColumnName).ToArray();
+            }
+            else
+            {
+                using var dataTable = AddNewTableToDataSet(typeof(TOut), tableName, primaryKeys, log) ?? throw new NoNullAllowedException();
+                columns = dataTable.Columns.Cast<DataColumn>().Select(c => c.ColumnName).ToArray();
+            }
+
+            using var connection = DBConnection();
+            connection.Open();
+
+            int i = 0;
+            string? cursor = null;
+            do
+            {
+                response = await getDocumentsFunc(cursor, pageSize);
+                
+                
+                if (!response.IsSuccess)
+                    throw new Exception(response.Error!.ToString());
+
+                List<TOut> output = new();
+
+                foreach (T document in response.Value!.Documents)
+                {
+                    output.AddRange(documentToOutput(document));
+                }
+
+                this.InsertIntoTable(TableName, connection, log, output, outputToDictionary, columns);
+
+                i += output.Count;
+
+                log.Information("Loaded {tableCount} records into {table}", output.Count, tableName);
+
+                cursor = response.Value!.Cursor;
+
+                //if (response.Value!.RemmainingDocuments < pageSize)
+                    //pageSize = response.Value!.RemmainingDocuments;
+            }
+            while (response.Value!.HasNextPage);
+
+            connection.Close();
+            log.Information("Loaded {tableCount} records into {table}", i, tableName);
+        }
+
+        public void InsertIntoTable<T>(
+            string tableName,
+            OleDbConnection connection,
+            ILogger log,
+            List<T> documents,
+            ConvertDocumentToDictionary<T> documentToDictionary,
+            string[]? columns = null)
+        {
+            using var transaction = connection.BeginTransaction();
+            using var command = connection.CreateCommand();
+            command.Transaction = transaction;
+
+            columns ??= documentToDictionary(documents.First()).Keys.ToArray();
+            string columnList = string.Join(", ", columns);
+            string placeholders = string.Join(", ", columns.Select(_ => "?"));
+            command.CommandText = $"INSERT INTO {tableName} ({columnList}) VALUES ({placeholders})";
+            command.Parameters.AddRange(columns.Select(_ => new OleDbParameter { Value = DBNull.Value }).ToArray());
+
+            //foreach (var column in columns)
+            //{
+            //    command.Parameters.Add(new OleDbParameter { Value = DBNull.Value });
+            //}
+            
+            try
+            {
+                foreach (var document in documents)
+                {
+                    var dictionary = documentToDictionary(document);
+
+                    for (int j = 0; j < columns.Length; j++)
+                    {
+                        var column = columns[ j ];
+
+                        var item = dictionary.TryGetValue(column, out object? value) ? value : DBNull.Value;
+
+                        if (item is null || item is string s && string.IsNullOrWhiteSpace(s))
+                        {
+                            command.Parameters[ j ].Value = DBNull.Value;
+                        }
+                        else
+                        {
+                            var typeMap = item.ToAccessTypeConverter();
+                            command.Parameters[ j ].Value = typeMap(item);
+                        }
+                    } 
+
+                    command.ExecuteNonQuery();
+                }
+
+                transaction.Commit();
+            }
+            catch (Exception ex)
+            {
+                transaction.Rollback();
+                log.Error(ex, "Batch failed");
+                throw;
+            }
         }
 
         public OleDbConnection DBConnection()
@@ -247,11 +315,11 @@ namespace MMIv8_Ktype.AccessMdb.Operations
             }
         }
 
-        public DataTable AddNewTableToDataSet(object obj, string tableName, string[] primaryKeys, ILogger log)
+        public DataTable AddNewTableToDataSet(Type type, string tableName, string[] primaryKeys, ILogger log)
         {
             if (!TableExists(tableName))
             {
-                DataTable newTable = Extensions.ConvertObjToNewDataTable(obj, tableName, primaryKeys);
+                DataTable newTable = type.ConvertObjToNewDataTable(tableName, primaryKeys);
 
                 ExecuteSQLQuery(Extensions.BuildCreateTableSql(newTable), log);
 
@@ -442,6 +510,7 @@ namespace MMIv8_Ktype.AccessMdb.Operations
             CommitChanges(TableName, log);
         }
     }
+
     public class ResetMatchResult(string dbPath, string tableName, string outputColumn) : AccessDBOperation(dbPath, tableName)
     {
         public string OutputColumn = outputColumn;
@@ -539,11 +608,12 @@ namespace MMIv8_Ktype.AccessMdb.Operations
         {
             var matchMakeModelEndpoints = new RefitClient(log).CreateService<IMatchMakeModelEndpoints>();
 
-            await base.GenerateTable<MatchMakeModel, MatchMakeModelRecord>(
+            await base.GenerateTableFromDocuments<MatchMakeModel, MatchMakeModelRecord>(
                 TableName,
                 log,
                 () => matchMakeModelEndpoints.GenerateMakeModelMatch(),
                 (document) => [ (MatchMakeModelRecord)document ],
+                (document) => GlobalHelpers.ObjToDictionary(document),
                 [ nameof(MatchMakeModelRecord.MatchID) ]
                 );
         }
@@ -613,11 +683,12 @@ namespace MMIv8_Ktype.AccessMdb.Operations
 
         public async override Task ExecuteOperation(ILogger log)
         {
-            await base.GenerateTable<GroupedMatchMakeModelRecord, GroupedMatchMakeModelRecord>(
+            await base.GenerateTableFromDocuments<GroupedMatchMakeModelRecord, GroupedMatchMakeModelRecord>(
                 TableName,
                 log,
                 () => GroupMatchMakeModel(log),
                 (document) => [ document ],
+                (document) => GlobalHelpers.ObjToDictionary(document),
                 [ nameof(GroupedMatchMakeModelRecord.MatchID) ]
                 );
 
@@ -666,11 +737,12 @@ namespace MMIv8_Ktype.AccessMdb.Operations
         {
             var matchEntityEndpoints = new RefitClient(log, 5).CreateService<IMatchEntityEndpoints>();
 
-            await base.GenerateTable<MatchRefine, MatchRefine>(
+            await base.GenerateTableFromDocuments<MatchRefine, MatchRefine>(
                 TableName,
                 log,
                 () => matchEntityEndpoints.GetAllMatchRefine(MakeModelMatchId, TecDocEntityId, MMIv8EntityId, IsCheck, IsMatched, IsFailed, HasDifference, Status),
                 (document) => [ document ],
+                (document) => GlobalHelpers.ObjToDictionary(document),
                 [ nameof(MatchRefine.DocumentId) ],
                 append: Append
                 );
@@ -719,11 +791,12 @@ namespace MMIv8_Ktype.AccessMdb.Operations
         {
             var matchEntityEndpoints = new RefitClient(log).CreateService<IMatchEntityEndpoints>();
 
-            await base.GenerateTableFromPagedCursor<MatchEntitySummary, MatchEntitySummary, ObjectId>(
+            await base.GenerateTableFromPagedDocuments<MatchEntitySummary, MatchEntitySummary, ObjectId>(
                 TableName,
                 log,
                 (string? cursor, int pageSize) => matchEntityEndpoints.GetAllMatchEntitySummary(cursor, pageSize, MakeModelMatchId, TecDocEntityId, MMIv8EntityId, IsCheck, IsMatched, IsFailed, HasDifference, Status),
                 (document) => [ document ],
+                (document) => GlobalHelpers.ObjToDictionary(document),
                 [ nameof(MatchEntitySummary.DocumentId) ],
                 append: Append
                 );
@@ -772,7 +845,7 @@ namespace MMIv8_Ktype.AccessMdb.Operations
         {
             var matchEntityEndpoints = new RefitClient(log).CreateService<IMatchEntityEndpoints>();
 
-            await base.GenerateTableFromPagedCursor<MatchEntity, MatchEntityComparisons, ObjectId>(
+            await base.GenerateTableFromPagedDocuments<MatchEntity, MatchEntityComparisons, ObjectId>(
                 TableName,
                 log,
                 (string? cursor, int pageSize) => matchEntityEndpoints.GetAll(cursor, pageSize, MakeModelMatchId, TecDocEntityId, MMIv8EntityId, IsCheck, IsMatched, IsFailed, HasDifference, Status),
@@ -782,6 +855,7 @@ namespace MMIv8_Ktype.AccessMdb.Operations
                             document.DocumentId,
                             document.TecDocEntity.DocumentId,
                             document.MMIv8Entity.DocumentId,
+                            document.MatchMakeModelMatchID,
                             c.Value.DocumentId,
                             c.Value.MatchBaseType,
                             c.Value.MatchBaseMethod,
@@ -790,11 +864,13 @@ namespace MMIv8_Ktype.AccessMdb.Operations
                             c.Value.MMIEntity.DictToString("; "),
                             c.Value.Score,
                             c.Value.Overridden,
-                            c.Value.Overridden ?? false ? c.Value.MatchContexts!.Find(d => d.ContextId == c.Value.OverriddenBy)?.TecDocEntity.DictToString() : string.Empty,
-                            c.Value.Overridden ?? false ? c.Value.MatchContexts!.Find(d => d.ContextId == c.Value.OverriddenBy)?.MMIEntity.DictToString() : string.Empty
+                            c.Value.Overridden ?? false ? c.Value.MatchContexts!.Find(d => d.ContextId == c.Value.OverriddenBy)?.TecDocEntity.DictToStringWithKey() : string.Empty,
+                            c.Value.Overridden ?? false ? c.Value.MatchContexts!.Find(d => d.ContextId == c.Value.OverriddenBy)?.MMIEntity.DictToStringWithKey() : string.Empty
                             )
                         ),
+                (document) => GlobalHelpers.ObjToDictionary(document),
                 [ nameof(MatchEntityComparisons.DocumentId), nameof(MatchEntityComparisons.MatchBaseType) ],
+                pageSize: 500,
                 append: Append
                 );
         }
@@ -842,11 +918,12 @@ namespace MMIv8_Ktype.AccessMdb.Operations
         {
             var matchEntityEndpoints = new RefitClient(log).CreateService<IMatchEntityEndpoints>();
 
-            await base.GenerateTableFromPagedCursor<MatchEntity, ExpandoObject, ObjectId>(
+            await base.GenerateTableFromPagedDocuments<MatchEntity, ExpandoObject, ObjectId>(
                 TableName,
                 log,
                 (string? cursor, int pageSize) => matchEntityEndpoints.GetAll(cursor, pageSize, MakeModelMatchId, TecDocEntityId, MMIv8EntityId, IsCheck, IsMatched, IsFailed, HasDifference, Status),
                 (MatchEntity document) => [ new ExpandoObject().BuildExpando(document) ],
+                (document) => (document).ToDictionary(c => c.Key, c => c.Value ?? string.Empty),
                 [ nameof(MatchEntity.DocumentId) ], 
                 append: Append
                 );
@@ -909,21 +986,18 @@ namespace MMIv8_Ktype.AccessMdb.Operations
 
     public class GenerateMatchEntityById : AccessDBOperation //TODO Tidy up expando building maybe even push to projection
     {
-        private readonly string tableName;
         public string DocumentId;
         public bool Append;
         public IMatchEntityEndpoints? MatchEntityEndpoints;
 
         public GenerateMatchEntityById(string dbPath, string tableName, string documentId, bool append) : base(dbPath, tableName)
         {
-            this.tableName = tableName;
             DocumentId = documentId;
             Append = append;
             MatchEntityEndpoints = null;
         }
         public GenerateMatchEntityById(string dbPath, string tableName, string documentId, bool append, IMatchEntityEndpoints matchEntityEndpoints) : base(dbPath, tableName)
         {
-            this.tableName = tableName;
             DocumentId = documentId;
             Append = append;
             MatchEntityEndpoints = matchEntityEndpoints;
@@ -936,26 +1010,17 @@ namespace MMIv8_Ktype.AccessMdb.Operations
 
             MatchEntityEndpoints ??= new RefitClient(log).CreateService<IMatchEntityEndpoints>();
 
-            try
-            {
-                var objectId = ObjectId.Parse(DocumentId);
-                var matchEntity = await MatchEntityEndpoints.GetById(objectId);
-                if (!matchEntity.IsSuccess)
-                    throw new Exception(matchEntity.Error!.ToString());
+            var objectId = ObjectId.Parse(DocumentId);
 
-                var matchEntityExpando = new ExpandoObject().BuildExpando(matchEntity.Value);
-
-                DataTable dataTable = AddNewTableToDataSet(matchEntityExpando, tableName, [ nameof(MatchEntity.DocumentId) ], log) ?? throw new NoNullAllowedException();
-
-                var newRow = dataTable.NewRow().ConvertObjToDataRow(matchEntityExpando);
-                dataTable.Rows.Add(newRow);
-            }
-            catch (Exception ex)
-            {
-                log.Error(ex, "Error writing {@item}", DocumentId);
-            }
-                
-            CommitChanges(TableName, log);
+            await base.GenerateTableFromDocument<MatchEntity, ExpandoObject>(
+                TableName,
+                log,
+                () => MatchEntityEndpoints.GetById(objectId),
+                (MatchEntity document) => [ new ExpandoObject().BuildExpando(document) ],
+                (document) => (document).ToDictionary(c => c.Key, c => c.Value ?? string.Empty),
+                [ nameof(MatchEntity.DocumentId) ],
+                append: Append
+                );
         }
     }
 
@@ -1000,11 +1065,12 @@ namespace MMIv8_Ktype.AccessMdb.Operations
         {
             var sourceEntityEndpoints = new RefitClient(log).CreateService<ISourceMMIv8Endpoints>();
 
-            await base.GenerateTableFromPagedCursor<SourceMMIv8, SourceMMIv8, ObjectId>(
+            await base.GenerateTableFromPagedDocuments<SourceMMIv8, SourceMMIv8, ObjectId>(
                 TableName,
                 log,
                 (string? cursor, int pageSize) => sourceEntityEndpoints.GetAll(cursor, pageSize),
                 (document) => [ document ],
+                (document) => GlobalHelpers.ObjToDictionary(document),
                 [ nameof(SourceMMIv8.ExternalId) ],
                 10000
                 );
@@ -1017,11 +1083,12 @@ namespace MMIv8_Ktype.AccessMdb.Operations
         {
             var sourceEntityEndpoints = new RefitClient(log).CreateService<ISourceTecDocPCEndpoints>();
 
-            await base.GenerateTableFromPagedCursor<SourceTecDocPC, SourceTecDocPC, ObjectId>(
+            await base.GenerateTableFromPagedDocuments<SourceTecDocPC, SourceTecDocPC, ObjectId>(
                 TableName,
                 log,
                 (string? cursor, int pageSize) => sourceEntityEndpoints.GetAll(cursor, pageSize),
                 (document) => [ document ],
+                (document) => GlobalHelpers.ObjToDictionary(document),
                 [ nameof(SourceTecDocPC.ExternalId) ],
                 10000
                 );

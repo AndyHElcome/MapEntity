@@ -1,4 +1,6 @@
 ﻿
+using MongoDB.Bson.Serialization.Attributes;
+
 namespace MMIv8_Ktype.Models.Outputs
 {
     public class MatchResult //TODO potentially make this a struct
@@ -11,6 +13,7 @@ namespace MMIv8_Ktype.Models.Outputs
         public int FailCount { get; set; }
         public int PerfectCount { get; set; }
 
+        [BsonIgnore]
         public bool IsPerfect => ComparisonCount == PerfectCount;
 
     }

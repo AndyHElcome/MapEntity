@@ -29,6 +29,7 @@ namespace MMIv8_Ktype.Core.Services
         private protected SortDefinition<T> SortByDocumentId(SortDefinition<T>? sort = null) => sort is null ? Builders<T>.Sort.Ascending(c => c.DocumentId) : sort;
         private protected FilterDefinition<T> FilterByDocumentId(Tid documentId) => Builders<T>.Filter.Eq(c => c.DocumentId, documentId);
         private protected FilterDefinition<T> FilterGtDocumentId(Tid documentId) => Builders<T>.Filter.Gt(c => c.DocumentId, documentId);
+        private protected FilterDefinition<T> FilterGteDocumentId(Tid documentId) => Builders<T>.Filter.Gte(c => c.DocumentId, documentId);
         private protected FilterDefinition<T> FilterLteDocumentId(Tid documentId) => Builders<T>.Filter.Lte(c => c.DocumentId, documentId);
 
         #region Query
@@ -37,7 +38,10 @@ namespace MMIv8_Ktype.Core.Services
             filter ??= Builders<T>.Filter.Empty;
             var options = new FindOptions { BatchSize = batchSize };
 
-            return Collection.Find(filter, options).Sort(this.SortByDocumentId(sort));
+            if (sort != null)
+                return Collection.Find(filter, options).Sort(sort);
+            else
+                return Collection.Find(filter, options);
         }
 
         internal IQueryable<T> GetQueryable()
@@ -149,37 +153,32 @@ namespace MMIv8_Ktype.Core.Services
 
         public async Task<Result<PagedCursorResponse<TOut>>> PaginateDocumentsByCursor<TOut, TOutId>(FilterDefinition<T>? filter = null, Tid? cursor = default, int pageSize = 100, ProjectionDefinition<T, TOut>? projection = null)
             where TOut : ICollectionEntity<TOutId>
+            where TOutId : Tid
         {
             try
             {
                 Log.Debug("Paging {Type} after: {@cursor}", typeof(T).Name, cursor?.ToString() ?? string.Empty);
                 var sw = Stopwatch.StartNew();
 
-                var count = this.CountByFilter(filter);
-                long preCount = 1;
+                var count = Convert.ToInt32(await this.CountByFilter(filter));
 
-                if (cursor is not null)
-                {
-                    if (filter is null)
-                    {
-                        preCount = await this.CountByFilter(this.FilterLteDocumentId(cursor));
-                        filter = this.FilterGtDocumentId(cursor);
-                    }
-                    else
-                    {
-                        preCount = await this.CountByFilter(this.FilterLteDocumentId(cursor) & filter);
-                        filter = this.FilterGtDocumentId(cursor) & filter;
+                var firstDoc = await this.GetFindFluent(filter)
+                                         .Limit(1)
+                                         .Project(projection)
+                                         .FirstOrDefaultAsync();
 
-                    }
-                }
-            
-                var results = await this.GetFindFluent(filter)
-                                        .Limit(pageSize)
-                                        .Project(projection)
-                                        .ToListAsync();
+                var filterTest = this.FilterGteDocumentId(firstDoc.DocumentId) & this.FilterLteDocumentId(cursor) & filter;
+                var preCount = Convert.ToInt32(await this.CountByFilter(filterTest));
 
-                var pre = preCount == 0 ? 1 : (Convert.ToInt32(preCount) / pageSize) + 1; //TODO review this
-                var pagedResults = new PagedCursorResponse<TOut>(results, Convert.ToInt32(await count), pre, pageSize, results.LastOrDefault()?.DocumentId?.ToString() ?? string.Empty);
+                int expectedDocuments = count - preCount;
+
+                var query = this.GetFindFluent(this.FilterGtDocumentId(cursor) & filter)
+                                .Limit(expectedDocuments < pageSize ? expectedDocuments : pageSize )
+                                .Project(projection);
+                Log.Debug("Page Query {query}", query.ToString());
+                var results = await query.ToListAsync();
+
+                var pagedResults = new PagedCursorResponse<TOut>(results, count, preCount, pageSize, results.LastOrDefault()?.DocumentId?.ToString() ?? string.Empty);
 
                 sw.Stop();
                 Log.Information("Paged {Type} {@page} in {Time}", typeof(T).Name, pagedResults.PageDetails(), sw);
@@ -188,7 +187,7 @@ namespace MMIv8_Ktype.Core.Services
             }
             catch (Exception ex)
             {
-                Log.Error(ex, "Error Documents for {type}", typeof(T).Name);
+                Log.Error(ex, "Error Paging Documents for {type}", typeof(T).Name);
                 return Error.Failure($"{typeof(T)}.PaginateDocumentsByCursorFailure", $"Error paging Documents. Error: {ex.Message}");
             }
         }

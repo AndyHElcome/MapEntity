@@ -104,7 +104,7 @@ namespace MMIv8_Ktype.Models
         }
 
 
-        public static Dictionary<string, object> ObjToDictionary(object obj, bool includeNull = true)
+        public static Dictionary<string, object> ObjToDictionary(this object obj, bool includeNull = true)
         {
             if (obj is null)
                 throw new NullReferenceException("Object is empty or missing");
@@ -135,6 +135,26 @@ namespace MMIv8_Ktype.Models
                 //Serilog.Log.Error(ex, "Exception using ObjToDictionary: {obj}", obj);
                 //return new();
                 throw new Exception($"Exception using ObjToDictionary: {@obj}", ex);
+            }
+        }
+
+
+        public static Dictionary<string, Type> TypeToDictionary(this Type type)
+        {
+            try
+            {
+                PropertyInfo[] propertyInfo = type.GetProperties(BindingFlags.Instance | BindingFlags.Public | BindingFlags.FlattenHierarchy);
+
+                Dictionary<string, Type> dict = propertyInfo
+                              .ToDictionary(prop => prop.Name, prop => prop.PropertyType);
+
+                return dict ?? new();
+            }
+            catch (Exception ex)
+            {
+                //Serilog.Log.Error(ex, "Exception using ObjToDictionary: {obj}", obj);
+                //return new();
+                throw new Exception($"Exception using ObjToDictionary: {@type}", ex);
             }
         }
 

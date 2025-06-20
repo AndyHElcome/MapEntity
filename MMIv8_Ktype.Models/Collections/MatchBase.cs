@@ -110,6 +110,10 @@ namespace MMIv8_Ktype.Models.Collections
         {
             return string.Join(separator, dict.Select(c => c.Value.ToString()).Where(c => !string.IsNullOrWhiteSpace(c)));
         }
+        public static string DictToStringWithKey(this Dictionary<string, dynamic> dict, string separator = " ")
+        {
+            return string.Join(separator, dict.Select(c => $"{c.Key.ToString()}: {c.Value.ToString()}").Where(c => !string.IsNullOrWhiteSpace(c)));
+        }
     }
 
     #region Manual Matches

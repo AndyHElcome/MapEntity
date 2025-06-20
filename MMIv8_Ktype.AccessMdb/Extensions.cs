@@ -195,14 +195,17 @@ namespace MMIv8_Ktype.AccessMdb
         private static readonly Dictionary<Type, Type> AccessTypeMap = new()
         {
             { typeof(ObjectId), typeof(string) },
+            { typeof(MatchBaseType), typeof(string) },
+            { typeof(MatchBaseMethod), typeof(string) },
             // Add more mappings here as needed
         };
 
-        private static Func<T, object> ToAccessTypeConverter<T>(this T type)
+        public static Func<T, object> ToAccessTypeConverter<T>(this T type)
         {
             return type!.GetType() switch
             {
                 Type t when t.IsArray || t.IsGenericList() => c => JsonSerializer.Serialize(((IEnumerable)c!).Cast<object>().Select(d => d.ToAccessTypeConverter()(d))),
+                Type t when t == typeof(DateOnly) => c =>  c is DateOnly dateOnly ? dateOnly.ToDateTime(TimeOnly.MinValue) : DBNull.Value,
                 Type t when AccessTypeMap.TryGetValue(t, out var toType) => c => Convert.ChangeType(c!, toType),
                 _ => c => c!
             };
@@ -219,48 +222,22 @@ namespace MMIv8_Ktype.AccessMdb
             };
         }
 
-        public static T ConvertDataRowToObj<T>(this DataRow dataRow, T obj) // TODO maybe implement
-            where T : new()
+        public static DataTable ConvertObjToNewDataTable(Dictionary<string, Type> dictionary, string tableName, string[] primaryKeyNames) // TODO Move
         {
-            foreach (var propertyInfo in obj.GetType().GetProperties())
-            {
-                var typeMap = propertyInfo.PropertyType.FromAccessTypeConverter();
-                
-                var value = dataRow[ propertyInfo.Name ];
+            DataTable newDataTable = new(tableName);
+            newDataTable.Columns.AddRange(
+                dictionary.Select(c => new DataColumn(c.Key, c.Value))
+                          .ToArray()
+                );
 
-                propertyInfo.SetValue(obj, typeMap(value));
-            }
+            var primaryKeys = primaryKeyNames.Select(c => newDataTable.Columns[ c ]!)
+                                             .Where(c => c != null)
+                                             .ToArray();
 
-            return obj;
-        }
+            if (primaryKeys.Length > 0)
+                newDataTable.PrimaryKey = primaryKeys;
 
-        public static DataRow ConvertObjToDataRow(this DataRow dataRow, Dictionary<string, object> dictionary) // TODO Move
-        {
-            foreach (var item in dictionary)
-            {
-                if (item.Value is null || item.Value is string s && string.IsNullOrWhiteSpace(s))
-                {
-                    dataRow[ item.Key ] = DBNull.Value;
-                }
-                else
-                {
-                    var typeMap = item.Value.ToAccessTypeConverter();
-                    dataRow[ item.Key ] = typeMap(item.Value);
-                }
-            }
-            return dataRow;
-        }
-
-        public static DataRow ConvertObjToDataRow(this DataRow dataRow, object obj) // TODO Move
-        {
-            Dictionary<string, object> dictionary = new();
-
-            if (obj is ExpandoObject)
-                dictionary = ((ExpandoObject)obj).ToDictionary();
-            else
-                dictionary = GlobalHelpers.ObjToDictionary(obj);
-
-            return dataRow.ConvertObjToDataRow(dictionary);
+            return newDataTable;
         }
 
         public static DataTable ConvertObjToNewDataTable(Dictionary<string, object> dictionary, string tableName, string[] primaryKeyNames) // TODO Move
@@ -281,22 +258,24 @@ namespace MMIv8_Ktype.AccessMdb
             return newDataTable;
         }
 
-        public static DataTable ConvertObjToNewDataTable(object obj, string tableName, string[] primaryKeyNames) // TODO Move
+        public static DataTable ConvertObjToNewDataTable(this Type type, string tableName, string[] primaryKeyNames) // TODO Move
         {
-            Dictionary<string, object> dictionary = new();
+            var dictionary = type.TypeToDictionary();
 
-            if (obj is ExpandoObject)
-                dictionary = ((ExpandoObject)obj).ToDictionary();
-            else
-                dictionary = GlobalHelpers.ObjToDictionary(obj);
+            DataTable newDataTable = new(tableName);
+            newDataTable.Columns.AddRange(
+                dictionary.Select(c => new DataColumn(c.Key, Nullable.GetUnderlyingType(c.Value) ?? c.Value))
+                          .ToArray()
+                );
 
-            return ConvertObjToNewDataTable(dictionary, tableName, primaryKeyNames);
-        }
+            var primaryKeys = primaryKeyNames.Select(c => newDataTable.Columns[ c ]!)
+                                             .Where(c => c != null)
+                                             .ToArray();
 
-        public static DataTable ConvertObjToNewDataTable(ExpandoObject obj, string tableName, string[] primaryKeyNames) // TODO Move
-        {
-            var dictionary = obj.ToDictionary();
-            return ConvertObjToNewDataTable(dictionary, tableName, primaryKeyNames);
+            if (primaryKeys.Length > 0)
+                newDataTable.PrimaryKey = primaryKeys;
+
+            return newDataTable;
         }
 
         public static string BuildCreateTableSql(DataTable table)
@@ -320,7 +299,7 @@ namespace MMIv8_Ktype.AccessMdb
 
                 if (col.Unique || table.PrimaryKey.Contains(col))
                     primaryKeys.Add($"[{col.ColumnName}]");
-                
+
                 columns.Add(columnSql);
             }
 

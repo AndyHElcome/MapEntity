@@ -114,6 +114,7 @@ namespace MMIv8_Ktype.Core.Endpoints
                     c.MatchRefine.BestScore != null && c.ScoreSum == c.MatchRefine.BestScore, //c.IsBest,
                     c.Matched,
                     c.MatchDetail,
+                    c.MatchResult.ComparisonCount == c.MatchResult.PerfectCount, //c.MatchResult.IsPerfect,
                     c.Status.Current.Status)
                 );
 
