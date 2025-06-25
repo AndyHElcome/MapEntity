@@ -55,7 +55,7 @@ internal class Program
 
         //args = [ "MMIv8_Ktype.AccessMdb", "GenerateMatchEntity", @"C:\Users\andy.hargreaves\OneDrive - Elcome Ltd\Desktop\NEW MMI TO KTYPE\MMIv8_Ktype_Data.accdb", "MatchEntity", "68496657c745bff32b4a6df9", "null", "null", "null", "null", "null", "null", "null", "false" ];
 
-        args = [ "MMIv8_Ktype.AccessMdb", "GenerateMatchComparisons", @"C:\Users\andy.hargreaves\OneDrive - Elcome Ltd\Desktop\NEW MMI TO KTYPE\MMIv8_Ktype_Data.accdb", "MatchEntityComparisons", "6849667ac745bff32b4bfce4", "null", "null", "null", "null", "false", "null", "null", "false" ];
+        //args = [ "MMIv8_Ktype.AccessMdb", "GenerateMatchComparisons", @"C:\Users\andy.hargreaves\OneDrive - Elcome Ltd\Desktop\NEW MMI TO KTYPE\MMIv8_Ktype_Data.accdb", "MatchEntityComparisons", "6849667ac745bff32b4bfce4", "null", "null", "null", "null", "false", "null", "null", "false" ];
 
         //args = [ "MMIv8_Ktype.AccessMdb", "GenerateMatchEntityAll", @"C:\Users\andy.hargreaves\OneDrive - Elcome Ltd\Desktop\NEW MMI TO KTYPE\MMIv8_Ktype_Data.accdb", "MatchEntity", "MatchEntitySummary", "MatchEntityComparisons", "68496493c745bff32b3e6118", "null", "null", "null", "null", "null", "null", "null", "false" ];
 
@@ -64,6 +64,8 @@ internal class Program
         //args = [ "MMIv8_Ktype.AccessMdb", "GenerateMatchEntityByIds", @"C:\Users\andy.hargreaves\OneDrive - Elcome Ltd\Desktop\NEW MMI TO KTYPE\MMIv8_Ktype_Data.accdb", "MatchIdsToGenerate", "MatchEntity", "input", "output", "false" ];
 
         //args = [ "MMIv8_Ktype.AccessMdb", "UpdateMatchedFlag", @"C:\Users\andy.hargreaves\OneDrive - Elcome Ltd\Desktop\NEW MMI TO KTYPE\MMIv8_Ktype_Data.accdb", "UpdateMatchFlag", "output" ];
+
+        //args = [ "MMIv8_Ktype.AccessMdb", "UpdateFailedFlag", @"C:\Users\andy.hargreaves\OneDrive - Elcome Ltd\Desktop\NEW MMI TO KTYPE\MMIv8_Ktype_Data.accdb", "UpdateFailedFlag", "output" ];
 
         //args = [ "MMIv8_Ktype.AccessMdb", "UpdateMatchRefineStatus", @"C:\Users\andy.hargreaves\OneDrive - Elcome Ltd\Desktop\NEW MMI TO KTYPE\MMIv8_Ktype_Data.accdb", "UpdateMatchRefineStatus", "output" ];
 
@@ -75,7 +77,7 @@ internal class Program
 
         //args = [ "MMIv8_Ktype.CSV", "GenerateModelMatchCSV", @"C:\Users\andy.hargreaves\OneDrive - Elcome Ltd\Desktop\NEW MMI TO KTYPE\Output\MakeModelMatch.csv" ];
 
-        //args = [ "MMIv8_Ktype.CSV", "CSVBackupOperation", @"C:\Users\andy.hargreaves\OneDrive - Elcome Ltd\Desktop\NEW MMI TO KTYPE\Backup" ];
+        args = [ "MMIv8_Ktype.CSV", "CSVBackupOperation", @"C:\Users\andy.hargreaves\OneDrive - Elcome Ltd\Desktop\NEW MMI TO KTYPE\Backup" ];
 
         //args = [ "MMIv8_Ktype.CSV", "CSVBackupInitialise", @"C:\Users\andy.hargreaves\OneDrive - Elcome Ltd\Desktop\NEW MMI TO KTYPE\Backup", @"C:\Users\andy.hargreaves\OneDrive - Elcome Ltd\Desktop\NEW MMI TO KTYPE\Source_MMIv8.txt", @"C:\Users\andy.hargreaves\OneDrive - Elcome Ltd\Desktop\NEW MMI TO KTYPE\Source_TD_PC.txt", "PreviousRelations.csv" ];
 

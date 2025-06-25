@@ -4,12 +4,13 @@ using MMIv8_Ktype.Models.DateIntersection;
 using MMIv8_Ktype.Models.Status;
 using MongoDB.Bson;
 using MongoDB.Bson.Serialization.Attributes;
+using System;
 using System.Text.Json.Serialization;
 
 namespace MMIv8_Ktype.Models.Indexes
 {
     [Serializable]
-    public abstract class SourceEntity : ICollectionEntity<ObjectId>, IStatusHistory, IUpdateDifferences
+    public abstract class SourceEntity : ICollectionEntity<ObjectId>, IStatusHistory, IUpdateDifferences, IEquatable<SourceEntity>
     {
         [BsonId]
         [DoNotUpdateDifferences]
@@ -35,5 +36,17 @@ namespace MMIv8_Ktype.Models.Indexes
         public SourceEntity()
         {
         }
+
+        public bool Equals(SourceEntity? other) 
+            => other is not null && EntityHash == other.EntityHash && Status.Current.Status == other.Status.Current.Status;
+
+        public override bool Equals(object? obj) 
+            => Equals(obj as SourceEntity);
+
+        public static bool operator ==(SourceEntity sourceEntity1, SourceEntity sourceEntity2) 
+            => sourceEntity1 is null ? sourceEntity2 is null : sourceEntity1.Equals(sourceEntity2);
+
+        public static bool operator !=(SourceEntity sourceEntity1, SourceEntity sourceEntity2) 
+            => sourceEntity1 is null ? sourceEntity2 is not null : !sourceEntity1.Equals(sourceEntity2);
     }
 }

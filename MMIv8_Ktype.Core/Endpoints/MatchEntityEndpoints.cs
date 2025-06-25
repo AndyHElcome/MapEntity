@@ -139,9 +139,13 @@ namespace MMIv8_Ktype.Core.Endpoints
         public async Task<SerializableResult<PagedCursorResponse<MatchEntityBackup>>> GetMatchEntityBackup(string? cursor = null, int PageSize = 100)
         {
             var filterBuilder = Builders<MatchEntity>.Filter;
-            var filter = filterBuilder.Eq(c => c.Matched, true)
-                       | filterBuilder.Eq(c => c.Status.Current.Status, Models.Status.Status.Check)
-                       | filterBuilder.Eq(c => c.Status.Current.Status, Models.Status.Status.Checked);
+            var filter =
+                filterBuilder.Or(
+                    filterBuilder.Eq(c => c.Matched, true),
+                    filterBuilder.Eq(c => c.MatchResult.Failed, true) & filterBuilder.Eq(c => c.MatchResult.FailCount, 0),
+                    filterBuilder.Eq(c => c.Status.Current.Status, Models.Status.Status.Checked)
+                    );
+
             var objectId = ObjectId.TryParse(cursor, out var objectid) ? objectid : ObjectId.Empty;
 
             var projection = Builders<MatchEntity>.Projection.Expression(c 

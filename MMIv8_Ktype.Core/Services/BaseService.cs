@@ -162,23 +162,29 @@ namespace MMIv8_Ktype.Core.Services
 
                 var count = Convert.ToInt32(await this.CountByFilter(filter));
 
-                var firstDoc = await this.GetFindFluent(filter)
-                                         .Limit(1)
-                                         .Project(projection)
-                                         .FirstOrDefaultAsync();
 
-                var filterTest = this.FilterGteDocumentId(firstDoc.DocumentId) & this.FilterLteDocumentId(cursor) & filter;
-                var preCount = Convert.ToInt32(await this.CountByFilter(filterTest));
+                int precount = 0;
+                if (cursor is not null)
+                {
+                    var firstDoc = await this.GetFindFluent(filter)
+                                             .Limit(1)
+                                             .Project(projection)
+                                             .FirstOrDefaultAsync();
 
-                int expectedDocuments = count - preCount;
+                    var precountFilter = this.FilterGteDocumentId(firstDoc.DocumentId) & this.FilterLteDocumentId(cursor) & filter;
+                    precount = Convert.ToInt32(await this.CountByFilter(precountFilter));
+                }
 
-                var query = this.GetFindFluent(this.FilterGtDocumentId(cursor) & filter)
+                int expectedDocuments = count - precount;
+
+                var cursorFilter = cursor is null ? Builders<T>.Filter.Empty : this.FilterGtDocumentId(cursor);
+                var query = this.GetFindFluent(cursorFilter & filter)
                                 .Limit(expectedDocuments < pageSize ? expectedDocuments : pageSize )
                                 .Project(projection);
                 Log.Debug("Page Query {query}", query.ToString());
                 var results = await query.ToListAsync();
 
-                var pagedResults = new PagedCursorResponse<TOut>(results, count, preCount, pageSize, results.LastOrDefault()?.DocumentId?.ToString() ?? string.Empty);
+                var pagedResults = new PagedCursorResponse<TOut>(results, count, precount, pageSize, results.LastOrDefault()?.DocumentId?.ToString() ?? string.Empty);
 
                 sw.Stop();
                 Log.Information("Paged {Type} {@page} in {Time}", typeof(T).Name, pagedResults.PageDetails(), sw);
@@ -217,7 +223,7 @@ namespace MMIv8_Ktype.Core.Services
 
         #region Creation 
         //TODO Look into replace or upsert creations?
-        //TODO Find the key violation Excpetiona and return conflict ErrorType
+        //TODO Find the key violation Excpetions and return conflict ErrorType
         public async Task<Result> Create(T document)
         {
             try

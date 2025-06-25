@@ -102,6 +102,7 @@ namespace MMIv8_Ktype.AccessMdb
                    .AddProperty(prefix + nameof(obj.Cylinder_Layout), obj.Cylinder_Layout)
                    .AddProperty(prefix + nameof(obj.Cam), obj.Cam)
                    .AddProperty(prefix + nameof(obj.Valve), obj.Valve)
+                   .AddProperty(prefix + nameof(obj.DateRange), obj.DateRange.ToString())
                    .AddProperty(prefix + nameof(obj.DateRange.Start), obj.DateRange.Start)
                    .AddProperty(prefix + nameof(obj.DateRange.End), obj.DateRange.End)
                    .AddProperty(prefix + nameof(obj.Body), obj.Body)
@@ -131,6 +132,7 @@ namespace MMIv8_Ktype.AccessMdb
                    .AddProperty(prefix + nameof(obj.ModelGeneration), obj.ModelGeneration)
                    .AddProperty(prefix + nameof(obj.Token_Type), obj.Token_Type)
                    .AddProperty(prefix + nameof(obj.TypeDesc), obj.TypeDesc)
+                   .AddProperty(prefix + nameof(obj.DateRange), obj.DateRange.ToString())
                    .AddProperty(prefix + nameof(obj.DateRange.Start), obj.DateRange.Start)
                    .AddProperty(prefix + nameof(obj.DateRange.End), obj.DateRange.End)
                    .AddProperty(prefix + nameof(obj.KW), obj.KW)
@@ -197,6 +199,7 @@ namespace MMIv8_Ktype.AccessMdb
             { typeof(ObjectId), typeof(string) },
             { typeof(MatchBaseType), typeof(string) },
             { typeof(MatchBaseMethod), typeof(string) },
+            { typeof(Status), typeof(string) },
             // Add more mappings here as needed
         };
 

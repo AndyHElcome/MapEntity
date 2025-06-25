@@ -188,8 +188,9 @@ namespace MMIv8_Ktype.Core.Contexts
                 new (matchEntityIndexBuilder.Ascending(c => c.Status.Current.Status),
                      new() { Name = "Status.Current.Status", Unique = false, Background = true }
                 ),
-                new (matchEntityIndexBuilder.Ascending(c => c.MatchResult.Failed),
-                     new() { Name = "MatchResult.Failed", Unique = false, Background = true }
+                new (matchEntityIndexBuilder.Ascending(c => c.MatchResult.Failed)
+                                            .Ascending(c => c.MatchResult.FailCount),
+                     new() { Name = "MatchResult.Failed_FailCount", Unique = false, Background = true }
                 ),
                 new (matchEntityIndexBuilder.Ascending(c => c.MatchRefine.IsCheck),
                      new() { Name = "MatchRefine.IsCheck", Unique = false, Background = true }

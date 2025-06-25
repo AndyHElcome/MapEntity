@@ -488,7 +488,8 @@ namespace MMIv8_Ktype.Core.Services.Mapping
         {
             foreach (var tecdocEntity in tecdocEntities)
             {
-                var query = mmiEntities.AsParallel().Select(m => new MatchEntity(versionProvider, tecdocEntity, m, MakeModelMatchID)).Where(m => m.DateIntersection.date_Intersection != 0);
+                //var query = mmiEntities.AsParallel().Select(m => new MatchEntity(versionProvider, tecdocEntity, m, MakeModelMatchID)).Where(m => m.DateIntersection.date_Intersection != 0);
+                var query = mmiEntities.AsParallel().Select(m => new MatchEntity(versionProvider, tecdocEntity, m, MakeModelMatchID)); //TODO Can't filter out bad dates unless we add them back in when updating 
 
                 yield return query.ToList();
             }
@@ -502,7 +503,7 @@ namespace MMIv8_Ktype.Core.Services.Mapping
                        & filterBuilder.Eq(c => c.MMIv8Entity.ExternalId, request.MMI_V8_Key);
 
             var combinationFlagUpdate =
-                new CombinationPipeline<MatchEntity>(MatchEntityService.Collection, filter).AppendUpdate(c => c.SetFailedFlag(request.Flag))
+                new CombinationPipeline<MatchEntity>(MatchEntityService.Collection, filter).AppendUpdate(c => c.SetFailedFlag(request.Flag, request.Detail))
                                                                                            .AppendPipeline(c => c.AppendStatus(versionProvider.NewStatus(Status.Checked, $"Updated Failed Flag {request.Detail}")));
             var combinationFlagResult = await combinationFlagUpdate.UpdateDocuments();
             if (!combinationFlagResult.IsSuccess)
@@ -527,7 +528,7 @@ namespace MMIv8_Ktype.Core.Services.Mapping
                        & filterBuilder.Eq(c => c.MMIv8Entity.ExternalId, request.MMI_V8_Key);
 
             var combinationFlagUpdate =
-                new CombinationPipeline<MatchEntity>(MatchEntityService.Collection, filter).AppendUpdate(c => c.SetMatchedFlag(request.Flag))
+                new CombinationPipeline<MatchEntity>(MatchEntityService.Collection, filter).AppendUpdate(c => c.SetMatchedFlag(request.Flag, request.Detail))
                                                                                            .AppendPipeline(c => c.AppendStatus(versionProvider.NewStatus(Status.Checked, $"Updated Match Flag {request.Detail}")));
             var combinationFlagResult = await combinationFlagUpdate.UpdateDocuments();
             if (!combinationFlagResult.IsSuccess)

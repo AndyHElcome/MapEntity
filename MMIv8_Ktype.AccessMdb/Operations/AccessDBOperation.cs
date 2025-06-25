@@ -507,7 +507,7 @@ namespace MMIv8_Ktype.AccessMdb.Operations
                 }
             }
 
-            CommitChanges(TableName, log);
+            //CommitChanges(TableName, log);
         }
     }
 
@@ -577,7 +577,42 @@ namespace MMIv8_Ktype.AccessMdb.Operations
                 }
             }
 
-            CommitChanges(TableName, log);
+            //CommitChanges(TableName, log);
+        }
+    }
+
+    public class UpdateFailedFlag(string dbPath, string tableName, string outputColumn) : AccessDBOperation(dbPath, tableName)
+    {
+        public string OutputColumn = outputColumn;
+
+        public async override Task ExecuteOperation(ILogger log)
+        {
+            IMatchEntityEndpoints matchEntityEndpoints = new RefitClient(log).CreateService<IMatchEntityEndpoints>();
+
+            DataTable dataTable = AddTableToDataSet(TableName, log) ?? throw new NoNullAllowedException();
+
+            foreach (DataRow row in dataTable.Rows)
+            {
+                try
+                {
+                    string[] args = row.ItemArray.Select(c => c?.ToString() ?? string.Empty)
+                                                 .Where(c => c != row[ OutputColumn ].ToString())
+                                                 .ToArray();
+
+                    UpdateFlagRequest record = GlobalHelpers.StringToObject<UpdateFlagRequest>(args);
+
+                    await matchEntityEndpoints.UpdateFailedFlag(record); //TODO Create return types
+
+                    row[ OutputColumn ] = "Updated";
+                }
+                catch (Exception ex)
+                {
+                    row[ OutputColumn ] = ex.Message;
+                    log.Error(ex, "Error in {@args}", row.ItemArray);
+                }
+            }
+
+            //CommitChanges(TableName, log);
         }
     }
 
@@ -797,7 +832,7 @@ namespace MMIv8_Ktype.AccessMdb.Operations
                 (string? cursor, int pageSize) => matchEntityEndpoints.GetAllMatchEntitySummary(cursor, pageSize, MakeModelMatchId, TecDocEntityId, MMIv8EntityId, IsCheck, IsMatched, IsFailed, HasDifference, Status),
                 (document) => [ document ],
                 (document) => GlobalHelpers.ObjToDictionary(document),
-                [ nameof(MatchEntitySummary.DocumentId) ],
+                [ nameof(MatchEntitySummary.DocumentId), nameof(MatchEntitySummary.TecDocEntityId), nameof(MatchEntitySummary.MMIv8EntityId) ],
                 append: Append
                 );
         }
