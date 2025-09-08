@@ -162,11 +162,15 @@ namespace MMIv8_Ktype.Core.Services
 
                 var count = Convert.ToInt32(await this.CountByFilter(filter));
 
+                if (count == 0)
+                    return Error.NoContent($"{typeof(T)}.NoContent", $"Could not find any documents");
+                //return new PagedCursorResponse<TOut>([], count, 0, pageSize, string.Empty);
 
                 int precount = 0;
                 if (cursor is not null)
                 {
                     var firstDoc = await this.GetFindFluent(filter)
+                                             .Sort(SortByDocumentId())
                                              .Limit(1)
                                              .Project(projection)
                                              .FirstOrDefaultAsync();
@@ -179,6 +183,7 @@ namespace MMIv8_Ktype.Core.Services
 
                 var cursorFilter = cursor is null ? Builders<T>.Filter.Empty : this.FilterGtDocumentId(cursor);
                 var query = this.GetFindFluent(cursorFilter & filter)
+                                .Sort(SortByDocumentId())
                                 .Limit(expectedDocuments < pageSize ? expectedDocuments : pageSize )
                                 .Project(projection);
                 Log.Debug("Page Query {query}", query.ToString());

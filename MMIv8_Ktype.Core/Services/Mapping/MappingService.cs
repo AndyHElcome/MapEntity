@@ -633,7 +633,7 @@ namespace MMIv8_Ktype.Core.Services.Mapping
             if (!versionResult.IsSuccess)
                 return versionResult;
 
-            var entityRelations = entityRelationsRequest.ConvertAll(c => new EntityRelation(versionResult.Value.DocumentId, c.MMI_V8_Key, c.KTypNr, c.Comment, c.VersionNumber));
+            var entityRelations = entityRelationsRequest.ConvertAll(c => new EntityRelation(versionResult.Value.DocumentId, c.MMI_V8_Key, c.KTypNr, c.Comment, versionNumber));
 
             var createResult = await EntityRelationService.Create([ .. entityRelations ]);
             if (!createResult.IsSuccess)
