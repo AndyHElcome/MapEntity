@@ -56,7 +56,18 @@ namespace MMIv8_Ktype.Api.Endpoints
             bool? IsFailed = null,
             bool? HasDifference = null,
             Status[]? Status = null);
-        
+
+        [Get("/DistinctMMIv8")]
+        Task<SerializableResult<List<MMI_V8_Key>>> GetDistinctMMIv8(
+            string? MakeModelMatchId = null,
+            string? TecDocEntityId = null,
+            string? MMIv8EntityId = null,
+            bool? IsCheck = null,
+            bool? IsMatched = null,
+            bool? IsFailed = null,
+            bool? HasDifference = null,
+            Status[]? Status = null);
+
         [Post("/CheckEntityMatch")] //TODO Change to add the match into the collection
         Task<SerializableResult<MatchEntity>> CheckEntityMatch([FromQuery] int KtypNr, [FromQuery] int MMI_V8_Key);
 

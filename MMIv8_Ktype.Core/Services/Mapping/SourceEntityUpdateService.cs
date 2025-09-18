@@ -128,6 +128,10 @@ namespace MMIv8_Ktype.Core.Services.Mapping
                     var matchEntityUpdate = MatchEntityService.Update(matchEntityFilterSourceEntity).AppendUpdate(c => c.UpdateEntity(sourceEntity)) //TODO check this is still updating properly
                                                                                                     .AppendPipeline(c => c.AppendStatus(versionProvider.NewStatus(Status.Check, $"Updated {typeof(TEntity).Name} Entity")));
                     var matchEntityResult = await matchEntityUpdate.UpdateDocuments();
+
+                    //Added this as it should continue when there are duplicates
+                    var sourceMakeModelMatchesResult = await MatchMakeModelService.GetByModelId(sourceEntity.SourceIndex, sourceEntity.SourceEntityModelHash, true);
+                    newMatchesToCreate = sourceMakeModelMatchesResult.IsSuccess ? sourceMakeModelMatchesResult.Value : new();
                 }
                 else
                 {

@@ -231,7 +231,7 @@ namespace MMIv8_Ktype.Core.Contexts
                 new (entityRelationIndexBuilder.Ascending(c => c.VersionID)
                                                .Ascending(c => c.MMI_V8_Key)
                                                .Ascending(c => c.KTypNr),
-                     new() { Name = "MMI_V8_Key_KTypNr", Unique = true, Background = true }
+                     new() { Name = "VersionID_MMI_V8_Key_KTypNr", Unique = true, Background = true }
                 ),
                 new (entityRelationIndexBuilder.Ascending(c => c.RelationKey),
                      new() { Name = "RelationKey", Unique = false, Background = true }

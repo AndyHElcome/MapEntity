@@ -367,6 +367,7 @@ namespace MMIv8_Ktype.Models.Collections
                 Start = matchEntity.TecDocEntity.DateRange.Start.ToString(),
                 End = matchEntity.TecDocEntity.DateRange.End.ToString(),
                 matchEntity.DateIntersection.date_TD_Coverage,
+                matchEntity.DateIntersection.date_TD_Span,
             });
 
         public override Dictionary<string, dynamic> CreateMMIEntity(MatchEntity matchEntity)
@@ -375,10 +376,12 @@ namespace MMIv8_Ktype.Models.Collections
                 Start = matchEntity.MMIv8Entity.DateRange.Start.ToString(),
                 End = matchEntity.MMIv8Entity.DateRange.End.ToString(),
                 matchEntity.DateIntersection.date_MMI_Coverage,
+                matchEntity.DateIntersection.date_MMI_Span,
+                matchEntity.DateIntersection.date_Intersection,
                 matchEntity.DateIntersection.date_InverseIntersection,
             });
 
-        public override decimal CalculateScore() => MatchBaseScoreExtensions.CalculateScoreDate2(TecDocEntity["date_TD_Coverage"], MMIEntity["date_MMI_Coverage"], MMIEntity["date_InverseIntersection"]);
+        public override decimal CalculateScore() => MatchBaseScoreExtensions.CalculateScoreDate3(TecDocEntity[ "date_TD_Coverage" ], TecDocEntity[ "date_TD_Span" ], MMIEntity[ "date_MMI_Coverage" ], MMIEntity[ "date_MMI_Span" ], MMIEntity[ "date_Intersection" ], MMIEntity[ "date_InverseIntersection" ]);
     }
 
     //public class MatchDateRemainder(IVersionProvider versionProvider, MatchEntity matchEntity) : MatchBase(versionProvider, matchEntity, MatchBaseType.DateRemainder, MatchBaseMethod.Automatic)

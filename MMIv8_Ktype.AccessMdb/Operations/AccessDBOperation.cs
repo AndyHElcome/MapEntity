@@ -476,6 +476,41 @@ namespace MMIv8_Ktype.AccessMdb.Operations
         }
     }
 
+    public class RemovePartialMatchBase(string dbPath, string tableName, string outputColumn) : AccessDBOperation(dbPath, tableName)
+    {
+        public string OutputColumn = outputColumn;
+
+        public async override Task ExecuteOperation(ILogger log)
+        {
+            IMatchBaseEndpoints matchBaseEndpoints = new RefitClient(log, 5).CreateService<IMatchBaseEndpoints>();
+
+            DataTable dataTable = AddTableToDataSet(TableName, log) ?? throw new NoNullAllowedException();
+
+            foreach (DataRow row in dataTable.Rows)
+            {
+                try
+                {
+                    string[] args = row.ItemArray.Select(c => c?.ToString() ?? string.Empty)
+                                             .Where(c => c != row[ OutputColumn ].ToString())
+                                             .ToArray();
+
+                    DeleteMatchBaseRequest deleteMatchBaseRequest = GlobalHelpers.StringToObject<DeleteMatchBaseRequest>(args);
+
+                    await matchBaseEndpoints.RemovePartialMatchBase(deleteMatchBaseRequest.MatchBaseType, deleteMatchBaseRequest.MatchHash); //TODO Create return types
+
+                    row[ OutputColumn ] = "Deleted";
+                }
+                catch (Exception ex)
+                {
+                    row[ OutputColumn ] = ex.Message;
+                    log.Error(ex, "Error in {@args}", row.ItemArray);
+                }
+            }
+
+            CommitChanges(TableName, log);
+        }
+    }
+
     public class UpdateMatchRefineStatus(string dbPath, string tableName, string outputColumn) : AccessDBOperation(dbPath, tableName)
     {
         public string OutputColumn = outputColumn;
@@ -1016,6 +1051,38 @@ namespace MMIv8_Ktype.AccessMdb.Operations
             await new GenerateMatchEntity(DBPath, MatchEntityTableName, MakeModelMatchId, TecDocEntityId, MMIv8EntityId, IsCheck, IsMatched, IsFailed, HasDifference, Status, Append).ExecuteOperation(log);
             await new GenerateMatchSummary(DBPath, MatchEntitySummaryTableName, MakeModelMatchId, TecDocEntityId, MMIv8EntityId, IsCheck, IsMatched, IsFailed, HasDifference, Status, Append).ExecuteOperation(log);
             await new GenerateMatchComparisons(DBPath, MatchEntityComparisonTableName, MakeModelMatchId, TecDocEntityId, MMIv8EntityId, IsCheck, IsMatched, IsFailed, HasDifference, Status, Append).ExecuteOperation(log);
+        }
+    }
+
+    public class GenerateMatchEntityBatch(string dbPath, string tableName, string inputColumn, string matchEntity, string matchEntitySummary, string matchEntityComparison) : AccessDBOperation(dbPath, tableName)
+    {
+        public string InputColumn { get; } = inputColumn;
+        public string MatchEntityTableName { get; } = matchEntity;
+        public string MatchEntitySummaryTableName { get; } = matchEntitySummary;
+        public string MatchEntityComparisonTableName { get; } = matchEntityComparison;
+
+        public async override Task ExecuteOperation(ILogger log)
+        {
+            DataTable dataTable = AddTableToDataSet(TableName, log) ?? throw new NoNullAllowedException();
+
+            bool append = false;
+
+            foreach (DataRow row in dataTable.Rows)
+            {
+                try
+                {
+                    await new GenerateMatchEntityAll(DBPath, MatchEntityTableName, MatchEntitySummaryTableName, MatchEntityComparisonTableName, row[ InputColumn ].ToString(), null, null, null, null, null, null, null, append).ExecuteOperation(log); //TODO Create return types
+                    append = true;
+                    //row[ OutputColumn ] = "Updated";
+                }
+                catch (Exception ex)
+                {
+                    //row[ OutputColumn ] = ex.Message;
+                    log.Error(ex, "Error in {@args}", row.ItemArray);
+                }
+            }
+
+            //CommitChanges(TableName, log);
         }
     }
 

@@ -18,6 +18,7 @@ using Microsoft.AspNetCore.Mvc.RazorPages;
 using MMIv8_Ktype.Core.Services;
 using MMIv8_Ktype.Models.Util;
 using System.Data.SqlTypes;
+using System.Text.Json;
 
 namespace MMIv8_Ktype.Core.Services
 {
@@ -160,14 +161,16 @@ namespace MMIv8_Ktype.Core.Services
                 Log.Debug("Paging {Type} after: {@cursor}", typeof(T).Name, cursor?.ToString() ?? string.Empty);
                 var sw = Stopwatch.StartNew();
 
+                filter ??= Builders<T>.Filter.Empty;
+
                 var count = Convert.ToInt32(await this.CountByFilter(filter));
 
-                if (count == 0)
-                    return Error.NoContent($"{typeof(T)}.NoContent", $"Could not find any documents");
-                //return new PagedCursorResponse<TOut>([], count, 0, pageSize, string.Empty);
+                if (count == 0) //TODO Fix API digestation of errors
+                    //return Error.NoContent($"{typeof(T)}.NoContent", $"Could not find any documents");
+                    return new PagedCursorResponse<TOut>([], count, 0, pageSize, string.Empty);
 
                 int precount = 0;
-                if (cursor is not null)
+                if (cursor is not null && cursor.ToString() != ObjectId.Empty.ToString())
                 {
                     var firstDoc = await this.GetFindFluent(filter)
                                              .Sort(SortByDocumentId())
@@ -237,6 +240,11 @@ namespace MMIv8_Ktype.Core.Services
                 Log.Debug("Created {Count} {Type}", 1, typeof(T).Name);
                 return Result.Success();
             }
+            catch (MongoWriteException ex)
+            {
+                Log.Error(ex, "Error Creating {Type} {@document}", typeof(T).Name, document);
+                return Error.WriteError($"{typeof(T)}.WriteError", $"Could not create {@document} due to {ex.WriteError.Category}. {ex.WriteError.Message}");
+            }
             catch (Exception ex)
             {
                 Log.Error(ex, "Error Creating {Type} {@document}", typeof(T).Name, document);
@@ -251,6 +259,11 @@ namespace MMIv8_Ktype.Core.Services
                 await Collection.InsertManyAsync(documents);
                 Log.Debug("Created {Count} {Type}", documents.Length, typeof(T).Name);
                 return Result.Success();
+            }
+            catch (MongoBulkWriteException<T> ex)
+            {
+                Log.Error(ex, "Error Creating {Type} {errorCount}/{requestCount} \r\n{@errors}", typeof(T).Name, ex.WriteErrors.Count, ex.Result.RequestCount, JsonSerializer.Serialize(ex.WriteErrors));
+                return Error.WriteError($@"{typeof(T)}.WriteError", $"Could not create {ex.WriteErrors.Count} documents.");
             }
             catch (Exception ex)
             {

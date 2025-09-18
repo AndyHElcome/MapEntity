@@ -162,25 +162,29 @@
         }
         public int GetInverseIntersectionSpan(DateOnlyRange range)
         {
-            var currentStart = Math.Abs(Start.Year * 12 + Start.Month);
-            var currentEnd = Math.Abs(End.Year * 12 + End.Month);
-
-            var rangeStart = Math.Abs(range.Start.Year * 12 + range.Start.Month);
-            var rangetEnd = Math.Abs(range.End.Year * 12 + range.End.Month);
-
-            var startDifference = Math.Abs(currentStart - rangeStart);
-            var endDifference = Math.Abs(currentEnd - rangetEnd);
-
+            int startDifference;
             if (Start == DateOnly.MinValue || range.Start == DateOnly.MinValue)
             {
                 startDifference = 0;
             }
+            else
+            {
+                var currentStart = Math.Abs(Start.Year * 12 + Start.Month);
+                var rangeStart = Math.Abs(range.Start.Year * 12 + range.Start.Month);
+                startDifference = Math.Abs(currentStart - rangeStart);
+            }
 
+            int endDifference;
             if (End == DateOnly.MaxValue || range.End == DateOnly.MaxValue)
             {
                 endDifference = 0;
             }
-
+            else
+            {
+                var currentEnd = Math.Abs(End.Year * 12 + End.Month);
+                var rangetEnd = Math.Abs(range.End.Year * 12 + range.End.Month);
+                endDifference = Math.Abs(currentEnd - rangetEnd);
+            }
 
             return startDifference + endDifference;
         }

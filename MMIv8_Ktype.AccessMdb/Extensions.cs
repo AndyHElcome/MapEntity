@@ -1,5 +1,6 @@
 ﻿using MMIv8_Ktype.Models;
 using MMIv8_Ktype.Models.Collections;
+using MMIv8_Ktype.Models.DateIntersection;
 using MMIv8_Ktype.Models.Outputs;
 using MMIv8_Ktype.Models.Status;
 using MMIv8_Ktype.Models.Util;
@@ -208,7 +209,8 @@ namespace MMIv8_Ktype.AccessMdb
             return type!.GetType() switch
             {
                 Type t when t.IsArray || t.IsGenericList() => c => JsonSerializer.Serialize(((IEnumerable)c!).Cast<object>().Select(d => d.ToAccessTypeConverter()(d))),
-                Type t when t == typeof(DateOnly) => c =>  c is DateOnly dateOnly ? dateOnly.ToDateTime(TimeOnly.MinValue) : DBNull.Value,
+                Type t when t == typeof(DateOnly) => c => c is DateOnly dateOnly ? dateOnly.ToDateTime(TimeOnly.MinValue) : DBNull.Value,
+                Type t when t == typeof(DateOnlyRange) => c => c is DateOnlyRange dateOnlyRange ? dateOnlyRange.ToString() : DBNull.Value,
                 Type t when AccessTypeMap.TryGetValue(t, out var toType) => c => Convert.ChangeType(c!, toType),
                 _ => c => c!
             };

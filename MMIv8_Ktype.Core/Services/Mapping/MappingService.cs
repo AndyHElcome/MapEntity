@@ -432,27 +432,27 @@ namespace MMIv8_Ktype.Core.Services.Mapping
             Task<Result<List<EntityRelation>>> checkTask = this.CheckPreviousMatchedFlag(newMatchesList);
 
             var createResult = await MatchEntityService.Create([ .. newMatches ]);
-            if (!createResult.IsSuccess)
+            if (!createResult.IsSuccess && createResult.Error!.Type != ErrorType.WriteError) //Added this as it should continue when there are duplicates
                 return createResult;
 
             var checkedEntityRelationsResult = await checkTask;
-            if (checkedEntityRelationsResult.IsSuccess )
+            if (checkedEntityRelationsResult.IsSuccess)
             {
                 var bulkCombinationUpdateResult = await MatchEntityService.BulkCombinationUpdatePreviousMatchedFlag(checkedEntityRelationsResult.Value).CommitBulkWrite();
 
                 sw.Stop();
-                Log.Information("Bulk Created {created} with {count} from Previous Match in {time}", newMatches.Count, bulkCombinationUpdateResult.Value.Acknowledged ? bulkCombinationUpdateResult.Value.MatchedCount : "0", sw);
+                Log.Information("Bulk Created {created} in {time} ({count} previous matches found)", newMatches.Count, bulkCombinationUpdateResult.Value.Acknowledged ? bulkCombinationUpdateResult.Value.MatchedCount : "0", sw);
                 return bulkCombinationUpdateResult;
             }
-            else if (checkedEntityRelationsResult.Error.Type == ErrorType.NoContent)
+            else if (checkedEntityRelationsResult.Error!.Type == ErrorType.NoContent)
             {
                 sw.Stop();
-                Log.Information("Bulk Created {created} in {time} (no previous match found)", newMatches.Count, sw);
+                Log.Information("Bulk Created {created} in {time} (no previous matches found)", newMatches.Count, sw);
                 return Result.Success();
             }
             else
-            { 
-                return checkedEntityRelationsResult; 
+            {
+                return checkedEntityRelationsResult;
             }
         }
 
@@ -488,8 +488,8 @@ namespace MMIv8_Ktype.Core.Services.Mapping
         {
             foreach (var tecdocEntity in tecdocEntities)
             {
-                //var query = mmiEntities.AsParallel().Select(m => new MatchEntity(versionProvider, tecdocEntity, m, MakeModelMatchID)).Where(m => m.DateIntersection.date_Intersection != 0);
-                var query = mmiEntities.AsParallel().Select(m => new MatchEntity(versionProvider, tecdocEntity, m, MakeModelMatchID)); //TODO Can't filter out bad dates unless we add them back in when updating 
+                var query = mmiEntities.AsParallel().Select(m => new MatchEntity(versionProvider, tecdocEntity, m, MakeModelMatchID)).Where(m => m.DateIntersection.date_Intersection != 0);
+                //var query = mmiEntities.AsParallel().Select(m => new MatchEntity(versionProvider, tecdocEntity, m, MakeModelMatchID)); //TODO Can't filter out bad dates unless we add them back in when updating 
 
                 yield return query.ToList();
             }

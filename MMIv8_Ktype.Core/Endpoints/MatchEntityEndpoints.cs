@@ -142,23 +142,42 @@ namespace MMIv8_Ktype.Core.Endpoints
             var filter =
                 filterBuilder.Or(
                     filterBuilder.Eq(c => c.Matched, true),
-                    filterBuilder.Eq(c => c.MatchResult.Failed, true) & filterBuilder.Eq(c => c.MatchResult.FailCount, 0),
-                    filterBuilder.Eq(c => c.Status.Current.Status, Models.Status.Status.Checked)
+                    filterBuilder.Eq(c => c.MatchResult.Failed, true) & filterBuilder.Eq(c => c.MatchResult.FailCount, 0)
                     );
 
             var objectId = ObjectId.TryParse(cursor, out var objectid) ? objectid : ObjectId.Empty;
 
-            var projection = Builders<MatchEntity>.Projection.Expression(c 
+            var projection = Builders<MatchEntity>.Projection.Expression(c
                 => new MatchEntityBackup(c.DocumentId,
                                          c.MMIv8Entity.MMI_V8_Key,
-                                         c.TecDocEntity.KTypNr, 
-                                         c.Matched, 
-                                         c.MatchDetail ?? "", 
-                                         c.MatchResult.Failed, 
-                                         c.MatchResult.FailDetail ?? "", 
+                                         c.TecDocEntity.KTypNr,
+                                         c.Matched,
+                                         c.MatchDetail ?? "",
+                                         c.MatchResult.Failed,
+                                         c.MatchResult.FailDetail ?? "",
                                          c.Status.Current.Status));
 
             return await matchEntityService.PaginateDocumentsByCursor<MatchEntityBackup, ObjectId>(filter: filter, cursor: objectId, pageSize: PageSize, projection: projection);
+        }
+
+        public async Task<SerializableResult<List<MMI_V8_Key>>> GetDistinctMMIv8(
+            string? MakeModelMatchId = null,
+            string? TecDocEntityId = null,
+            string? MMIv8EntityId = null,
+            bool? IsCheck = null,
+            bool? IsMatched = null,
+            bool? IsFailed = null,
+            bool? HasDifference = null,
+            Status[]? Status = null)
+        {
+            var filter = MatchEntityFilter(MakeModelMatchId, TecDocEntityId, MMIv8EntityId, IsCheck, IsMatched, IsFailed, HasDifference, Status);
+
+            var results = await matchEntityService.GetDistinctDocuments<int>(nameof(MatchEntity.MMIv8Entity) + '.' + nameof(SourceMMIv8.ExternalId), filter: filter);
+
+            if (!results.IsSuccess)
+                return results.Error!;
+
+            return Result.Success(results.Value.ConvertAll(c => new MMI_V8_Key(c)));
         }
 
         public async Task<SerializableResult<MatchEntity>> GetMatchEntity(int KtypNr, int MMI_V8_Key)

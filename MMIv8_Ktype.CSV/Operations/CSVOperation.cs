@@ -25,7 +25,7 @@ namespace MMIv8_Ktype.CSV.Operations
     {
         public string CSVPath { get; set; } = csvPath;
 
-        public CsvReadingStream CsvStream => new(CSVPath);
+        public CSVReadingStream CsvStream => new(CSVPath);
 
         public abstract Task ExecuteOperation(ILogger log);
     }
@@ -35,12 +35,12 @@ namespace MMIv8_Ktype.CSV.Operations
         public string CSVPath { get; set; } = csvPath;
         public bool Append { get; set; } = append;
 
-        public CsvWritingStream CsvStream => new(CSVPath, Append);
+        public CSVWritingStream CsvStream => new(CSVPath, Append);
 
         public abstract Task ExecuteOperation(ILogger log);
     }
 
-    public class CsvWritingStream(string csvPath, bool append = false) : IDisposable
+    public class CSVWritingStream(string csvPath, bool append = false) : IDisposable
     {
         public StreamWriter Writer => new StreamWriter(csvPath, append, Encoding.UTF8);
         public CsvWriter CsvWriter => new CsvWriter(Writer, CultureInfo.InvariantCulture);
@@ -53,7 +53,7 @@ namespace MMIv8_Ktype.CSV.Operations
         }
     }
 
-    public class CsvReadingStream(string csvPath) : IDisposable
+    public class CSVReadingStream(string csvPath) : IDisposable
     {
         public StreamReader Reader => new StreamReader(csvPath, Encoding.UTF8);
         //public CsvReader CsvReader => new CsvReader(Reader, CultureInfo.InvariantCulture);
@@ -64,6 +64,42 @@ namespace MMIv8_Ktype.CSV.Operations
             Reader.Close();
             Reader.Dispose();
             CsvReader.Dispose();
+        }
+    }
+
+    public sealed class DEBUG(string csvPath) : ICSVOperation
+    {
+        public string CSVPath { get; set; } = csvPath;
+
+        public async Task ExecuteOperation(ILogger log)
+        {
+
+            var path = Path.GetFullPath(CSVPath);
+            string filepath;
+
+            filepath = Path.Combine(path, "MatchBody.csv");
+            Task MatchBody = new UpdateMatchBaseScore(filepath).ExecuteOperation(log);
+            filepath = Path.Combine(path, "MatchDrive.csv");
+            Task MatchDrive = new UpdateMatchBaseScore(filepath).ExecuteOperation(log);
+            filepath = Path.Combine(path, "MatchFuel.csv");
+            Task MatchFuel = new UpdateMatchBaseScore(filepath).ExecuteOperation(log);
+
+            await Task.WhenAll(MatchBody, MatchDrive, MatchFuel);
+
+            filepath = Path.Combine(path, "MatchedMatches.csv");
+            Task MatchedMatches = new UpdateMatchedFlag(filepath).ExecuteOperation(log);
+            filepath = Path.Combine(path, "FailedMatches.csv");
+            Task FailedMatches = new UpdateFailedFlag(filepath).ExecuteOperation(log);
+
+            await Task.WhenAll(MatchedMatches, FailedMatches);
+
+            filepath = Path.Combine(path, "CheckedMMIs.csv");
+            Task CheckedMMIs = new UpdateMatchRefineStatus(filepath).ExecuteOperation(log);
+            //filepath = Path.Combine(path, "CheckMMIs.csv");
+            //Task CheckMMIs = new ResetMatchResult(filepath).ExecuteOperation(log);
+
+            //await Task.WhenAll(CheckedMMIs, CheckMMIs);
+            await Task.WhenAll(CheckedMMIs);
         }
     }
 
@@ -80,7 +116,7 @@ namespace MMIv8_Ktype.CSV.Operations
 
             var matchMakeModel = client.CreateService<IMatchMakeModelEndpoints>();
             var filepath = Path.Combine(path, "MatchMakeModel.csv");
-            using (var csvWriter = new CsvWritingStream(filepath).CsvWriter)
+            using (var csvWriter = new CSVWritingStream(filepath).CsvWriter)
             {
                 csvWriter.Context.RegisterClassMap<MatchMakeModelMap>();
                 csvWriter.WriteRecords((await matchMakeModel.GenerateMakeModelMatch()).Value!);
@@ -92,11 +128,19 @@ namespace MMIv8_Ktype.CSV.Operations
             foreach (var matchBaseType in (MatchBaseType[])Enum.GetValues(typeof(MatchBaseType)))
             {
                 filepath = Path.Combine(path, $"Match{matchBaseType.ToString()}.csv");
-                var matchBases = await matchBase.GetByMatchBaseType(matchBaseType);
 
-                using (var csvWriter = new CsvWritingStream(filepath).CsvWriter)
+                try
                 {
-                    csvWriter.WriteRecords(matchBases.Value!.Documents.Select(c => c.BuildCsvObject()));
+                    var matchBases = await matchBase.GetByMatchBaseType(matchBaseType);
+                    using (var csvWriter = new CSVWritingStream(filepath).CsvWriter)
+                    {
+                        csvWriter.WriteRecords(matchBases.Value!.Documents.Select(c => c.BuildCsvObject()));
+                    }
+                }
+                catch(Exception ex)
+                {
+                    log.Error(ex ,"Error creating file for Match {matchBaseType} {path}", matchBaseType.ToString(), filepath);
+                    continue;
                 }
 
                 log.Information("Created file for Match {matchBaseType} {path}", matchBaseType.ToString(), filepath);
@@ -104,8 +148,9 @@ namespace MMIv8_Ktype.CSV.Operations
 
 
             var matchEntity = client.CreateService<IMatchEntityEndpoints>();
-            filepath = Path.Combine(path, "MatchEntity.csv");
-            using (var csvWriter = new CsvWritingStream(filepath).CsvWriter)
+            filepath = Path.Combine(path, "...");
+            using (var csvWriterMatched = new CSVWritingStream(Path.Combine(path, "MatchedMatches.csv")).CsvWriter)
+            using (var csvWriterFailed = new CSVWritingStream(Path.Combine(path, "FailedMatches.csv")).CsvWriter)
             {
                 string? cursor = null;
                 int page = 1;
@@ -116,7 +161,13 @@ namespace MMIv8_Ktype.CSV.Operations
                     response = await matchEntity.GetMatchEntityBackup(cursor, 1000);
                     if (!response.IsSuccess)
                         throw new Exception(response.Error!.ToString());
-                    csvWriter.WriteRecords(response.Value!.Documents);
+
+                    var results = response.Value!.Documents.Where(c => c.Matched).Select(c => new UpdateFlagRequest(c.KTypNr, c.MMI_V8_Key, c.Matched, c.MatchDetail));
+                    csvWriterMatched.WriteRecords(results);
+
+                    results = response.Value!.Documents.Where(c => c.Failed).Select(c => new UpdateFlagRequest(c.KTypNr, c.MMI_V8_Key, c.Failed, c.FailDetail));
+                    csvWriterFailed.WriteRecords(results);
+
                     page++;
                     cursor = response.Value!.Cursor;
                 }
@@ -124,10 +175,30 @@ namespace MMIv8_Ktype.CSV.Operations
             }
             log.Information("Created file for Match Entity {path}", filepath);
 
+            filepath = Path.Combine(path, "CheckMMIs.csv");
+            using (var csvWriter = new CSVWritingStream(filepath).CsvWriter)
+            {
+                var response = await matchEntity.GetDistinctMMIv8(IsCheck: true);
+                if (!response.IsSuccess)
+                    throw new Exception(response.Error!.ToString());
+                csvWriter.WriteRecords(response.Value!);
+            }
+            log.Information("Created file for Previous Relations {path}", filepath);
+
+            filepath = Path.Combine(path, "CheckedMMIs.csv");
+            using (var csvWriter = new CSVWritingStream(filepath).CsvWriter)
+            {
+                var response = await matchEntity.GetDistinctMMIv8(IsCheck: false);
+                if (!response.IsSuccess)
+                    throw new Exception(response.Error!.ToString());
+                csvWriter.WriteRecords(response.Value!);
+            }
+            log.Information("Created file for Previous Relations {path}", filepath);
+
 
             var entityRelation = client.CreateService<IEntityRelationEndpoints>();
             filepath = Path.Combine(path, "CurrentRelations.csv");
-            using (var csvWriter = new CsvWritingStream(filepath).CsvWriter)
+            using (var csvWriter = new CSVWritingStream(filepath).CsvWriter)
             {
                 var response = await entityRelation.GetCurrentEntityRelations();
                 if (!response.IsSuccess)
@@ -137,7 +208,7 @@ namespace MMIv8_Ktype.CSV.Operations
             log.Information("Created file for Current Relations {path}", filepath);
 
             filepath = Path.Combine(path, "PreviousRelations.csv");
-            using (var csvWriter = new CsvWritingStream(filepath).CsvWriter)
+            using (var csvWriter = new CSVWritingStream(filepath).CsvWriter)
             {
                 var response = await entityRelation.GetPreviousEntityRelations();
                 if (!response.IsSuccess)
@@ -202,8 +273,20 @@ namespace MMIv8_Ktype.CSV.Operations
 
             await Task.WhenAll(MatchBody, MatchDrive, MatchFuel, MatchMark, MatchIdentifier);
 
-            //TODO Add Read for checked EntityMatches
-            //TODO Add Read for checked EntityMatches
+            filepath = Path.Combine(path, "MatchedMatches.csv");
+            Task MatchedMatches = new UpdateMatchedFlag(filepath).ExecuteOperation(log);
+            filepath = Path.Combine(path, "FailedMatches.csv");
+            Task FailedMatches = new UpdateFailedFlag(filepath).ExecuteOperation(log);
+
+            await Task.WhenAll(MatchedMatches, FailedMatches);
+
+            filepath = Path.Combine(path, "CheckedMMIs.csv");
+            Task CheckedMMIs = new UpdateMatchRefineStatus(filepath).ExecuteOperation(log);
+            //filepath = Path.Combine(path, "CheckMMIs.csv");
+            //Task CheckMMIs = new ResetMatchResult(filepath).ExecuteOperation(log);
+
+            //await Task.WhenAll(CheckedMMIs, CheckMMIs);
+            await Task.WhenAll(CheckedMMIs);
         }
     }
 
@@ -355,7 +438,7 @@ namespace MMIv8_Ktype.CSV.Operations
     {
         public async override Task ExecuteOperation(ILogger log)
         {
-            var matchBaseEndpoints = new RefitClient(log, 5).CreateService<IMatchBaseEndpoints>();
+            var matchBaseEndpoints = new RefitClient(log, 15).CreateService<IMatchBaseEndpoints>();
             int count = 0;
 
             using (var csvReader = CsvStream.CsvReader)
@@ -390,7 +473,7 @@ namespace MMIv8_Ktype.CSV.Operations
     {
         public async override Task ExecuteOperation(ILogger log)
         {
-            var matchBaseEndpoints = new RefitClient(log, 5).CreateService<IMatchBaseEndpoints>();
+            var matchBaseEndpoints = new RefitClient(log, 15).CreateService<IMatchBaseEndpoints>();
             int count = 0;
 
             using (var csvReader = CsvStream.CsvReader)
@@ -404,6 +487,110 @@ namespace MMIv8_Ktype.CSV.Operations
                     var putMatchBaseRequest = csvReader.GetRecord<PutMatchBaseRequest>();
 
                     await matchBaseEndpoints.StorePartialMatchBase(putMatchBaseRequest.MatchBaseType, putMatchBaseRequest.MatchHash, putMatchBaseRequest.NewScore);
+                    count++;
+                }
+            }
+
+            log.Information("Loaded file: {CSVPath} ({count} records)", CSVPath, count);
+        }
+    }
+
+    public sealed class UpdateMatchedFlag(string csvPath) : CSVReadOperation(csvPath)
+    {
+        public async override Task ExecuteOperation(ILogger log)
+        {
+            var matchEntityEndpoints = new RefitClient(log, 5).CreateService<IMatchEntityEndpoints>();
+            int count = 0;
+
+            using (var csvReader = CsvStream.CsvReader)
+            {
+                csvReader.Context.AutoMap<UpdateFlagRequest>();
+
+                csvReader.Read();
+                csvReader.ReadHeader();
+                while (csvReader.Read())
+                {
+                    var request = csvReader.GetRecord<UpdateFlagRequest>();
+
+                    await matchEntityEndpoints.UpdateMatchedFlag(request);
+                    count++;
+                }
+            }
+
+            log.Information("Loaded file: {CSVPath} ({count} records)", CSVPath, count);
+        }
+    }
+
+    public sealed class UpdateFailedFlag(string csvPath) : CSVReadOperation(csvPath)
+    {
+        public async override Task ExecuteOperation(ILogger log)
+        {
+            var matchEntityEndpoints = new RefitClient(log, 5).CreateService<IMatchEntityEndpoints>();
+            int count = 0;
+
+            using (var csvReader = CsvStream.CsvReader)
+            {
+                csvReader.Context.AutoMap<UpdateFlagRequest>();
+
+                csvReader.Read();
+                csvReader.ReadHeader();
+                while (csvReader.Read())
+                {
+                    var request = csvReader.GetRecord<UpdateFlagRequest>();
+
+                    await matchEntityEndpoints.UpdateFailedFlag(request);
+                    count++;
+                }
+            }
+
+            log.Information("Loaded file: {CSVPath} ({count} records)", CSVPath, count);
+        }
+    }
+
+    public sealed class UpdateMatchRefineStatus(string csvPath) : CSVReadOperation(csvPath)
+    {
+        public async override Task ExecuteOperation(ILogger log)
+        {
+            var matchEntityEndpoints = new RefitClient(log, 5).CreateService<IMatchEntityEndpoints>();
+            int count = 0;
+
+            using (var csvReader = CsvStream.CsvReader)
+            {
+                csvReader.Context.AutoMap<MMI_V8_Key>();
+
+                csvReader.Read();
+                csvReader.ReadHeader();
+                while (csvReader.Read())
+                {
+                    var request = csvReader.GetRecord<MMI_V8_Key>();
+
+                    await matchEntityEndpoints.UpdateMatchRefineStatus(request.ExternalId);
+                    count++;
+                }
+            }
+
+            log.Information("Loaded file: {CSVPath} ({count} records)", CSVPath, count);
+        }
+    }
+
+    public sealed class ResetMatchResult(string csvPath) : CSVReadOperation(csvPath)
+    {
+        public async override Task ExecuteOperation(ILogger log)
+        {
+            var matchEntityEndpoints = new RefitClient(log, 5).CreateService<IMatchEntityEndpoints>();
+            int count = 0;
+
+            using (var csvReader = CsvStream.CsvReader)
+            {
+                csvReader.Context.AutoMap<MMI_V8_Key>();
+
+                csvReader.Read();
+                csvReader.ReadHeader();
+                while (csvReader.Read())
+                {
+                    var request = csvReader.GetRecord<MMI_V8_Key>();
+
+                    await matchEntityEndpoints.ResetMatchResult(request.ExternalId);
                     count++;
                 }
             }

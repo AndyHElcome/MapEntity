@@ -104,6 +104,7 @@ namespace MMIv8_Ktype.Models
         public static Error NotFound(string Code, string description) => new(ErrorType.NotFound, Code, description);
         public static Error NoContent(string Code, string description) => new(ErrorType.NoContent, Code, description);
         public static Error Conflict(string Code, string description) => new(ErrorType.Conflict, Code, description);
+        public static Error WriteError(string Code, string description) => new(ErrorType.WriteError, Code, description);
 
         public override string ToString() => $"[{Type.ToString()}] {Code} ({Description})";
     }
@@ -116,6 +117,7 @@ namespace MMIv8_Ktype.Models
         NotFound,
         NoContent,
         Conflict,
+        WriteError,
     }
 
 

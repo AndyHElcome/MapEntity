@@ -20,6 +20,20 @@ namespace MMIv8_Ktype.Models.Util
             return ConvertScore(dateCoverage) + ConvertScore(dateInverse);
         }
 
+        public static decimal CalculateScoreDate3(double dateTDCoverage, double dateTDSpan, double dateMMICoverage, double dateMMISpan, double dateIntersection, double dateInverseIntersection)
+        {
+            double minSpan = Math.Min(dateTDSpan, dateMMISpan);
+            double intersectionTolerance = minSpan <= 12 ? 3 : minSpan * 0.4;
+
+            if (dateIntersection < intersectionTolerance)
+                return 0;
+
+            double dateCoverage = Math.Max(dateTDCoverage, dateMMICoverage) / 100;
+            double dateInverse = 0.100 * (1 - Math.Abs(dateInverseIntersection) / 120);
+
+            return ConvertScore(dateCoverage) + ConvertScore(dateInverse);
+        }
+
         public static decimal CalculateScoreEngine(string? TDEngineCode, string? MMIEngineCode)
         {
             if (string.IsNullOrWhiteSpace(TDEngineCode) || string.IsNullOrWhiteSpace(MMIEngineCode))

@@ -23,7 +23,7 @@ namespace MMIv8_Ktype.Models.DateIntersection
         public IntersectionType date_TD_IntersectionType => td_Date.GetIntersectionType(mmi_Date);
 
         [MongoDB.Bson.Serialization.Attributes.BsonElement]
-        private int date_TD_Span => td_Date.MonthDifferenceAbs();
+        public int date_TD_Span => td_Date.MonthDifferenceAbs();
 
         [MongoDB.Bson.Serialization.Attributes.BsonElement]
         public double date_TD_Coverage => Math.Round(date_Intersection * 100.0 / date_TD_Span, 2);
@@ -32,7 +32,7 @@ namespace MMIv8_Ktype.Models.DateIntersection
         public IntersectionType date_MMI_IntersectionType => mmi_Date.GetIntersectionType(td_Date);
 
         [MongoDB.Bson.Serialization.Attributes.BsonElement]
-        private int date_MMI_Span => mmi_Date.MonthDifferenceAbs();
+        public int date_MMI_Span => mmi_Date.MonthDifferenceAbs();
 
         [MongoDB.Bson.Serialization.Attributes.BsonElement]
         public double date_MMI_Coverage => Math.Round(date_Intersection * 100.0 / date_MMI_Span, 2);
