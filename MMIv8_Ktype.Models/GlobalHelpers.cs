@@ -1,4 +1,5 @@
-﻿using MMIv8_Ktype.Models.Collections;
+﻿using Microsoft.Extensions.FileSystemGlobbing.Internal;
+using MMIv8_Ktype.Models.Collections;
 using MMIv8_Ktype.Models.Util;
 using Serilog;
 using System;
@@ -7,6 +8,7 @@ using System.Reflection;
 using System.Runtime.CompilerServices;
 using System.Security.Cryptography;
 using System.Text;
+using System.Text.Json;
 using System.Text.RegularExpressions;
 
 namespace MMIv8_Ktype.Models
@@ -103,6 +105,16 @@ namespace MMIv8_Ktype.Models
             return lcs;
         }
 
+        public static T? DictionaryToObj<T>(this Dictionary<string, object> dict, bool includeNull = true)
+        {
+            if (dict is not { Count: > 0 })
+                return default(T);
+
+            if (!includeNull)
+                dict = dict.Where(c => c.Value is not null).ToDictionary(k => k.Key, v => v.Value);
+
+            return  JsonSerializer.Deserialize<T>(JsonSerializer.Serialize(dict));
+        }
 
         public static Dictionary<string, object> ObjToDictionary(this object obj, bool includeNull = true)
         {

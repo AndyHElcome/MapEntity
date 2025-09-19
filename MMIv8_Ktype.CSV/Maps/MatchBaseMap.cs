@@ -33,4 +33,15 @@ namespace MMIv8_Ktype.CSV.Maps
             Parameter(nameof(PutMatchBaseRequest.NewScore)).Name("Score");
         }
     }
+
+    public sealed class PutMatchBaseRequestWithContextsMap : ClassMap<PutMatchBaseRequestWithContexts>
+    {
+        public PutMatchBaseRequestWithContextsMap()
+        {
+            Parameter(nameof(PutMatchBaseRequestWithContexts.MatchBaseType));
+            Parameter(nameof(PutMatchBaseRequestWithContexts.MatchHash));
+            Parameter(nameof(PutMatchBaseRequestWithContexts.NewScore)).Name("Score");
+            Parameter(nameof(PutMatchBaseRequestWithContexts.Contexts)).Name("Contexts");
+        }
+    }
 }

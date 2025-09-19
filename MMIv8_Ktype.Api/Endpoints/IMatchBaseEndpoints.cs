@@ -28,6 +28,12 @@ namespace MMIv8_Ktype.Api.Endpoints
         [Post("/AddContext")]
         Task<Result> AddMatchBaseContext(string MatchHash, [FromBody] AddMatchContext MatchContext);
 
+        [Post("/RemoveContext")]
+        Task<Result> RemoveMatchBaseContext(string MatchHash, [FromBody] RemoveMatchContext MatchContext);
+
+        [Put("/ReorderContext")]
+        Task<Result> ReorderMatchBaseContext(string MatchHash, [FromBody] string[] MatchContextsOrder);
+
         [Put("/Partial/{MatchBaseType}")]
         Task<Result> StorePartialMatchBase([FromRoute] MatchBaseType MatchBaseType, [FromQuery] string MatchHash, [FromQuery] decimal NewScore);
 

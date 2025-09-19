@@ -49,9 +49,24 @@ namespace MMIv8_Ktype.Core.Endpoints
         public async Task<Result> AddMatchBaseContext(string MatchHash, AddMatchContext MatchContext)
         {
             if (MatchContext.TecDocEntity is null && MatchContext.MMIEntity is null)
-                return Error.Validation("MatchBase.MatchContext.AddValidation","Both TecDocEntity and MMIEntity are null");
+                return Error.Validation("MatchBase.MatchContext.AddValidation", "Both TecDocEntity and MMIEntity are null");
 
             return await mappingService.AddMatchContext(MatchHash, new MatchContext(MatchContext.TecDocEntity, MatchContext.MMIEntity, MatchContext.ScoreOverride));
+        }
+
+        public async Task<Result> RemoveMatchBaseContext(string MatchHash, RemoveMatchContext MatchContext)
+        {
+            if (MatchContext.ContextId is null && MatchContext.TecDocEntity is null && MatchContext.MMIEntity is null)
+                return Error.Validation("MatchBase.MatchContext.AddValidation", "All of ContextId, TecDocEntity and MMIEntity are null");
+
+            string contextToRemove = MatchContext.ContextId ?? new MatchContext(MatchContext.TecDocEntity, MatchContext.MMIEntity, 0).ContextId;
+
+            return await mappingService.RemoveMatchContext(MatchHash, contextToRemove);
+        }
+
+        public async Task<Result> ReorderMatchBaseContext(string MatchHash, string[] MatchContextsOrder)
+        {
+            return await mappingService.ReorderMatchContext(MatchHash, MatchContextsOrder);
         }
 
         public async Task<Result> StorePartialMatchBase(MatchBaseType MatchBaseType, string MatchHash, decimal NewScore)

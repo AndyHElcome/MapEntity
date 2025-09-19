@@ -4,6 +4,8 @@ using MongoDB.Bson;
 using MongoDB.Bson.Serialization.Attributes;
 using MongoDB.Driver;
 using System.Dynamic;
+using System.Reflection.Metadata;
+using System.Text.Json;
 using System.Text.Json.Serialization;
 
 namespace MMIv8_Ktype.Models.Collections
@@ -99,6 +101,8 @@ namespace MMIv8_Ktype.Models.Collections
 
             csvObj.Score = Score;
             csvObj.Status = Status.Current?.Status;
+
+            csvObj.Contexts = MatchContexts is null || MatchContexts.Count == 0 ? "" : JsonSerializer.Serialize(MatchContexts);
 
             return csvObj;
         }
@@ -447,12 +451,12 @@ namespace MMIv8_Ktype.Models.Collections
         public string ContextId => GlobalHelpers.GenerateKey(new { TecDocEntity, MMIEntity });
         public Dictionary<string, dynamic> TecDocEntity { get; set; } = new();
         public Dictionary<string, dynamic> MMIEntity { get; set; } = new();
+        public decimal ScoreOverride { get; set; }
 
         [JsonIgnore]
         [BsonIgnore]
         public FilterDefinition<MatchEntity> OverrideFilter 
             => Builders<MatchEntity>.Filter.And([.. TecDocEntity is null ? [ Builders<MatchEntity>.Filter.Empty ] : TecDocEntity.Select(c => Builders<MatchEntity>.Filter.Eq($"TecDocEntity.{c.Key}", c.Value.ToString())), .. MMIEntity is null ? [Builders<MatchEntity>.Filter.Empty] : MMIEntity.Select(c => Builders<MatchEntity>.Filter.Eq($"MMIv8Entity.{c.Key}", c.Value.ToString()))]);
-        public decimal ScoreOverride { get; set; }
 
         public MatchContext(object? tecdocEntityObj, object? mmiEntityObj, decimal scoreOverride)
         {
@@ -464,6 +468,14 @@ namespace MMIv8_Ktype.Models.Collections
         public MatchContext()
         {
         }
+
+        public override string ToString()
+        {
+            string tecdocEntity = TecDocEntity.DictToString("; ");
+            string mmiEntity = MMIEntity.DictToString("; ");
+            return $"TD: [{tecdocEntity}] MMI: [{mmiEntity}] Score: {ScoreOverride}";
+        }
+
     }
 
 }

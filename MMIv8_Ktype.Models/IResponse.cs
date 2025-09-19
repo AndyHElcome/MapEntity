@@ -145,6 +145,7 @@ namespace MMIv8_Ktype.Models
             ErrorType.None => throw new NotImplementedException(),
             ErrorType.Failure => StatusCodes.Status500InternalServerError,
             ErrorType.Validation => StatusCodes.Status400BadRequest,
+            ErrorType.WriteError => StatusCodes.Status500InternalServerError,
             ErrorType.NotFound => StatusCodes.Status404NotFound,
             ErrorType.NoContent => StatusCodes.Status204NoContent,
             ErrorType.Conflict => StatusCodes.Status409Conflict,
@@ -155,6 +156,7 @@ namespace MMIv8_Ktype.Models
         {
             ErrorType.None => throw new NotImplementedException(),
             ErrorType.Validation => "Bad Request",
+            ErrorType.WriteError => "Write Error",
             ErrorType.NotFound => "Not Found",
             ErrorType.NoContent => "No Content",
             ErrorType.Conflict => "Conflict",

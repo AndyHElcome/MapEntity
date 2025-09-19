@@ -67,11 +67,11 @@ internal class Program
 
         //args = [ "MMIv8_Ktype.AccessMdb", "GenerateMatchEntityByIds", @"C:\Users\andy.hargreaves\OneDrive - KerridgeCS\Desktop\NEW MMI TO KTYPE\MMIv8_Ktype_Data.accdb", "MatchIdsToGenerate", "MatchEntity", "input", "output", "false" ];
 
-        //args = [ "MMIv8_Ktype.AccessMdb", "UpdateMatchedFlag", @"C:\Users\andy.hargreaves\OneDrive - KerridgeCS\Desktop\NEW MMI TO KTYPE\MMIv8_Ktype_Data.accdb", "UpdateMatchFlag", "output" ];
+        args = [ "MMIv8_Ktype.AccessMdb", "UpdateMatchedFlag", @"C:\Users\andy.hargreaves\OneDrive - KerridgeCS\Desktop\NEW MMI TO KTYPE\MMIv8_Ktype_Data.accdb", "UpdateMatchFlag", "output" ];
 
-        //args = [ "MMIv8_Ktype.AccessMdb", "UpdateFailedFlag", @"C:\Users\andy.hargreaves\OneDrive - KerridgeCS\Desktop\NEW MMI TO KTYPE\MMIv8_Ktype_Data.accdb", "UpdateFailedFlag", "output" ];
+        args = [ "MMIv8_Ktype.AccessMdb", "UpdateFailedFlag", @"C:\Users\andy.hargreaves\OneDrive - KerridgeCS\Desktop\NEW MMI TO KTYPE\MMIv8_Ktype_Data.accdb", "UpdateFailedFlag", "output" ];
 
-        //args = [ "MMIv8_Ktype.AccessMdb", "UpdateMatchRefineStatus", @"C:\Users\andy.hargreaves\OneDrive - KerridgeCS\Desktop\NEW MMI TO KTYPE\MMIv8_Ktype_Data.accdb", "UpdateMatchRefineStatus", "output" ];
+        args = [ "MMIv8_Ktype.AccessMdb", "UpdateMatchRefineStatus", @"C:\Users\andy.hargreaves\OneDrive - KerridgeCS\Desktop\NEW MMI TO KTYPE\MMIv8_Ktype_Data.accdb", "UpdateMatchRefineStatus", "output" ];
 
         //args = [ "MMIv8_Ktype.AccessMdb", "ResetMatchResult", @"C:\Users\andy.hargreaves\OneDrive - KerridgeCS\Desktop\NEW MMI TO KTYPE\MMIv8_Ktype_Data.accdb", "UpdateMatchRefineStatus", "output" ];
 

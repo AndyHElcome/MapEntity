@@ -17,6 +17,7 @@ using SharpCompress.Writers;
 using System.Formats.Asn1;
 using System.Globalization;
 using System.Text;
+using System.Text.Json;
 using System.Threading.Tasks;
 
 namespace MMIv8_Ktype.CSV.Operations
@@ -77,29 +78,34 @@ namespace MMIv8_Ktype.CSV.Operations
             var path = Path.GetFullPath(CSVPath);
             string filepath;
 
-            filepath = Path.Combine(path, "MatchBody.csv");
-            Task MatchBody = new UpdateMatchBaseScore(filepath).ExecuteOperation(log);
-            filepath = Path.Combine(path, "MatchDrive.csv");
-            Task MatchDrive = new UpdateMatchBaseScore(filepath).ExecuteOperation(log);
-            filepath = Path.Combine(path, "MatchFuel.csv");
-            Task MatchFuel = new UpdateMatchBaseScore(filepath).ExecuteOperation(log);
 
-            await Task.WhenAll(MatchBody, MatchDrive, MatchFuel);
+            filepath = Path.Combine(path, "MatchMark.csv");
+            Task MatchMark = new StorePartialMatchBase(filepath).ExecuteOperation(log);
+            await Task.WhenAll(MatchMark);
 
-            filepath = Path.Combine(path, "MatchedMatches.csv");
-            Task MatchedMatches = new UpdateMatchedFlag(filepath).ExecuteOperation(log);
-            filepath = Path.Combine(path, "FailedMatches.csv");
-            Task FailedMatches = new UpdateFailedFlag(filepath).ExecuteOperation(log);
+            //filepath = Path.Combine(path, "MatchBody.csv");
+            //Task MatchBody = new UpdateMatchBaseScore(filepath).ExecuteOperation(log);
+            //filepath = Path.Combine(path, "MatchDrive.csv");
+            //Task MatchDrive = new UpdateMatchBaseScore(filepath).ExecuteOperation(log);
+            //filepath = Path.Combine(path, "MatchFuel.csv");
+            //Task MatchFuel = new UpdateMatchBaseScore(filepath).ExecuteOperation(log);
 
-            await Task.WhenAll(MatchedMatches, FailedMatches);
+            //await Task.WhenAll(MatchBody, MatchDrive, MatchFuel);
 
-            filepath = Path.Combine(path, "CheckedMMIs.csv");
-            Task CheckedMMIs = new UpdateMatchRefineStatus(filepath).ExecuteOperation(log);
+            //filepath = Path.Combine(path, "MatchedMatches.csv");
+            //Task MatchedMatches = new UpdateMatchedFlag(filepath).ExecuteOperation(log);
+            //filepath = Path.Combine(path, "FailedMatches.csv");
+            //Task FailedMatches = new UpdateFailedFlag(filepath).ExecuteOperation(log);
+
+            //await Task.WhenAll(MatchedMatches, FailedMatches);
+
+            //filepath = Path.Combine(path, "CheckedMMIs.csv");
+            //Task CheckedMMIs = new UpdateMatchRefineStatus(filepath).ExecuteOperation(log);
             //filepath = Path.Combine(path, "CheckMMIs.csv");
             //Task CheckMMIs = new ResetMatchResult(filepath).ExecuteOperation(log);
 
             //await Task.WhenAll(CheckedMMIs, CheckMMIs);
-            await Task.WhenAll(CheckedMMIs);
+            //await Task.WhenAll(CheckedMMIs);
         }
     }
 
@@ -443,14 +449,14 @@ namespace MMIv8_Ktype.CSV.Operations
 
             using (var csvReader = CsvStream.CsvReader)
             {
-                csvReader.Context.RegisterClassMap<PutMatchBaseRequestMap>();
+                csvReader.Context.RegisterClassMap<PutMatchBaseRequestWithContextsMap>();
 
                 csvReader.Read();
                 csvReader.ReadHeader();
                 
                 while (csvReader.Read())
                 {
-                    var putMatchBaseRequest = csvReader.GetRecord<PutMatchBaseRequest>();
+                    var putMatchBaseRequest = csvReader.GetRecord<PutMatchBaseRequestWithContexts>();
                     //try
                     //{
                     //    await matchBaseEndpoints.UpdateMatchBaseScore(putMatchBaseRequest.MatchBaseType, putMatchBaseRequest.MatchHash, putMatchBaseRequest.NewScore);
@@ -461,6 +467,17 @@ namespace MMIv8_Ktype.CSV.Operations
                     //}
 
                     await matchBaseEndpoints.UpdateMatchBaseScore(putMatchBaseRequest.MatchBaseType, putMatchBaseRequest.MatchHash, putMatchBaseRequest.NewScore);
+
+                    if (!string.IsNullOrWhiteSpace(putMatchBaseRequest.Contexts))
+                    {
+                        foreach (MatchContext matchContext in JsonSerializer.Deserialize<List<MatchContext>>(putMatchBaseRequest.Contexts)!)
+                        {
+                            TecDocEntity? tecdocEntity = matchContext.TecDocEntity.DictionaryToObj<TecDocEntity>();
+                            MMIEntity? mmiEntity = matchContext.MMIEntity.DictionaryToObj<MMIEntity>();
+
+                            await matchBaseEndpoints.AddMatchBaseContext(putMatchBaseRequest.MatchHash, new AddMatchContext(tecdocEntity, mmiEntity, matchContext.ScoreOverride));
+                        }
+                    }
                     count++;
                 }
             }
@@ -478,15 +495,27 @@ namespace MMIv8_Ktype.CSV.Operations
 
             using (var csvReader = CsvStream.CsvReader)
             {
-                csvReader.Context.RegisterClassMap<PutMatchBaseRequestMap>();
+                csvReader.Context.RegisterClassMap<PutMatchBaseRequestWithContextsMap>();
 
                 csvReader.Read();
                 csvReader.ReadHeader();
                 while (csvReader.Read())
                 {
-                    var putMatchBaseRequest = csvReader.GetRecord<PutMatchBaseRequest>();
+                    var putMatchBaseRequest = csvReader.GetRecord<PutMatchBaseRequestWithContexts>();
 
                     await matchBaseEndpoints.StorePartialMatchBase(putMatchBaseRequest.MatchBaseType, putMatchBaseRequest.MatchHash, putMatchBaseRequest.NewScore);
+
+                    if (!string.IsNullOrWhiteSpace(putMatchBaseRequest.Contexts))
+                    { 
+                        foreach(MatchContext matchContext in JsonSerializer.Deserialize<List<MatchContext>>(putMatchBaseRequest.Contexts)!)
+                        {
+                            TecDocEntity? tecdocEntity = matchContext.TecDocEntity.DictionaryToObj<TecDocEntity>(false);
+                            MMIEntity? mmiEntity = matchContext.MMIEntity.DictionaryToObj<MMIEntity>(false);
+
+                            await matchBaseEndpoints.AddMatchBaseContext(putMatchBaseRequest.MatchHash, new AddMatchContext(tecdocEntity, mmiEntity, matchContext.ScoreOverride));
+                        }
+                    }
+
                     count++;
                 }
             }

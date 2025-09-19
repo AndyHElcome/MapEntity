@@ -1,6 +1,7 @@
 ﻿using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Rewrite;
+using Microsoft.Extensions.FileSystemGlobbing.Internal;
 using MMIv8_Ktype.Api.Endpoints;
 using MMIv8_Ktype.Api.Requests;
 using MMIv8_Ktype.Core.Contexts;
@@ -21,6 +22,7 @@ using System.Collections;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
+using System.Text.Json;
 using System.Xml;
 using Version = MMIv8_Ktype.Models.Collections.Version;
 
@@ -99,22 +101,36 @@ namespace MMIv8_Ktype.Core.Services.Mapping
             if (!updateMatchResult.IsSuccess)
                 return updateMatchResult;
 
+            var applyMatchResult = await ApplyMatchScore(matchBaseResult.Value);
+            if (!applyMatchResult.IsSuccess)
+                return applyMatchResult;
+
+            sw.Stop();
+            Log.Information("Updated {updateMatch} in {time}", updateMatchResult.Value.DocumentId.ToString(), sw);
+
+            return Result.Success();
+        }
+
+        private async Task<Result> ApplyMatchScore(MatchBase matchBase) // could be endpoint?
+        {
+            var sw = Stopwatch.StartNew();
+
             FilterDefinition<MatchEntity> filter;
             string matchEntityResultString;
-            if (updateMatchResult.Value.MatchContexts is null)
+            if (matchBase.MatchContexts is null)
             {
-                CombinationPipeline<MatchEntity> matchEntityUpdate = MatchEntityService.UpdateMatchBaseScoreMatchResult(updateMatchResult.Value); //TODO this might need to be recalculate
+                CombinationPipeline<MatchEntity> matchEntityUpdate = MatchEntityService.UpdateMatchBaseScoreMatchResult(matchBase); //TODO this might need to be recalculate
                 var matchEntityResult = await matchEntityUpdate.UpdateDocuments();
                 Log.Debug("Match Entities {time}", sw);
                 if (!matchEntityResult.IsSuccess)
                     return matchEntityResult;
 
                 filter = matchEntityUpdate.Filter;
-                matchEntityResultString =  matchEntityResult.Value.IsAcknowledged ? matchEntityResult.Value.ModifiedCount.ToString() : "notAcknowledged";
+                matchEntityResultString = matchEntityResult.Value.IsAcknowledged ? matchEntityResult.Value.ModifiedCount.ToString() : "notAcknowledged";
             }
             else
             {
-                BulkCombinationUpdate matchEntityUpdate = MatchEntityService.UpdateMatchBaseScoreMatchResultWithContexts(updateMatchResult.Value, out filter); //TODO this might need to be recalculate
+                BulkCombinationUpdate matchEntityUpdate = MatchEntityService.UpdateMatchBaseScoreMatchResultWithContexts(matchBase, out filter); //TODO this might need to be recalculate
                 var matchEntityResult = await matchEntityUpdate.CommitBulkWrite();
                 Log.Debug("Match Entities with Contexts {time}", sw);
                 if (!matchEntityResult.IsSuccess)
@@ -130,37 +146,93 @@ namespace MMIv8_Ktype.Core.Services.Mapping
                 return matchRefineResult;
 
             sw.Stop();
-            Log.Information("Updated {updateMatch} in {time} ({matchEntitiesCount} MatchEntities) ({matchRefineCount} MatchRefine) ", updateMatchResult.Value.ToString(), sw, matchEntityResultString, matchRefineResult.Value.Acknowledged ? matchRefineResult.Value.ModifiedCount : "notAcknowledged");
+            Log.Information("Applied changes to {updateMatch} in {time} ({matchEntitiesCount} MatchEntities) ({matchRefineCount} MatchRefine) ", matchBase.ToString(), sw, matchEntityResultString, matchRefineResult.Value.Acknowledged ? matchRefineResult.Value.ModifiedCount : "notAcknowledged");
 
             return Result.Success();
         }
 
-        public async Task<Result<UpdateResult>> AddMatchContext(string documentId, MatchContext matchContext)
+        private async Task<Result> SetMatchContext(MatchBase matchBase, List<MatchContext>? newMatchContexts, string detail)
+        {
+            var combinationUpdateResult = await MatchBaseService.CombinationUpdateMatchContext(matchBase, newMatchContexts, detail).FindAndUpdateDocument();
+            if (!combinationUpdateResult.IsSuccess)
+                return combinationUpdateResult.Error!;
+
+            var applyMatchResult = await ApplyMatchScore(combinationUpdateResult.Value);
+            if (!applyMatchResult.IsSuccess)
+                return applyMatchResult.Error!;
+
+            return combinationUpdateResult;
+        }
+
+        public async Task<Result> AddMatchContext(string documentId, MatchContext matchContext)
         {
             var matchBaseResult = await MatchBaseService.GetById(documentId);
             if (!matchBaseResult.IsSuccess)
                 return matchBaseResult.Error!;
 
-            matchBaseResult.Value.MatchContexts = new();
-            var currentContext = matchBaseResult.Value.MatchContexts?.Find(c => c.ContextId == matchContext.ContextId);
+            matchBaseResult.Value.MatchContexts ??= new();
+            var currentContext = matchBaseResult.Value.MatchContexts.Find(c => c.ContextId == matchContext.ContextId);
 
             if (currentContext is not null && currentContext.ScoreOverride == matchContext.ScoreOverride)
-                return Error.Validation("MatchBase.MatchContext.ScoreOverrideValidation", "MatchContext ScoreOverride has not changed");
+                return Error.Validation("MatchBase.MatchContext.AddContextValidation", "MatchContext ScoreOverride has not changed");
 
             if (currentContext is not null)
-                matchBaseResult.Value.MatchContexts?.RemoveAll(c => c.ContextId == matchContext.ContextId);
+                matchBaseResult.Value.MatchContexts.RemoveAll(c => c.ContextId == matchContext.ContextId);
 
             matchBaseResult.Value.MatchContexts.Add(matchContext);
 
-            var combinationUpdateResult = await MatchBaseService.CombinationUpdateMatchContext(matchBaseResult.Value, matchBaseResult.Value.MatchContexts, $"NewContext: {matchContext.ContextId}").UpdateDocuments();
-            if (!combinationUpdateResult.IsSuccess)
-                return combinationUpdateResult;
+            var setMatchContext = await this.SetMatchContext(matchBaseResult.Value, matchBaseResult.Value.MatchContexts, $"NewContext: {matchContext.ToString()}");
+            if (!setMatchContext.IsSuccess)
+                return setMatchContext.Error!;
 
-            var updateScoreResult = await this.UpdateMatchScore(documentId, matchBaseResult.Value.Score, true);
-            if (!updateScoreResult.IsSuccess)
-                return updateScoreResult.Error!;
+            return setMatchContext;
+        }
 
-            return combinationUpdateResult;
+        public async Task<Result> RemoveMatchContext(string documentId, string contextId)
+        {
+            var matchBaseResult = await MatchBaseService.GetById(documentId);
+            if (!matchBaseResult.IsSuccess)
+                return matchBaseResult.Error!;
+
+            if (matchBaseResult.Value.MatchContexts is null)
+                return Error.Validation("MatchBase.MatchContext.RemoveContextValidation", "MatchContext list empty, nothing to delete");
+
+            matchBaseResult.Value.MatchContexts ??= new();
+            var currentContext = matchBaseResult.Value.MatchContexts.Find(c => c.ContextId == contextId);
+
+            if (currentContext is null)
+                return Error.Validation("MatchBase.MatchContext.RemoveContextValidation", $"MatchContext {contextId} could not be found");
+            else
+                matchBaseResult.Value.MatchContexts?.RemoveAll(c => c.ContextId == contextId);
+
+            var setMatchContext = await this.SetMatchContext(matchBaseResult.Value, matchBaseResult.Value.MatchContexts, $"RemovedContext: {currentContext.ToString()}");
+            if (!setMatchContext.IsSuccess)
+                return setMatchContext.Error!;
+
+            return setMatchContext;
+        }
+
+        public async Task<Result> ReorderMatchContext(string documentId, string[] newMatchContextsOrder)
+        {
+            var matchBaseResult = await MatchBaseService.GetById(documentId);
+            if (!matchBaseResult.IsSuccess)
+                return matchBaseResult.Error!;
+
+            if (matchBaseResult.Value.MatchContexts is null)
+                return Error.Validation("MatchBase.MatchContext.ReorderContextValidation", "MatchContext list empty, nothing to reorder");
+
+            var currentContexts = matchBaseResult.Value.MatchContexts.Select(c => c.ContextId).Order();
+
+            if (!currentContexts.SequenceEqual(newMatchContextsOrder.Order()))
+                return Error.Validation("MatchBase.MatchContext.ReorderContextValidation", $"MatchContext list provided does not match MatchBase Contexts. {JsonSerializer.Serialize(currentContexts)}");
+
+            var orderedContexts = matchBaseResult.Value.MatchContexts.OrderBy(c => Array.IndexOf(newMatchContextsOrder, c.ContextId)).ToList(); //TODO Test works
+
+            var setMatchContext = await this.SetMatchContext(matchBaseResult.Value, orderedContexts, $"Reordered Contexts");
+            if (!setMatchContext.IsSuccess)
+                return setMatchContext.Error!;
+
+            return setMatchContext;
         }
 
         /// <summary>
@@ -372,9 +444,9 @@ namespace MMIv8_Ktype.Core.Services.Mapping
             if (!matchEntityPartialResult.IsSuccess)
                 return matchEntityPartialResult;
 
-            var updateResult = await UpdateMatchScore(matchHash, matchEntityPartialResult.Value.Reset(versionProvider).Score, true);
-            if (!updateResult.IsSuccess)
-                return updateResult;
+            var applyMatchResult = await ApplyMatchScore(matchEntityPartialResult.Value.Reset(versionProvider));
+            if (!applyMatchResult.IsSuccess)
+                return applyMatchResult;
 
             var deleteResult = await MatchBaseService.DeleteById(matchHash);
             if (!deleteResult.IsSuccess)

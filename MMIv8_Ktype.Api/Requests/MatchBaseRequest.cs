@@ -8,8 +8,10 @@ using MongoDB.Bson;
 namespace MMIv8_Ktype.Api.Requests
 {
     public record PutMatchBaseRequest(MatchBaseType MatchBaseType, string MatchHash, decimal NewScore) : IRequest;
+    public record PutMatchBaseRequestWithContexts(MatchBaseType MatchBaseType, string MatchHash, decimal NewScore, string Contexts) : IRequest;
     public record DeleteMatchBaseRequest(MatchBaseType MatchBaseType, string MatchHash) : IRequest;
     public record AddMatchContext(TecDocEntity? TecDocEntity, MMIEntity? MMIEntity, decimal ScoreOverride) : IRequest;
+    public record RemoveMatchContext(string? ContextId, TecDocEntity? TecDocEntity, MMIEntity? MMIEntity) : IRequest;
     public class MMIEntity
     {
         public string? Manufacturer { get; set; } = null;
