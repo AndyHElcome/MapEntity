@@ -101,7 +101,7 @@ namespace MMIv8_Ktype.Core.Services.Mapping
             if (!updateMatchResult.IsSuccess)
                 return updateMatchResult;
 
-            var applyMatchResult = await ApplyMatchScore(matchBaseResult.Value);
+            var applyMatchResult = await ApplyMatchScore(updateMatchResult.Value);
             if (!applyMatchResult.IsSuccess)
                 return applyMatchResult;
 
@@ -111,7 +111,7 @@ namespace MMIv8_Ktype.Core.Services.Mapping
             return Result.Success();
         }
 
-        private async Task<Result> ApplyMatchScore(MatchBase matchBase) // could be endpoint?
+        private async Task<Result> ApplyMatchScore(MatchBase matchBase) 
         {
             var sw = Stopwatch.StartNew();
 
