@@ -448,6 +448,7 @@ namespace MMIv8_Ktype.Models.Collections
 
     public class MatchContext
     {
+        [BsonElement]
         public string ContextId => GlobalHelpers.GenerateKey(new { TecDocEntity, MMIEntity });
         public Dictionary<string, dynamic> TecDocEntity { get; set; } = new();
         public Dictionary<string, dynamic> MMIEntity { get; set; } = new();

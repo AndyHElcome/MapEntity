@@ -81,7 +81,7 @@ internal class Program
 
         //args = [ "MMIv8_Ktype.CSV", "GenerateModelMatchCSV", @"C:\Users\andy.hargreaves\OneDrive - KerridgeCS\Desktop\NEW MMI TO KTYPE\Output\MakeModelMatch.csv" ];
 
-        //args = [ "MMIv8_Ktype.CSV", "CSVBackupOperation", @"C:\Users\andy.hargreaves\OneDrive - KerridgeCS\Desktop\NEW MMI TO KTYPE\Backup" ];
+        args = [ "MMIv8_Ktype.CSV", "CSVBackupOperation", @"C:\Users\andy.hargreaves\OneDrive - KerridgeCS\Desktop\NEW MMI TO KTYPE\Backup" ];
 
         //args = [ "MMIv8_Ktype.CSV", "CSVBackupInitialise", @"C:\Users\andy.hargreaves\OneDrive - KerridgeCS\Desktop\NEW MMI TO KTYPE\Backup", @"C:\Users\andy.hargreaves\OneDrive - KerridgeCS\Desktop\NEW MMI TO KTYPE\Source_MMIv8.txt", @"C:\Users\andy.hargreaves\OneDrive - KerridgeCS\Desktop\NEW MMI TO KTYPE\Source_TD_PC.txt", "PreviousRelations.csv" ];
 
@@ -92,6 +92,8 @@ internal class Program
         //args = [ "MMIv8_Ktype.CSV", "UpdateMatchBaseScore", @"C:\Users\andy.hargreaves\OneDrive - KerridgeCS\Desktop\NEW MMI TO KTYPE\Backup\MatchFuel.csv" ];
 
         //args = [ "MMIv8_Ktype.CSV", "StorePartialMatchBase", @"C:\Users\andy.hargreaves\OneDrive - KerridgeCS\Desktop\NEW MMI TO KTYPE\Backup\MatchIdentifier.csv" ];
+
+        //args = [ "MMIv8_Ktype.CSV", "StorePartialMatchBase", @"C:\Users\andy.hargreaves\OneDrive - KerridgeCS\Desktop\NEW MMI TO KTYPE\Backup\MatchMark.csv" ];
 
         //args = [ "MMIv8_Ktype.CSV", "LoadEntityRelation", @"C:\Users\andy.hargreaves\OneDrive - KerridgeCS\Desktop\NEW MMI TO KTYPE\Backup\PreviousRelations.csv", "1" ];
 

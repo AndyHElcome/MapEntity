@@ -189,7 +189,7 @@ namespace MMIv8_Ktype.CSV.Operations
                     throw new Exception(response.Error!.ToString());
                 csvWriter.WriteRecords(response.Value!);
             }
-            log.Information("Created file for Previous Relations {path}", filepath);
+            log.Information("Created file for CheckMMIs {path}", filepath);
 
             filepath = Path.Combine(path, "CheckedMMIs.csv");
             using (var csvWriter = new CSVWritingStream(filepath).CsvWriter)
@@ -199,7 +199,7 @@ namespace MMIv8_Ktype.CSV.Operations
                     throw new Exception(response.Error!.ToString());
                 csvWriter.WriteRecords(response.Value!);
             }
-            log.Information("Created file for Previous Relations {path}", filepath);
+            log.Information("Created file for CheckedMMIs {path}", filepath);
 
 
             var entityRelation = client.CreateService<IEntityRelationEndpoints>();
