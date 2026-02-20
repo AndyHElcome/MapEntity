@@ -1,0 +1,135 @@
+﻿@using DevExpress.Blazor.Internal.Editors
+@using MMIv8_Ktype.Api
+@using MMIv8_Ktype.Api.Endpoints
+@using MMIv8_Ktype.Api.Requests
+@using MMIv8_Ktype.Api.Responses
+@using MMIv8_Ktype.Models.Collections
+
+
+<style>
+	.grid-container {
+		width: 100%;
+	}
+</style>
+
+<div class="grid-container">
+	<DxLoadingPanel @bind-Visible="loading"
+					IsContentBlocked="true"
+					ApplyBackgroundShading="true"
+					IndicatorAreaVisible="false"
+					Text="Fetching Data...">
+		@if (!loading)
+		{
+			<DxGrid Data="@(Response.Value?.Documents)"
+					FooterDisplayMode="GridFooterDisplayMode.Never"
+					ColumnResizeMode="GridColumnResizeMode.NextColumn"
+					ShowAllRows="true"
+					AllowSort="false">
+				<Columns>
+					<DxGridDataColumn FieldName=@nameof(MatchBase.DocumentId) />
+					<DxGridDataColumn FieldName=@nameof(MatchBase.MatchBaseType) />
+					<DxGridDataColumn FieldName=@nameof(MatchBase.MatchBaseMethod) />
+					<DxGridDataColumn FieldName=@nameof(MatchBase.TecDocEntity)>
+						<CellDisplayTemplate Context="displayContext">
+							@{
+								var item = (MatchBase)displayContext.DataItem;
+								string value = item.TecDocEntity.DictToStringWithKey("\r\n");
+							}
+							<span style="white-space: pre;">@value</span>
+						</CellDisplayTemplate>
+					</DxGridDataColumn>
+					<DxGridDataColumn FieldName=@nameof(MatchBase.MMIEntity)>
+						<CellDisplayTemplate Context="displayContext">
+							@{
+								var item = (MatchBase)displayContext.DataItem;
+								string value = item.MMIEntity.DictToStringWithKey("\r\n");
+							}
+							<span style ="white-space: pre;">@value</span>
+						</CellDisplayTemplate>
+					</DxGridDataColumn>
+					<DxGridDataColumn FieldName=@nameof(MatchBase.Score) />
+					<DxGridDataColumn FieldName="@($"{nameof(MatchBase.Status)}.{nameof(MatchBase.Status.Current)}")" />
+					<DxGridCommandColumn>
+						<CellDisplayTemplate>
+							@{
+								var item = (MatchBase)context.DataItem;
+								if (item.Status.Current.Status == Models.Status.Status.Check)
+								{
+									<DxButton RenderStyle="ButtonRenderStyle.Link" IconCssClass="bi bi-check fs-5" @onclick="@(() => OnChecked(item))" />						
+								}
+							}
+						</CellDisplayTemplate>
+					</DxGridCommandColumn>
+				</Columns>
+			</DxGrid>
+			<PagedCursorResponse_Pager Response="@(Response.Value)"
+									   OnPageChanged="OnPageIndexChanged"
+									   OnPageSizeChanged="OnPageSizeChanged"
+									   ShowPageSizeSelector="true"
+									   ShowSummary="true"
+									   IsLoading="@(loading || isError)" />
+		}
+		else if (isError)
+		{
+			<div class="alert alert-danger m-0" role="alert">
+				An error occurred while fetching data. @Response.Error?.ToString()
+			</div>
+		}
+
+	</DxLoadingPanel>
+</div>
+
+@code {
+	public Models.SerializableResult<PagedResponse<MatchBase>> Response { get; set; }
+	public bool loading { get; set; } = true;
+	public bool isError { get; set; } = false;
+
+	PagedRequest pagedRequest { get; set; } = new();
+
+	IMatchBaseEndpoints endpoint { get; init; } = new RefitClient(Log.Logger).CreateService<IMatchBaseEndpoints>();
+
+	async Task LoadData()
+	{
+		try
+		{
+			loading = true;
+			Response = await endpoint.GetByPage(PagedRequest: pagedRequest, new FilterQuery<MatchBase>(), new SortQuery<MatchBase>());
+			isError = !Response.IsSuccess;
+			pagedRequest = new(Response.Value?.CurrentPage, Response.Value?.PageSize);
+		}
+		catch (Exception ex)
+		{
+			isError = true;
+			Console.WriteLine(ex);
+		}
+		finally
+		{
+			loading = false;
+		}
+
+	}
+
+	async Task OnChecked(MatchBase editedItem)
+	{
+		_ = await endpoint.UpdateStatus(editedItem, Models.Status.Status.Checked);
+		await LoadData();
+	}
+
+	async Task OnPageIndexChanged(int newPageIndex)
+	{
+		pagedRequest = new(newPageIndex, Response.Value?.PageSize);
+		await LoadData();
+	}
+
+	async Task OnPageSizeChanged(int newPageSize)
+	{
+		pagedRequest = new(1, newPageSize);
+		await LoadData();
+	}
+
+	protected override async Task OnInitializedAsync()
+	{
+		await LoadData();
+	}
+}
+

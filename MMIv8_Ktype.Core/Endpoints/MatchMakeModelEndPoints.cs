@@ -14,13 +14,8 @@ namespace MMIv8_Ktype.Core.Endpoints
 {
     public class MatchMakeModelEndPoints(MatchMakeModelService matchMakeModelService, 
                                          MappingService mappingService,
-                                         BulkMappingService bulkMappingService) : IMatchMakeModelEndpoints
+                                         BulkMappingService bulkMappingService) : BaseEndpointsWithVersion<MatchMakeModel, ObjectId, FilterQuery<MatchMakeModel>, SortQuery<MatchMakeModel>>(matchMakeModelService), IMatchMakeModelEndpoints
     {
-        public async Task<SerializableResult<PagedCursorResponse<MatchMakeModel>>> GetAll(string? cursor = null, int PageSize = 100) //TODO Fix large gets
-        {
-            var objectId = ObjectId.TryParse(cursor, out var objectid) ? objectid : ObjectId.Empty;
-            return await matchMakeModelService.PaginateDocumentsByCursor<MatchMakeModel, ObjectId>(cursor: objectId, pageSize: PageSize);
-        }
 
         public async Task<SerializableResult<List<MatchMakeModel>>> GenerateMakeModelMatch()
         {
@@ -35,11 +30,6 @@ namespace MMIv8_Ktype.Core.Endpoints
         public async Task<SerializableResult<List<MatchMakeModel>>> GetByModelId(SourceIndex SourceIndex, string SourceEntityModelHash)
         {
             return await matchMakeModelService.GetByModelId(SourceIndex, SourceEntityModelHash);
-        }
-
-        public async Task<SerializableResult<MatchMakeModel>> GetMakeModelMatchById(ObjectId MatchID)
-        {
-            return await matchMakeModelService.GetById(MatchID);
         }
 
         public async Task<Result> CreateMatchMakeModel(string TD_SourceEntityModelHash = "", string MMI_SourceEntityModelHash = "")

@@ -12,13 +12,8 @@ using Refit;
 namespace MMIv8_Ktype.Api.Endpoints
 {
     [GroupName("MatchMakeModel")]
-    public interface IMatchMakeModelEndpoints : IEndpoint
+    public interface IMatchMakeModelEndpoints : IBaseEndpoint<MatchMakeModel, ObjectId, FilterQuery<MatchMakeModel>, SortQuery<MatchMakeModel>>, IVersionEndpoint<MatchMakeModel, ObjectId, FilterQuery<MatchMakeModel>>, IEndpoint
     {
-        [Get("")]
-        Task<SerializableResult<PagedCursorResponse<MatchMakeModel>>> GetAll([FromQuery] string? cursor = null, [FromQuery] int PageSize = 0);
-
-        [Get("/{MatchID}")]
-        Task<SerializableResult<MatchMakeModel>> GetMakeModelMatchById(ObjectId MatchID);
 
         [Get("/GetByModels")]
         Task<SerializableResult<MatchMakeModel>> GetMakeModelMatch([FromQuery] string TD_SourceEntityModelHash, [FromQuery] string MMI_SourceEntityModelHash);

@@ -1,20 +1,21 @@
-using MongoDB.Bson.Serialization.Conventions;
+using Microsoft.OpenApi;
+using MMIv8_Ktype.Api;
+using MMIv8_Ktype.Api.Endpoints;
+using MMIv8_Ktype.Core.Contexts;
+using MMIv8_Ktype.Core.Exceptions;
+using MMIv8_Ktype.Core.Services;
+using MMIv8_Ktype.Core.Services.Mapping;
+using MMIv8_Ktype.Core.Services.Match;
+using MMIv8_Ktype.Core.Services.Source;
+using MMIv8_Ktype.Models;
+using MMIv8_Ktype.Models.Collections;
+using MMIv8_Ktype.Models.Util;
 using MongoDB.Bson;
+using MongoDB.Bson.IO;
+using MongoDB.Bson.Serialization.Conventions;
 using Serilog;
 using Serilog.Events;
-using MMIv8_Ktype.Models.Collections;
-using MMIv8_Ktype.Models;
-using MMIv8_Ktype.Core.Services;
-using MMIv8_Ktype.Core.Contexts;
-using MMIv8_Ktype.Core.Services.Match;
-using MMIv8_Ktype.Core.Services.Mapping;
-using MMIv8_Ktype.Core.Services.Source;
 using System.Reflection;
-using MMIv8_Ktype.Models.Util;
-using MMIv8_Ktype.Api.Endpoints;
-using MongoDB.Bson.IO;
-using MMIv8_Ktype.Core.Exceptions;
-using MMIv8_Ktype.Api;
 
 internal class Program
 {
@@ -68,6 +69,7 @@ internal class Program
         builder.Services.AddScoped<SourceMMIv8EntityModelService>();
 
         builder.Services.AddScoped<MatchEntityService>();
+        builder.Services.AddScoped<MatchRefineService>();
         builder.Services.AddScoped<MatchBaseService>();
         builder.Services.AddScoped<MatchMakeModelService>();
 
@@ -80,6 +82,8 @@ internal class Program
         // Learn more about configuring Swagger/OpenAPI at https://aka.ms/aspnetcore/swashbuckle
         builder.Services.AddEndpointsApiExplorer();
         builder.Services.AddSwaggerGen();
+
+ 
 
 
 
@@ -95,6 +99,7 @@ internal class Program
         //}
 
         app.UseSwagger();
+
         app.UseSwaggerUI();
 
         {

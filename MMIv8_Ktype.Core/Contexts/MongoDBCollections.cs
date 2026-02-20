@@ -27,6 +27,8 @@ namespace MMIv8_Ktype.Core.Contexts
             SourceTecDocPCModel = GetCollection<MongoSourceEntityModel>(mongoDatabase, "SourceTecDocPCModel");
             SourceMMIv8Model = GetCollection<MongoSourceEntityModel>(mongoDatabase, "SourceMMIv8Model");
 
+            MatchRefine = GetCollection<MatchRefine>(mongoDatabase);
+
             CreateAllIndexes(false);
         }
 
@@ -44,6 +46,8 @@ namespace MMIv8_Ktype.Core.Contexts
 
         public readonly IMongoCollection<MongoSourceEntityModel> SourceTecDocPCModel;
         public readonly IMongoCollection<MongoSourceEntityModel> SourceMMIv8Model;
+        //TODO Create MatchRefine View
+        public readonly IMongoCollection<MatchRefine> MatchRefine;
 
         private static IMongoCollection<T> GetCollection<T>(IMongoDatabase mongoDatabase, string? collectionName = null)
         {
@@ -56,6 +60,7 @@ namespace MMIv8_Ktype.Core.Contexts
         {
             if (regenerate)
                 await mongoDatabase.DropCollectionAsync("SourceTecDocPCModel");
+
             var sourceTDModelAggregate = SourceTecDocPC.Aggregate()
                 .Sort(new BsonDocument
                     {
@@ -111,8 +116,10 @@ namespace MMIv8_Ktype.Core.Contexts
             var sourceTDModelPipeline = PipelineDefinition<SourceTecDocPC, MongoSourceEntityModel>.Create(sourceTDModelAggregate.Stages);
             await mongoDatabase.CreateViewAsync("SourceTecDocPCModel", "SourceTecDocPC", sourceTDModelPipeline);
 
+
             if (regenerate)
                 await mongoDatabase.DropCollectionAsync("SourceMMIv8Model");
+
             var sourceMMIv8ModelAggregate = SourceMMIv8.Aggregate()
                 .Sort(new BsonDocument
                     {
@@ -157,6 +164,23 @@ namespace MMIv8_Ktype.Core.Contexts
                 );
             var sourceMMIv8ModelPipeline = PipelineDefinition<SourceMMIv8, MongoSourceEntityModel>.Create(sourceMMIv8ModelAggregate.Stages);
             await mongoDatabase.CreateViewAsync("SourceMMIv8Model", "SourceMMIv8", sourceMMIv8ModelPipeline);
+
+
+            if (regenerate)
+                await mongoDatabase.DropCollectionAsync("MatchRefine");
+
+            //TODO check if MMIv8EntityId needs to be _id for indexes
+            var matchEntityAggregate = MatchEntity.Aggregate()
+                .Group(new BsonDocument
+                    {
+                        { "_id", "$MatchRefine"},
+                    }
+                )
+                .ReplaceRoot<MatchRefine>("$_id");
+            var matchRefinePipeline = PipelineDefinition<MatchEntity, MatchRefine>.Create(matchEntityAggregate.Stages);
+            await mongoDatabase.CreateViewAsync("MatchRefine", "MatchEntity", matchRefinePipeline);
+
+
         }
 
         public void CreateAllIndexes(bool regenerate = false)
@@ -191,6 +215,9 @@ namespace MMIv8_Ktype.Core.Contexts
                 new (matchEntityIndexBuilder.Ascending(c => c.MatchResult.Failed)
                                             .Ascending(c => c.MatchResult.FailCount),
                      new() { Name = "MatchResult.Failed_FailCount", Unique = false, Background = true }
+                ),
+                new (matchEntityIndexBuilder.Ascending(c => c.MatchRefine),
+                     new() { Name = "MatchRefine", Unique = false, Background = true }
                 ),
                 new (matchEntityIndexBuilder.Ascending(c => c.MatchRefine.IsCheck),
                      new() { Name = "MatchRefine.IsCheck", Unique = false, Background = true }

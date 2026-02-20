@@ -1,7 +1,6 @@
-﻿using MMIv8_Ktype.Models.Collections;
-using MongoDB.Bson;
+﻿using MongoDB.Bson;
 
-namespace MMIv8_Ktype.Models.Outputs
+namespace MMIv8_Ktype.Models.Collections
 {
     public class MatchRefine : ICollectionEntity<ObjectId>
     {

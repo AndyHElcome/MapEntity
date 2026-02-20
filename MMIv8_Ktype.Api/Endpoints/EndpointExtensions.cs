@@ -35,6 +35,28 @@ namespace MMIv8_Ktype.Api.Endpoints
             return methods;
         }
 
+        private static Type CreateFuncType(Type[] typeArgs)
+        {
+            // The last type is the return type.
+            // The rest are input parameters.
+            return typeArgs.Length switch
+            {
+                1 => typeof(Func<>).MakeGenericType(typeArgs),                // TResult
+                2 => typeof(Func<,>).MakeGenericType(typeArgs),              // T1, TResult
+                3 => typeof(Func<,,>).MakeGenericType(typeArgs),             // T1, T2, TResult
+                4 => typeof(Func<,,,>).MakeGenericType(typeArgs),
+                5 => typeof(Func<,,,,>).MakeGenericType(typeArgs),
+                6 => typeof(Func<,,,,,>).MakeGenericType(typeArgs),
+                7 => typeof(Func<,,,,,,>).MakeGenericType(typeArgs),
+                8 => typeof(Func<,,,,,,,>).MakeGenericType(typeArgs),
+                9 => typeof(Func<,,,,,,,,>).MakeGenericType(typeArgs),
+                10 => typeof(Func<,,,,,,,,,>).MakeGenericType(typeArgs),
+                11 => typeof(Func<,,,,,,,,,,>).MakeGenericType(typeArgs),
+                _ => throw new NotSupportedException(
+                    $"Too many parameters for Func<> delegate: {typeArgs.Length - 1} parameters")
+            };
+        }
+
         public static void MapEndpointsFromInterface(IEndpointRouteBuilder routeBuilder, IEndpoint implementation, Type abstraction)
         {
             var methods = abstraction.GetInterfaceMethods();
@@ -44,7 +66,7 @@ namespace MMIv8_Ktype.Api.Endpoints
 
             foreach (var method in methods)
             {
-                foreach(var httpMethodAttribute in method.GetCustomAttributes<HttpMethodAttribute>())
+                foreach (var httpMethodAttribute in method.GetCustomAttributes<HttpMethodAttribute>())
                 {
                     if (httpMethodAttribute is null)
                         continue;
@@ -57,42 +79,98 @@ namespace MMIv8_Ktype.Api.Endpoints
                     var returnType = method.ReturnType;
                     var parameters = method.GetParameters();
 
-                    Delegate handler = parameters.Length switch
-                    {
-                        0 => Delegate.CreateDelegate(
-                                Expression.GetDelegateType(returnType),
-                                implementation,
-                                implMethod),
 
-                        1 => Delegate.CreateDelegate(
-                                Expression.GetDelegateType([parameters[ 0 ].ParameterType, returnType]),
-                                implementation,
-                                implMethod),
 
-                        _ => Delegate.CreateDelegate(
-                                Expression.GetDelegateType([.. parameters.Select(c => c.ParameterType), returnType]),
-                                implementation,
-                                implMethod)
-                    };
+
+                    Type[] typeArgs = parameters
+                        .Select(p => p.ParameterType)
+                        .Append(returnType)
+                        .ToArray();
+
+                    Type funcType = CreateFuncType(typeArgs);
+
+                    Delegate handler = Delegate.CreateDelegate(
+                        funcType,
+                        implementation,
+                        implMethod!);
+
 
                     var methodName = $"{groupName}_{method.Name}";
 
                     _ = httpMethodAttribute.Method.Method switch
                     {
-                        "GET" => group.MapGet(path, handler).WithName(methodName).AddEndpointFilter<ResultEndpointFilter>(),
-                        "PUT" => group.MapPut(path, handler).WithName(methodName).AddEndpointFilter<ResultEndpointFilter>(),
-                        "POST" => group.MapPost(path, handler).WithName(methodName).AddEndpointFilter<ResultEndpointFilter>(),
-                        "DELETE" => group.MapDelete(path, handler).WithName(methodName).AddEndpointFilter<ResultEndpointFilter>(),
+                        "GET" => group.MapGet(path, handler).WithName(methodName).WithTags(groupName).AddEndpointFilter<ResultEndpointFilter>(),
+                        "PUT" => group.MapPut(path, handler).WithName(methodName).WithTags(groupName).AddEndpointFilter<ResultEndpointFilter>(),
+                        "POST" => group.MapPost(path, handler).WithName(methodName).WithTags(groupName).AddEndpointFilter<ResultEndpointFilter>(),
+                        "DELETE" => group.MapDelete(path, handler).WithName(methodName).WithTags(groupName).AddEndpointFilter<ResultEndpointFilter>(),
                         //"HEAD" => _,
                         //"OPTIONS" => _,
                         //"TRACE" => _,
-                        "PATCH" => group.MapPatch(path, handler).WithName(methodName).AddEndpointFilter<ResultEndpointFilter>(),
+                        "PATCH" => group.MapPatch(path, handler).WithName(methodName).WithTags(groupName).AddEndpointFilter<ResultEndpointFilter>(),
                         //"CONNECT" => _,
                         _ => throw new NotSupportedException($"Do not recognise HttpMethod {httpMethodAttribute.Method}")
                     };
                 }
             }
         }
+        //public static void MapEndpointsFromInterface(IEndpointRouteBuilder routeBuilder, IEndpoint implementation, Type abstraction)
+        //{
+        //    var methods = abstraction.GetInterfaceMethods();
+
+        //    var groupName = abstraction.GetGroupName() ?? abstraction.Name;
+        //    var group = routeBuilder.MapGroup(groupName).WithTags(groupName);
+
+        //    foreach (var method in methods)
+        //    {
+        //        foreach (var httpMethodAttribute in method.GetCustomAttributes<HttpMethodAttribute>())
+        //        {
+        //            if (httpMethodAttribute is null)
+        //                continue;
+
+        //            var path = httpMethodAttribute.Path;
+
+        //            // Get actual MethodInfo from the implementation
+        //            var implMethod = implementation.GetType().GetMethod(method.Name);
+
+        //            var returnType = method.ReturnType;
+        //            var parameters = method.GetParameters();
+
+        //            Delegate handler = parameters.Length switch
+        //            {
+        //                0 => Delegate.CreateDelegate(
+        //                        Expression.GetDelegateType(returnType),
+        //                        implementation,
+        //                        implMethod),
+
+        //                1 => Delegate.CreateDelegate(
+        //                        Expression.GetDelegateType([ parameters[ 0 ].ParameterType, returnType ]),
+        //                        implementation,
+        //                        implMethod),
+
+        //                _ => Delegate.CreateDelegate(
+        //                        Expression.GetDelegateType([ .. parameters.Select(c => c.ParameterType), returnType ]),
+        //                        implementation,
+        //                        implMethod)
+        //            };
+
+        //            var methodName = $"{groupName}_{method.Name}";
+
+        //            _ = httpMethodAttribute.Method.Method switch
+        //            {
+        //                "GET" => group.MapGet(path, handler).WithName(methodName).AddEndpointFilter<ResultEndpointFilter>(),
+        //                "PUT" => group.MapPut(path, handler).WithName(methodName).AddEndpointFilter<ResultEndpointFilter>(),
+        //                "POST" => group.MapPost(path, handler).WithName(methodName).AddEndpointFilter<ResultEndpointFilter>(),
+        //                "DELETE" => group.MapDelete(path, handler).WithName(methodName).AddEndpointFilter<ResultEndpointFilter>(),
+        //                //"HEAD" => _,
+        //                //"OPTIONS" => _,
+        //                //"TRACE" => _,
+        //                "PATCH" => group.MapPatch(path, handler).WithName(methodName).AddEndpointFilter<ResultEndpointFilter>(),
+        //                //"CONNECT" => _,
+        //                _ => throw new NotSupportedException($"Do not recognise HttpMethod {httpMethodAttribute.Method}")
+        //            };
+        //        }
+        //    }
+        //}
 
         public static TypeInfo[] GetEnpointInterfaces()
         {

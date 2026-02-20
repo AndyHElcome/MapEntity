@@ -1,0 +1,74 @@
+﻿@using MMIv8_Ktype.Api
+@using MMIv8_Ktype.Api.Endpoints
+@using MMIv8_Ktype.Api.Responses
+@using MMIv8_Ktype.Models
+@using MMIv8_Ktype.Models.Collections
+
+
+
+<div class="grid-container">
+    <DxGrid Data="@GridData"
+            @bind-PageIndex="@ActivePageIndex" 
+            PagerVisible="false" 
+			ShowAllRows="true"
+            FooterDisplayMode="GridFooterDisplayMode.Never">
+        <Columns>
+            <DxGridDataColumn FieldName="@(nameof(Models.Collections.Version.DocumentId))" />
+            <DxGridDataColumn FieldName="@(nameof(Models.Collections.Version.VersionNumber))" />
+            <DxGridDataColumn FieldName="@(nameof(Models.Collections.Version.Date))" />
+            <DxGridDataColumn FieldName="@(nameof(Models.Collections.Version.TecDocEntityVersion))" />
+            <DxGridDataColumn FieldName="@(nameof(Models.Collections.Version.MMIv8EntityVersion))" />
+            <DxGridDataColumn FieldName="@(nameof(Models.Collections.Version.User))" />
+            <DxGridDataColumn FieldName="@($"{nameof(Models.Collections.Version.User)}.{nameof(Models.Collections.Version.User.Name)}")" />
+        </Columns>
+    </DxGrid>
+    <PagedCursorResponse_Pager Response="@PagedCursorResponse" OnPageChanged="OnPageIndexChanged" />
+</div>
+
+@code {
+    public SerializableResult<PagedResponse<Models.Collections.Version>> Response { get; set; }
+
+
+    BasePagedResponse PagedCursorResponse { get; set; }
+    IEnumerable<Models.Collections.Version> GridData { get; set; }
+    Error GridError { get; set; }
+
+    int PageSize { get; set; } = 10;
+    int ActivePageIndex { get; set; } = 1;
+
+    public bool loading { get; set; } = true;
+
+    List<string?> previousCursors = new() { null };
+
+    async Task LoadData()
+    {
+        try
+        {
+            var response = await new RefitClient(Log.Logger).CreateService<IVersionEndpoints>().GetByPage(new Api.Requests.PagedRequest() { Page = ActivePageIndex, PageSize = PageSize }, new Api.Requests.VersionFilterRequest(), new Api.Requests.VersionSortRequest());
+            Response = response;
+            PagedCursorResponse = Response.Value;
+            GridData = Response.Value!.Documents;
+            GridError = Response.Error;
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine(ex);
+        }
+        finally
+        {
+            loading = false;
+        }
+    }
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadData();
+    }
+
+    async Task OnPageIndexChanged(int newPageIndex)
+    {
+        ActivePageIndex = newPageIndex;
+
+        await LoadData();
+    }
+}

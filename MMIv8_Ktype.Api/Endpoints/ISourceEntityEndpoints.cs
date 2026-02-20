@@ -1,4 +1,6 @@
-﻿using MMIv8_Ktype.Api.Responses;
+﻿using Microsoft.AspNetCore.Mvc;
+using MMIv8_Ktype.Api.Requests;
+using MMIv8_Ktype.Api.Responses;
 using MMIv8_Ktype.Models;
 using MMIv8_Ktype.Models.Attributes;
 using MMIv8_Ktype.Models.Collections;
@@ -14,16 +16,19 @@ using System.Threading.Tasks;
 
 namespace MMIv8_Ktype.Api.Endpoints
 {
-    public interface ISourceEntityEndpoints<T>
+    public interface ISourceEntityEndpoints<T> : IBaseEndpoint<T, ObjectId, FilterQuery<T>, SortQuery<T>>
     {
-        [Get("")]
-        Task<SerializableResult<PagedCursorResponse<T>>> GetAll(string? Cursor, int PageSize);
-
         [Get("/GetByExternalId/{ExternalId}")]
         Task<SerializableResult<T>> GetByExternalId(int ExternalId);
 
-        [Get("/GetEntityId/{EntityId}")]
-        Task<SerializableResult<T>> GetById(ObjectId EntityId);
+        [Get("/GetMakes")]
+        Task<SerializableResult<List<string>>> GetMakes([FromQuery] string[]? makes, [FromQuery] string[]? models);
+
+        [Get("/GetModels")]
+        Task<SerializableResult<List<string>>> GetModels([FromQuery] string[]? makes, [FromQuery] string[]? models);
+
+        [Get("/GetByMakeModel")]
+        Task<SerializableResult<MongoSourceEntityModel>> GetByMakeModel([FromQuery] string make, [FromQuery] string model);
 
         [Put("/Update")]
         Task<Result> UpdateEntity(T sourceEntity);

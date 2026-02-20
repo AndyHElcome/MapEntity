@@ -137,7 +137,7 @@ namespace MMIv8_Ktype.CSV.Operations
 
                 try
                 {
-                    var matchBases = await matchBase.GetByMatchBaseType(matchBaseType);
+                    var matchBases = await matchBase.GetByMatchBaseType(matchBaseType, new PagedCursorRequest<string>());
                     using (var csvWriter = new CSVWritingStream(filepath).CsvWriter)
                     {
                         csvWriter.WriteRecords(matchBases.Value!.Documents.Select(c => c.BuildCsvObject()));

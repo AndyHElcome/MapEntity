@@ -4,13 +4,15 @@
     <ManagePackageVersionsCentrally>true</ManagePackageVersionsCentrally>
   </PropertyGroup>
   <ItemGroup>
+    <PackageVersion Include="DevExpress.Blazor" Version="25.2.4" />
     <PackageVersion Include="Refit" Version="8.0.0" />
     <PackageVersion Include="Refit.HttpClientFactory" Version="8.0.0" />
+    <PackageVersion Include="Swashbuckle.AspNetCore.Annotations" Version="10.1.4" />
     <PackageVersion Include="System.Data.OleDb" Version="9.0.4" />
     <PackageVersion Include="System.Text.Json" Version="9.0.4" />
     <PackageVersion Include="CsvHelper" Version="33.0.1" />
     <PackageVersion Include="MongoDB.Driver" Version="3.3.0" />
-    <PackageVersion Include="Swashbuckle.AspNetCore" Version="7.2.0" />
+    <PackageVersion Include="Swashbuckle.AspNetCore" Version="10.1.4" />
     <PackageVersion Include="Serilog" Version="4.2.0" />
     <PackageVersion Include="Serilog.Sinks.Console" Version="6.0.0" />
     <PackageVersion Include="Serilog.Sinks.File" Version="6.0.0" />

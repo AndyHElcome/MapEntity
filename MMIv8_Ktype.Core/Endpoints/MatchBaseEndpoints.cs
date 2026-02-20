@@ -10,6 +10,7 @@ using MMIv8_Ktype.Models;
 using MMIv8_Ktype.Models.Collections;
 using MMIv8_Ktype.Models.Status;
 using MMIv8_Ktype.Models.Util;
+using MongoDB.Bson;
 using MongoDB.Driver;
 using System.Security.Cryptography;
 using System.Text.RegularExpressions;
@@ -17,28 +18,14 @@ using System.Text.RegularExpressions;
 namespace MMIv8_Ktype.Core.Endpoints
 {
     public class MatchBaseEndpoints(MatchBaseService matchBaseService,
-                                    MappingService mappingService) : IMatchBaseEndpoints
+                                    MappingService mappingService) : BaseEndpointsWithVersion<MatchBase, string, FilterQuery<MatchBase>, SortQuery<MatchBase>>(matchBaseService), IMatchBaseEndpoints
     {
-        public async Task<SerializableResult<PagedCursorResponse<MatchBase>>> GetAll(string? cursor = null, int PageSize = 100)
-        {
-            return await matchBaseService.PaginateDocumentsByCursor<MatchBase, string>(cursor: cursor, pageSize: PageSize);
-        }
-
-        public async Task<SerializableResult<PagedCursorResponse<MatchBase>>> GetByMatchBaseType(MatchBaseType MatchBaseType, string? cursor = null, int PageSize = 100) //TODO change to stream call
+        //TODO move this into a filterQuery
+        public async Task<SerializableResult<PagedCursorResponse<MatchBase>>> GetByMatchBaseType(MatchBaseType MatchBaseType, [AsParameters] PagedCursorRequest<string> PagedRequest) //TODO change to stream call
         {
             var filter = Builders<MatchBase>.Filter.Eq(c => c.MatchBaseType, MatchBaseType);
 
-            return await matchBaseService.PaginateDocumentsByCursor<MatchBase, string>(filter: filter, cursor: cursor, pageSize: PageSize);
-        }
-
-        public async Task<SerializableResult<MatchBase>> GetById(string MatchHash)
-        {
-            return await matchBaseService.GetById(MatchHash);
-        }
-
-        public async Task<SerializableResult<MatchBase>> UpdateStatus(MatchBase MatchBase, Status Status, string? Detail = null)
-        {
-            return await matchBaseService.UpdateStatus(MatchBase, Status, Detail);
+            return await matchBaseService.PaginateDocumentsByCursor<MatchBase, string>(filter: filter, cursor: PagedRequest.GetCursor(), pageSize: PagedRequest.PageSize ?? 0);
         }
 
         public async Task<Result> UpdateMatchBaseScore(MatchBaseType MatchBaseType, string MatchHash, decimal NewScore)

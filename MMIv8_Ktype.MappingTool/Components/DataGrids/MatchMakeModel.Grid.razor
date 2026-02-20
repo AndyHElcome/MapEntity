@@ -1,0 +1,128 @@
+﻿@using DevExpress.Blazor.Internal.Editors
+@using MMIv8_Ktype.Api
+@using MMIv8_Ktype.Api.Endpoints
+@using MMIv8_Ktype.Api.Requests
+@using MMIv8_Ktype.Api.Responses
+@using MMIv8_Ktype.Models.Collections
+
+
+<style>
+	.grid-container {
+		width: 100%;
+	}
+</style>
+
+<div class="grid-container">
+	<DxLoadingPanel @bind-Visible="loading"
+					IsContentBlocked="true"
+					ApplyBackgroundShading="true"
+					IndicatorAreaVisible="false"
+					Text="Fetching Data...">
+		@if (!loading)
+		{
+			<DxGrid Data="@(Response.Value?.Documents)"
+					FooterDisplayMode="GridFooterDisplayMode.Never"
+					ColumnResizeMode="GridColumnResizeMode.NextColumn"
+					ShowAllRows="true"
+					AllowSort="false"			>
+				<Columns>
+					<DxGridDataColumn FieldName=@nameof(MatchMakeModel.DocumentId) Visible="false" />
+					<DxGridBandColumn Caption="@(nameof(MatchMakeModel.TecDocModel))">
+						<Columns>
+							<DxGridDataColumn FieldName="@($"{nameof(MatchMakeModel.TecDocModel)}.{nameof(MatchMakeModel.TecDocModel.DocumentId)}")" Caption="@(nameof(MatchMakeModel.TecDocModel.DocumentId))" Visible="false" />
+							<DxGridDataColumn FieldName="@($"{nameof(MatchMakeModel.TecDocModel)}.{nameof(MatchMakeModel.TecDocModel.Make)}")" Caption="@(nameof(MatchMakeModel.TecDocModel.Make))" />
+							<DxGridDataColumn FieldName="@($"{nameof(MatchMakeModel.TecDocModel)}.{nameof(MatchMakeModel.TecDocModel.Model)}")" Caption="@(nameof(MatchMakeModel.TecDocModel.Model))" />
+						</Columns>
+					</DxGridBandColumn>
+					<DxGridBandColumn Caption="@(nameof(MatchMakeModel.MMIv8Model))">
+						<Columns>
+							<DxGridDataColumn FieldName="@($"{nameof(MatchMakeModel.MMIv8Model)}.{nameof(MatchMakeModel.MMIv8Model.DocumentId)}")" Caption="@(nameof(MatchMakeModel.MMIv8Model.DocumentId))" Visible="false" />
+							<DxGridDataColumn FieldName="@($"{nameof(MatchMakeModel.MMIv8Model)}.{nameof(MatchMakeModel.MMIv8Model.Make)}")" Caption="@(nameof(MatchMakeModel.MMIv8Model.Make))" />
+							<DxGridDataColumn FieldName="@($"{nameof(MatchMakeModel.MMIv8Model)}.{nameof(MatchMakeModel.MMIv8Model.Model)}")" Caption="@(nameof(MatchMakeModel.MMIv8Model.Model))" />
+						</Columns>
+					</DxGridBandColumn>
+					<DxGridDataColumn FieldName="@($"{nameof(MatchMakeModel.Status)}.{nameof(MatchMakeModel.Status.Current)}")" />
+					<DxGridCommandColumn>
+						<CellDisplayTemplate>
+							@{
+								var item = (MatchMakeModel)context.DataItem;
+								if (item.Status.Current.Status == Models.Status.Status.Check)
+								{
+									<DxButton RenderStyle="ButtonRenderStyle.Link" IconCssClass="bi bi-check fs-5" @onclick="@(() => OnChecked(item))" />						
+								}
+							}
+						</CellDisplayTemplate>
+					</DxGridCommandColumn>
+				</Columns>
+			</DxGrid>
+			<PagedCursorResponse_Pager Response="@(Response.Value)"
+									   OnPageChanged="OnPageIndexChanged"
+									   OnPageSizeChanged="OnPageSizeChanged"
+									   ShowPageSizeSelector="true"
+									   ShowSummary="true"
+									   IsLoading="@(loading || isError)" />
+		}
+		else if (isError)
+		{
+			<div class="alert alert-danger m-0" role="alert">
+				An error occurred while fetching data. @Response.Error?.ToString()
+			</div>
+		}
+
+	</DxLoadingPanel>
+</div>
+
+@code {
+	public Models.SerializableResult<PagedResponse<MatchMakeModel>> Response { get; set; }
+	public bool loading { get; set; } = true;
+	public bool isError { get; set; } = false;
+
+	PagedRequest pagedRequest { get; set; } = new();
+
+	IMatchMakeModelEndpoints matchMakeModelEndpoints { get; init; } = new RefitClient(Log.Logger).CreateService<IMatchMakeModelEndpoints>();
+
+	async Task LoadData()
+	{
+		try
+		{
+			loading = true;
+			Response = await matchMakeModelEndpoints.GetByPage(PagedRequest: pagedRequest, new FilterQuery<MatchMakeModel>(), new SortQuery<MatchMakeModel>());
+			isError = !Response.IsSuccess;
+			pagedRequest = new(Response.Value?.CurrentPage, Response.Value?.PageSize);
+		}
+		catch (Exception ex)
+		{
+			isError = true;
+			Console.WriteLine(ex);
+		}
+		finally
+		{
+			loading = false;
+		}
+
+	}
+
+	async Task OnChecked(MatchMakeModel editedItem)
+	{
+		_ = await matchMakeModelEndpoints.UpdateStatus(editedItem, Models.Status.Status.Checked);
+		await LoadData();
+	}
+
+	async Task OnPageIndexChanged(int newPageIndex)
+	{
+		pagedRequest = new(newPageIndex, Response.Value?.PageSize);
+		await LoadData();
+	}
+
+	async Task OnPageSizeChanged(int newPageSize)
+	{
+		pagedRequest = new(1, newPageSize);
+		await LoadData();
+	}
+
+	protected override async Task OnInitializedAsync()
+	{
+		await LoadData();
+	}
+}
+

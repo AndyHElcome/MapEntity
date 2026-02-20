@@ -1,26 +1,22 @@
-﻿using Microsoft.AspNetCore.Mvc;
+﻿using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.Mvc;
 using MMIv8_Ktype.Api.Requests;
 using MMIv8_Ktype.Api.Responses;
 using MMIv8_Ktype.Models;
 using MMIv8_Ktype.Models.Attributes;
 using MMIv8_Ktype.Models.Collections;
 using MMIv8_Ktype.Models.Util;
+using MongoDB.Bson;
 using MongoDB.Driver;
 using Refit;
 
 namespace MMIv8_Ktype.Api.Endpoints
 {
     [GroupName("MatchBase")]
-    public interface IMatchBaseEndpoints : IEndpoint
+    public interface IMatchBaseEndpoints : IBaseEndpoint<MatchBase, string, FilterQuery<MatchBase>, SortQuery<MatchBase>>, IVersionEndpoint<MatchBase, string, FilterQuery<MatchBase>>, IEndpoint
     {
-        [Get("")]
-        Task<SerializableResult<PagedCursorResponse<MatchBase>>> GetAll([FromQuery] string? cursor = null, [FromQuery] int PageSize = 100);
-
         [Get("/GetByType/{MatchBaseType}")]
-        Task<SerializableResult<PagedCursorResponse<MatchBase>>> GetByMatchBaseType([FromRoute] MatchBaseType MatchBaseType, [FromQuery] string? cursor = null, [FromQuery] int PageSize = 0);
-
-        [Get("/GetById/{MatchHash}")]
-        Task<SerializableResult<MatchBase>> GetById(string MatchHash);
+        Task<SerializableResult<PagedCursorResponse<MatchBase>>> GetByMatchBaseType([FromRoute] MatchBaseType MatchBaseType, [AsParameters] PagedCursorRequest<string> PagedRequest);
 
         [Put("/{MatchBaseType}")]
         Task<Result> UpdateMatchBaseScore([FromRoute] MatchBaseType MatchBaseType, [FromQuery] string MatchHash, [FromQuery] decimal NewScore);

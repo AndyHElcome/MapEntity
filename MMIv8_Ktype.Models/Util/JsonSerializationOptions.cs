@@ -16,6 +16,7 @@ namespace MMIv8_Ktype.Models.Util
         {
             target.Converters.Add(new JsonStringEnumConverter());
             target.Converters.Add(new JsonObjectIdConverter());
+            target.Converters.Add(new NullableObjectIdJsonConverter());
             target.Converters.Add(new JsonConverterFactoryForStackOfT());
             target.DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull;
             target.NumberHandling = JsonNumberHandling.AllowReadingFromString;

@@ -1,0 +1,34 @@
+﻿@using DevExpress.Blazor.Internal.Editors
+@using MMIv8_Ktype.Api
+@using MMIv8_Ktype.Api.Endpoints
+@using MMIv8_Ktype.Api.Requests
+@using MMIv8_Ktype.Api.Responses
+@using MMIv8_Ktype.Models.Collections
+@using MongoDB.Bson
+
+
+<Generic_Grid TItem="MatchEntity"
+			  Tid="ObjectId"
+			  TFilter="MatchEntityFilterRequest"
+			  TSort="MatchEntitySortRequest"
+			  TEndpoint="IMatchEntityEndpoints"
+			  Endpoints="@(new RefitClient(Log.Logger).CreateService<IMatchEntityEndpoints>())"
+			  Filter="@(new MatchEntityFilterRequest())"
+			  Sort="@(new MatchEntitySortRequest())">
+	<Columns>
+		<DxGridDataColumn FieldName=@nameof(MatchEntity.DocumentId) />				
+		<DxGridBandColumn Caption="@(nameof(MatchEntity.TecDocEntity))">
+			<Columns>
+				<DxGridDataColumn FieldName="@($"{nameof(MatchEntity.TecDocEntity)}.{nameof(MatchEntity.TecDocEntity.DocumentId)}")" Caption="@(nameof(MatchEntity.TecDocEntity.DocumentId))" Visible="false" />
+				<DxGridDataColumn FieldName="@($"{nameof(MatchEntity.TecDocEntity)}.{nameof(MatchEntity.TecDocEntity.Make)}")" Caption="@(nameof(MatchEntity.TecDocEntity.Make))" />
+				<DxGridDataColumn FieldName="@($"{nameof(MatchEntity.TecDocEntity)}.{nameof(MatchEntity.TecDocEntity.Model)}")" Caption="@(nameof(MatchEntity.TecDocEntity.Model))" />
+			</Columns>
+		</DxGridBandColumn>
+
+	</Columns>
+</Generic_Grid>
+
+@code {
+
+}
+

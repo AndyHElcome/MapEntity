@@ -129,30 +129,39 @@ namespace MMIv8_Ktype.Core.Services
                 return Error.Failure($"{typeof(T)}.GetByIdFailure", $"Error getting Documents with Id {documentId!.ToString()}. Error: {ex.Message}");
             }
         }
-
-        [Obsolete]
-        public async Task<PagedResponse<TOut>> PaginateDocuments<TOut>(FilterDefinition<T>? filter = null, SortDefinition<T>? sort = null, int page = 1, int pageSize = 100, ProjectionDefinition<T, TOut>? projection = null)
+        
+        public async Task<Result<PagedResponse<TOut>>> PaginateDocuments<TOut>(FilterDefinition<T>? filter = null, SortDefinition<T>? sort = null, int page = 1, int pageSize = 100, ProjectionDefinition<T, TOut>? projection = null)
         {
-            Log.Debug("Paging {Type} Page: {page}", typeof(T).Name, page);
-            var sw = Stopwatch.StartNew();
+            try
+            {
+                Log.Debug("Paging {Type} Page: {page}", typeof(T).Name, page);
+                var sw = Stopwatch.StartNew();
 
-            var count = this.CountByFilter(filter);
+                filter ??= Builders<T>.Filter.Empty;
 
-            var results = this.GetFindFluent(filter, sort)
-                              .Skip((page - 1) * pageSize)
-                              .Limit(pageSize)
-                              .Project(projection)
-                              .ToListAsync();
+                var count = this.CountByFilter(filter);
 
-            var pagedResults = new PagedResponse<TOut>(await results, Convert.ToInt32(await count), page, pageSize);
+                var results = this.GetFindFluent(filter, sort)
+                                  .Skip((page - 1) * pageSize)
+                                  .Limit(pageSize)
+                                  .Project(projection)
+                                  .ToListAsync();
 
-            sw.Stop();
-            Log.Information("Paged {Type} {@page} in {Time}", typeof(T).Name, pagedResults.PageDetails(), sw);
+                var pagedResults = new PagedResponse<TOut>(await results, Convert.ToInt32(await count), page, pageSize);
 
-            return pagedResults;
+                sw.Stop();
+                Log.Information("Paged {Type} {@page} in {Time}", typeof(T).Name, pagedResults.PageDetails(), sw);
+
+                return pagedResults;
+            }
+            catch (Exception ex)
+            {
+                Log.Error(ex, "Error Paging Documents for {type}", typeof(T).Name);
+                return Error.Failure($"{typeof(T)}.PaginateDocumentsByCursorFailure", $"Error paging Documents. Error: {ex.Message}");
+            }
         }
 
-        public async Task<Result<PagedCursorResponse<TOut>>> PaginateDocumentsByCursor<TOut, TOutId>(FilterDefinition<T>? filter = null, Tid? cursor = default, int pageSize = 100, ProjectionDefinition<T, TOut>? projection = null)
+        public async Task<Result<PagedCursorResponse<TOut>>> PaginateDocumentsByCursor<TOut, TOutId>(FilterDefinition<T>? filter = null, Tid? cursor = default, int pageSize = 100, ProjectionDefinition<T, TOut>? projection = null, bool returnResults = true)
             where TOut : ICollectionEntity<TOutId>
             where TOutId : Tid
         {
@@ -183,16 +192,26 @@ namespace MMIv8_Ktype.Core.Services
                 }
 
                 int expectedDocuments = count - precount;
+                int limit = expectedDocuments < pageSize ? expectedDocuments : pageSize;
 
                 var cursorFilter = cursor is null ? Builders<T>.Filter.Empty : this.FilterGtDocumentId(cursor);
                 var query = this.GetFindFluent(cursorFilter & filter)
                                 .Sort(SortByDocumentId())
-                                .Limit(expectedDocuments < pageSize ? expectedDocuments : pageSize )
+                                .Limit(limit)
                                 .Project(projection);
                 Log.Debug("Page Query {query}", query.ToString());
-                var results = await query.ToListAsync();
 
-                var pagedResults = new PagedCursorResponse<TOut>(results, count, precount, pageSize, results.LastOrDefault()?.DocumentId?.ToString() ?? string.Empty);
+                PagedCursorResponse<TOut> pagedResults;
+                if (returnResults)
+                {
+                    var results = await query.ToListAsync();
+                    pagedResults = new PagedCursorResponse<TOut>(results, count, precount, pageSize, results.LastOrDefault()?.DocumentId?.ToString() ?? string.Empty);
+                }
+                else
+                {
+                    var results = await query.Skip(limit - 1).FirstOrDefaultAsync();
+                    pagedResults = new PagedCursorResponse<TOut>([], count, precount, pageSize, results.DocumentId?.ToString() ?? string.Empty);
+                }
 
                 sw.Stop();
                 Log.Information("Paged {Type} {@page} in {Time}", typeof(T).Name, pagedResults.PageDetails(), sw);
@@ -359,6 +378,10 @@ namespace MMIv8_Ktype.Core.Services
     {
         public IVersionProvider VersionProvider = versionProvider;
 
+        public async Task<Result<T>> UpdateStatus(Tid documentId, Status status, string? detail = null)
+        {
+            return await this.Update(documentId).AppendPipeline(c => c.AppendStatus(VersionProvider.NewStatus(status, detail))).FindAndUpdateDocument();
+        }
         public async Task<Result<T>> UpdateStatus(T document, Status status, string? detail = null)
         {
             return await this.Update(document).AppendPipeline(c => c.AppendStatus(VersionProvider.NewStatus(status, detail))).FindAndUpdateDocument();

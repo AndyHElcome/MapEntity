@@ -1,6 +1,5 @@
 ﻿using MMIv8_Ktype.Models.Collections;
 using MMIv8_Ktype.Models.Indexes;
-using MMIv8_Ktype.Models.Outputs;
 using MongoDB.Bson;
 using MongoDB.Driver;
 

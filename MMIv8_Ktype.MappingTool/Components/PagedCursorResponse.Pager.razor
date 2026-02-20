@@ -1,0 +1,141 @@
+﻿@using MMIv8_Ktype.Api.Responses
+@using MMIv8_Ktype.Models.Collections
+
+<style>
+    /* Left group (navigation buttons) */
+    .dx-pager-left {
+        display: flex;
+        align-items: center;
+        gap: .35rem;
+    }
+
+    /* Center group (summary & page input) */
+    .dx-pager-center {
+        display: flex;
+        align-items: center;
+        gap: .75rem;
+    }
+
+    /* Right group (page size selector) */
+    .dx-pager-right {
+        display: flex;
+        align-items: center;
+        gap: .5rem;
+        white-space: nowrap;
+    }
+
+    /* Summary text formatting */
+    .dx-pager-summary {
+        font-size: .85rem;
+        opacity: .8;
+    }
+
+    /* Optional: style the label for page size chooser */
+    .dx-pager-label {
+        font-size: .85rem;
+        opacity: .8;
+        white-space: nowrap;
+    }
+
+    .dx-pagesize-combo {
+        width: 80px;
+        align-items: center;
+    }
+
+    .pager-container {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 1rem;
+        padding: .5rem 0;
+        flex-wrap: nowrap;
+    }
+</style>
+
+@if (Response is not null)
+{
+    <div class="pager-container">
+        <div class="dx-pager-left">
+
+            <DxPager ActivePageIndex="@( Response.CurrentPage - 1)"
+                     PageCount="@(Response.TotalPages)"
+                     ActivePageIndexChanged="@(async (int i) => await OnPageChanged.InvokeAsync(i + 1))">
+            </DxPager>
+        </div>
+
+
+
+        @if (ShowSummary)
+        {
+            <div class="dx-pager-center">
+                <div class="dx-pager-summary">
+                    @SummaryText
+                </div>
+            </div>
+        }
+
+        @if (ShowPageSizeSelector)
+        {
+            <div class="dx-pager-right">
+                <label for="@_pageSizeComboId" class="dx-pager-label">Page size:</label>
+                <DxComboBox Data="@PageSizeOptions"
+                            CssClass="dx-pagesize-combo"
+                            @bind-Value="_pageSize"
+                            @bind-Value:event="ValueChanged"
+                            Enabled="@(!IsLoading)"
+                            Id="@_pageSizeComboId"
+                            DropDownWidthMode="DropDownWidthMode.ContentOrEditorWidth" />
+            </div>
+        }
+    </div>
+}
+
+
+
+@code {        
+    [Parameter, EditorRequired] public BasePagedResponse? Response { get; set; } = null;
+    [Parameter] public EventCallback<int> OnPageChanged { get; set; }
+	[Parameter] public bool ShowPager { get; set; } = true;
+	[Parameter] public bool ShowPageSizeSelector { get; set; } = true;
+	[Parameter] public EventCallback<int> OnPageSizeChanged { get; set; }
+	[Parameter] public int[] PageSizeOptions { get; set; } = new int[] { 10, 25, 50, 100, 200 };
+	[Parameter] public bool IsLoading { get; set; } = false;
+
+
+
+    [Parameter] public bool ShowSummary { get; set; } = true;
+
+    protected string SummaryText
+        => $"Showing {Start:N0}–{End:N0} of {Response.TotalDocuments:N0} (Page {Response.CurrentPage:N0} of {Response.TotalPages:N0})";
+
+    protected int Start => Response.TotalDocuments == 0 ? 0 : Response.CoveredDocuments + 1;
+
+    protected int End => Response.CoveredDocuments + Response.Count;
+
+
+
+
+    protected int _pageSize
+    {
+        get => Response?.PageSize ?? 10;
+        set
+        {
+            if (value != Response.PageSize)
+            {
+                _ = OnPageSizeChangedInternalAsync(value);
+            }
+        }
+    }
+
+    protected readonly string _pageSizeComboId = $"pagesize-{Guid.NewGuid():N}";
+
+
+    protected async Task OnPageSizeChangedInternalAsync(int newSize)
+    {
+        if (IsLoading)
+            return;
+        // Common UX: reset to page 1 when page size changes
+        await OnPageSizeChanged.InvokeAsync(newSize);
+    }
+
+}

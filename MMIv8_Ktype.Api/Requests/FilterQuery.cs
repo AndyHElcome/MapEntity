@@ -1,9 +1,11 @@
 ﻿// minimal endpoint https://youtu.be/gsAuFIhXz3g?si=MfaGxzKFgLlgWIbR
 // reflection endpoint mapping https://youtu.be/CkGFV5bekbY?si=GkVIYuPIObrZDMu1
-using System.Security.Cryptography;
+using MongoDB.Driver;
 
 namespace MMIv8_Ktype.Api.Requests
 {
-    public interface IRequest { }
-
+    public class FilterQuery<T>
+    {
+        public MongoDB.Driver.FilterDefinition<T>? GetFilter() => Builders<T>.Filter.Empty;
+    }
 }

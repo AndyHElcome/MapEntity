@@ -1,4 +1,5 @@
-﻿using Microsoft.AspNetCore.Mvc;
+﻿using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.Mvc;
 using MMIv8_Ktype.Api.Requests;
 using MMIv8_Ktype.Api.Responses;
 using MMIv8_Ktype.Models;
@@ -17,13 +18,13 @@ using System.Threading.Tasks;
 namespace MMIv8_Ktype.Api.Endpoints
 {
     [GroupName("EntityRelation")]
-    public interface IEntityRelationEndpoints : IEndpoint
+    public interface IEntityRelationEndpoints : IBaseEndpoint<EntityRelation, ObjectId, FilterQuery<EntityRelation>, SortQuery<EntityRelation>>, IEndpoint
     {
         [Get("/GetCurrentEntityRelations")]
-        Task<SerializableResult<PagedCursorResponse<EntityRelation>>> GetCurrentEntityRelations([FromQuery] string? cursor = null, [FromQuery] int PageSize = 0);
+        Task<SerializableResult<PagedCursorResponse<EntityRelation>>> GetCurrentEntityRelations([AsParameters] PagedCursorRequest<ObjectId> pagedRequest);
 
         [Get("/GetPreviousEntityRelations")]
-        Task<SerializableResult<PagedCursorResponse<EntityRelation>>> GetPreviousEntityRelations([FromQuery] string? cursor = null, [FromQuery] int PageSize = 0);
+        Task<SerializableResult<PagedCursorResponse<EntityRelation>>> GetPreviousEntityRelations([AsParameters] PagedCursorRequest<ObjectId> pagedRequest);
 
         [Post("/CreateEntityRelation")]
         Task<Result> CreateEntityRelation(int versionNumber, List<PutEntityRelationRequest> entityRelationsRequest);

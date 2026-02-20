@@ -1,24 +1,21 @@
-﻿using MMIv8_Ktype.Core.Services;
+﻿using Microsoft.AspNetCore.Http.HttpResults;
 using MMIv8_Ktype.Api.Endpoints;
-using MongoDB.Driver;
 using MMIv8_Ktype.Api.Requests;
+using MMIv8_Ktype.Api.Responses;
+using MMIv8_Ktype.Core.Services;
 using MMIv8_Ktype.Core.Services.Mapping;
-using Version = MMIv8_Ktype.Models.Collections.Version;
-using MongoDB.Bson;
-using MMIv8_Ktype.Models.Collections;
-using Serilog;
 using MMIv8_Ktype.Core.Services.Match;
-using Microsoft.AspNetCore.Http.HttpResults;
 using MMIv8_Ktype.Models;
+using MMIv8_Ktype.Models.Collections;
+using MongoDB.Bson;
+using MongoDB.Driver;
+using Serilog;
+using Version = MMIv8_Ktype.Models.Collections.Version;
 
 namespace MMIv8_Ktype.Core.Endpoints
 {
-    public class UserEndpoints(UserService userService, MappingService mappingService) : IUserEndpoints
+    public class UserEndpoints(UserService userService, MappingService mappingService) : BaseEndpoints<User, ObjectId, FilterQuery<User>, SortQuery<User>>(userService), IUserEndpoints
     {
-        public async Task<SerializableResult<List<User>>> GetAll()
-        {
-            return Result.Success(await userService.GetFindFluent().ToListAsync());
-        }
 
         public async Task<SerializableResult<User>> GetByUserName(string UserName)
         {

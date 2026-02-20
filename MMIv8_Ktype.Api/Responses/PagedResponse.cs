@@ -3,31 +3,24 @@
 using MMIv8_Ktype.Models;
 using MMIv8_Ktype.Models.Util;
 using System.Reflection.Metadata;
+using System.Text.Json.Serialization;
 using System.Xml;
 
 namespace MMIv8_Ktype.Api.Responses
 {
+    [Serializable]
     public class PagedResponse<T>(List<T> documents,
                                   int totalDocuments,
-                                  int page,
-                                  int pageSize) : IResponse
+                                  int currentPage,
+                                  int pageSize) : BasePagedResponse
     {
         public List<T> Documents { get; } = documents;
 
-        public int TotalDocuments { get; } = totalDocuments;
-        public int Page { get; } = page;
-        public int PageSize { get; } = pageSize;
+        public override int PageSize { get; } = pageSize;
+        public override int Count { get; } = documents.Count;
+        public override int TotalDocuments { get; } = totalDocuments;
 
-        public bool HasPreviousPage => Page > 1;
-        public bool HasNextPage => TotalDocuments != ((Page - 1) * PageSize) + Documents.Count;
-
-        public override string ToString()
-        {
-            return $"Documents: {Documents.Count} / Total: {TotalDocuments} (Page:{Page} PageSize:{PageSize} Prev:{HasPreviousPage} Next:{HasNextPage})";
-        }
-        public object PageDetails()
-        {
-            return new { Documents = Documents.Count, TotalDocuments, Page, PageSize, HasPreviousPage, HasNextPage };
-        }
+        public override int CoveredDocuments => (CurrentPage - 1) * PageSize;
+        public override int CurrentPage { get; } = currentPage;
     }
 }

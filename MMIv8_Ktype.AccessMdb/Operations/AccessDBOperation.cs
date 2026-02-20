@@ -5,7 +5,6 @@ using MMIv8_Ktype.Api.Requests;
 using MMIv8_Ktype.Api.Responses;
 using MMIv8_Ktype.Models;
 using MMIv8_Ktype.Models.Collections;
-using MMIv8_Ktype.Models.Outputs;
 using MMIv8_Ktype.Models.Status;
 using MMIv8_Ktype.Models.Util;
 using MongoDB.Bson;
@@ -695,7 +694,7 @@ namespace MMIv8_Ktype.AccessMdb.Operations
         {
             var matchMakeModelEndpoints = new RefitClient(log).CreateService<IMatchMakeModelEndpoints>();
 
-            var matchMakeModelsResult = await matchMakeModelEndpoints.GetAll();
+            var matchMakeModelsResult = await matchMakeModelEndpoints.GetByCursor(new PagedCursorRequest<ObjectId>(), new FilterQuery<MatchMakeModel>());
 
             List<MatchMakeModel> matchMakeModels = matchMakeModelsResult.Value!.Documents.Where(c => c.MMIv8Model.DocumentId is not null && c.TecDocModel.DocumentId is not null).ToList();
             int i = 1;
@@ -807,10 +806,22 @@ namespace MMIv8_Ktype.AccessMdb.Operations
         {
             var matchEntityEndpoints = new RefitClient(log, 5).CreateService<IMatchEntityEndpoints>();
 
+            MatchEntityFilterRequest filter = new()
+            {
+                MakeModelMatchId = MakeModelMatchId,
+                TecDocEntityId = TecDocEntityId,
+                MMIv8EntityId = MMIv8EntityId,
+                IsCheck = IsCheck,
+                IsMatched = IsMatched,
+                IsFailed = IsFailed,
+                HasDifference = HasDifference,
+                Status = Status
+            };
+
             await base.GenerateTableFromDocuments<MatchRefine, MatchRefine>(
                 TableName,
                 log,
-                () => matchEntityEndpoints.GetAllMatchRefine(MakeModelMatchId, TecDocEntityId, MMIv8EntityId, IsCheck, IsMatched, IsFailed, HasDifference, Status),
+                () => matchEntityEndpoints.GetAllMatchRefine(filter),
                 (document) => [ document ],
                 (document) => GlobalHelpers.ObjToDictionary(document),
                 [ nameof(MatchRefine.DocumentId) ],
@@ -861,10 +872,22 @@ namespace MMIv8_Ktype.AccessMdb.Operations
         {
             var matchEntityEndpoints = new RefitClient(log).CreateService<IMatchEntityEndpoints>();
 
+            MatchEntityFilterRequest filter = new()
+            {
+                MakeModelMatchId = MakeModelMatchId,
+                TecDocEntityId = TecDocEntityId,
+                MMIv8EntityId = MMIv8EntityId,
+                IsCheck = IsCheck,
+                IsMatched = IsMatched,
+                IsFailed = IsFailed,
+                HasDifference = HasDifference,
+                Status = Status
+            };
+
             await base.GenerateTableFromPagedDocuments<MatchEntitySummary, MatchEntitySummary, ObjectId>(
                 TableName,
                 log,
-                (string? cursor, int pageSize) => matchEntityEndpoints.GetAllMatchEntitySummary(cursor, pageSize, MakeModelMatchId, TecDocEntityId, MMIv8EntityId, IsCheck, IsMatched, IsFailed, HasDifference, Status),
+                (string? cursor, int pageSize) => matchEntityEndpoints.GetAllMatchEntitySummary( new PagedCursorRequest<ObjectId>() { Cursor = cursor, PageSize = pageSize }, filter),
                 (document) => [ document ],
                 (document) => GlobalHelpers.ObjToDictionary(document),
                 [ nameof(MatchEntitySummary.DocumentId), nameof(MatchEntitySummary.TecDocEntityId), nameof(MatchEntitySummary.MMIv8EntityId) ],
@@ -915,10 +938,21 @@ namespace MMIv8_Ktype.AccessMdb.Operations
         {
             var matchEntityEndpoints = new RefitClient(log).CreateService<IMatchEntityEndpoints>();
 
+            MatchEntityFilterRequest filter = new()
+            {
+                MakeModelMatchId = MakeModelMatchId,
+                TecDocEntityId = TecDocEntityId,
+                MMIv8EntityId = MMIv8EntityId,
+                IsCheck = IsCheck,
+                IsMatched = IsMatched,
+                IsFailed = IsFailed,
+                HasDifference = HasDifference,
+                Status = Status
+            };
             await base.GenerateTableFromPagedDocuments<MatchEntity, MatchEntityComparisons, ObjectId>(
                 TableName,
                 log,
-                (string? cursor, int pageSize) => matchEntityEndpoints.GetAll(cursor, pageSize, MakeModelMatchId, TecDocEntityId, MMIv8EntityId, IsCheck, IsMatched, IsFailed, HasDifference, Status),
+                (string? cursor, int pageSize) => matchEntityEndpoints.GetByCursor(new PagedCursorRequest<ObjectId>() { Cursor = cursor, PageSize = pageSize }, filter),
                 (document) 
                     => document.EntityComparison.Select(c 
                         => new MatchEntityComparisons(
@@ -988,10 +1022,21 @@ namespace MMIv8_Ktype.AccessMdb.Operations
         {
             var matchEntityEndpoints = new RefitClient(log).CreateService<IMatchEntityEndpoints>();
 
+            MatchEntityFilterRequest filter = new()
+            {
+                MakeModelMatchId = MakeModelMatchId,
+                TecDocEntityId = TecDocEntityId,
+                MMIv8EntityId = MMIv8EntityId,
+                IsCheck = IsCheck,
+                IsMatched = IsMatched,
+                IsFailed = IsFailed,
+                HasDifference = HasDifference,
+                Status = Status
+            };
             await base.GenerateTableFromPagedDocuments<MatchEntity, ExpandoObject, ObjectId>(
                 TableName,
                 log,
-                (string? cursor, int pageSize) => matchEntityEndpoints.GetAll(cursor, pageSize, MakeModelMatchId, TecDocEntityId, MMIv8EntityId, IsCheck, IsMatched, IsFailed, HasDifference, Status),
+                (string? cursor, int pageSize) => matchEntityEndpoints.GetByCursor(new PagedCursorRequest<ObjectId>() { Cursor = cursor, PageSize = pageSize }, filter),
                 (MatchEntity document) => [ new ExpandoObject().BuildExpando(document) ],
                 (document) => (document).ToDictionary(c => c.Key, c => c.Value ?? string.Empty),
                 [ nameof(MatchEntity.DocumentId) ], 
@@ -1170,7 +1215,7 @@ namespace MMIv8_Ktype.AccessMdb.Operations
             await base.GenerateTableFromPagedDocuments<SourceMMIv8, SourceMMIv8, ObjectId>(
                 TableName,
                 log,
-                (string? cursor, int pageSize) => sourceEntityEndpoints.GetAll(cursor, pageSize),
+                (string? cursor, int pageSize) => sourceEntityEndpoints.GetByCursor(new PagedCursorRequest<ObjectId>() { Cursor = cursor, PageSize = pageSize }, new FilterQuery<SourceMMIv8>()),
                 (document) => [ document ],
                 (document) => GlobalHelpers.ObjToDictionary(document),
                 [ nameof(SourceMMIv8.ExternalId) ],
@@ -1188,7 +1233,7 @@ namespace MMIv8_Ktype.AccessMdb.Operations
             await base.GenerateTableFromPagedDocuments<SourceTecDocPC, SourceTecDocPC, ObjectId>(
                 TableName,
                 log,
-                (string? cursor, int pageSize) => sourceEntityEndpoints.GetAll(cursor, pageSize),
+                (string? cursor, int pageSize) => sourceEntityEndpoints.GetByCursor(new PagedCursorRequest<ObjectId>() { Cursor = cursor, PageSize = pageSize }, new FilterQuery<SourceTecDocPC>()),
                 (document) => [ document ],
                 (document) => GlobalHelpers.ObjToDictionary(document),
                 [ nameof(SourceTecDocPC.ExternalId) ],

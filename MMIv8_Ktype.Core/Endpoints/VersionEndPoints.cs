@@ -1,24 +1,26 @@
-﻿using MMIv8_Ktype.Core.Services;
+﻿using Microsoft.AspNetCore.Http.HttpResults;
+using Microsoft.AspNetCore.Mvc;
 using MMIv8_Ktype.Api.Endpoints;
-using MongoDB.Driver;
 using MMIv8_Ktype.Api.Requests;
+using MMIv8_Ktype.Api.Responses;
+using MMIv8_Ktype.Core.Services;
 using MMIv8_Ktype.Core.Services.Mapping;
-using Version = MMIv8_Ktype.Models.Collections.Version;
-using MongoDB.Bson;
-using MMIv8_Ktype.Models.Collections;
-using Serilog;
 using MMIv8_Ktype.Core.Services.Match;
-using Microsoft.AspNetCore.Http.HttpResults;
 using MMIv8_Ktype.Models;
+using MMIv8_Ktype.Models.Collections;
+using MMIv8_Ktype.Models.Status;
+using MongoDB.Bson;
+using MongoDB.Driver;
+using Refit;
+using Serilog;
+using System.Security.Cryptography;
+using Version = MMIv8_Ktype.Models.Collections.Version;
 
 namespace MMIv8_Ktype.Core.Endpoints
 {
-    public class VersionEndPoints(VersionService versionService, MappingService mappingService) : IVersionEndpoints
+
+    public class VersionEndPoints(VersionService versionService, MappingService mappingService) : BaseEndpoints<Version, ObjectId, VersionFilterRequest, VersionSortRequest>(versionService), IVersionEndpoints
     {
-        public async Task<SerializableResult<List<Version>>> GetAll() //TODO change results to stream
-        {
-            return Result.Success(await versionService.GetFindFluent().ToListAsync());
-        }
 
         public async Task<SerializableResult<Version>> GetCurrentVersion()
         {
