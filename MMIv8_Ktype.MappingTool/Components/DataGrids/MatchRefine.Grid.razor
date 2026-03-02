@@ -1,0 +1,35 @@
+﻿@using DevExpress.Blazor.Internal.Editors
+@using MMIv8_Ktype.Api
+@using MMIv8_Ktype.Api.Endpoints
+@using MMIv8_Ktype.Api.Requests
+@using MMIv8_Ktype.Api.Responses
+@using MMIv8_Ktype.Models.Collections
+@using MongoDB.Bson
+
+
+<Generic_Grid TItem="MatchRefine"
+			  Tid="ObjectId"
+			  TFilter="FilterQuery<MatchRefine>"
+			  TSort="SortQuery<MatchRefine>"
+			  TEndpoint="IMatchRefineEndpoints"
+			  
+			  Filter="@(new FilterQuery<MatchRefine>())"
+			  Sort="@(new SortQuery<MatchRefine>())">
+	<Columns>
+		<DxGridDataColumn FieldName=@nameof(MatchRefine.DocumentId) />
+		<DxGridDataColumn FieldName=@nameof(MatchRefine.BestMatches) />
+		<DxGridDataColumn FieldName=@nameof(MatchRefine.LastMatches) />
+		<DxGridDataColumn FieldName=@nameof(MatchRefine.ChosenMatches) />
+		<DxGridDataColumn FieldName=@nameof(MatchRefine.PassCount) />
+		<DxGridDataColumn FieldName=@nameof(MatchRefine.Difference) />
+		<DxGridDataColumn FieldName=@nameof(MatchRefine.IsCheck) />
+		<DxGridDataColumn FieldName=@nameof(MatchRefine.BestScore) />
+
+
+	</Columns>
+</Generic_Grid>
+
+@code {
+
+}
+

@@ -1,0 +1,74 @@
+﻿@using DevExpress.Blazor
+@using MMIv8_Ktype.Api
+@using MMIv8_Ktype.Api.Endpoints
+@using MMIv8_Ktype.Api.Requests
+@using MMIv8_Ktype.Api.Responses
+@using MMIv8_Ktype.MappingTool.Components.DataGrids
+@using MMIv8_Ktype.Models
+@using MMIv8_Ktype.Models.Collections
+@using Serilog
+@using Serilog.Events
+
+
+
+<div class="container d-flex ">
+    <SourceEntityModel_Form_Edit T="SourceTecDocPC" @bind-EditItem="@(EditItem.TecDocModel)" SourceEntityEndpoints="@(new RefitClient(Log.Logger).CreateService<ISourceTecDocPCEndpoints>())" />
+    <SourceEntityModel_Form_Edit T="SourceMMIv8" @bind-EditItem="@(EditItem.MMIv8Model)" SourceEntityEndpoints="@(new RefitClient(Log.Logger).CreateService<ISourceMMIv8Endpoints>())" />
+    
+    <DxButton Text="Create" Click="@OpenConfirmDialogAsync" />
+</div>
+
+<DxDialogProvider  />
+
+
+@code {
+    [Inject] IDialogService DialogService { get; set; }
+    [Parameter, EditorRequired] public MatchMakeModel EditItem { get; set; }
+
+    private async Task OpenConfirmDialogAsync()
+    {
+        bool result = await DialogService.ConfirmAsync(new MessageBoxOptions()
+        {
+            Title = "Confirm",
+            Text = "Are you sure you want to create Match?",
+            RenderStyle = MessageBoxRenderStyle.Primary,
+            OkButtonText = "Ok",
+            CancelButtonText = "Cancel",
+			CloseOnEscape = true,
+			CloseOnOutsideClick = true,
+        });
+
+        if(result)
+        {
+            var response = await new RefitClient(Log.Logger).CreateService<IMatchMakeModelEndpoints>().CreateMatchMakeModel(EditItem.TecDocModel.DocumentId, EditItem.MMIv8Model.DocumentId);
+            await ResultsDialog(response);
+		}
+    }
+
+
+
+    private async Task ResultsDialog(IResultWrapper result)
+    {
+        if(result.IsSuccess)
+        {
+            await DialogService.AlertAsync(new MessageBoxOptions()
+            {
+                Title = "Success",
+                //Text = "",
+                RenderStyle = MessageBoxRenderStyle.Success,
+                OkButtonText = "Ok",                
+            });
+        }
+		else
+        {
+            await DialogService.AlertAsync(new MessageBoxOptions()
+            {
+                Title = "Error",
+                Text = "We encountered an error",
+                RenderStyle = MessageBoxRenderStyle.Danger,
+                OkButtonText = "Ok",
+            });
+		}
+    }
+
+}

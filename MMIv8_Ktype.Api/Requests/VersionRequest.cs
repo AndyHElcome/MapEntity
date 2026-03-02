@@ -19,7 +19,7 @@ namespace MMIv8_Ktype.Api.Requests
         public string? MMIv8EntityVersion { get; set; } = null;
         public string[]? UserName { get; set; } = null;
 
-        public FilterDefinition<Version> GetFilter()
+        public new FilterDefinition<Version> GetFilter()
         {
             var filterBuilder = Builders<Version>.Filter;
             var filter = filterBuilder.Empty;

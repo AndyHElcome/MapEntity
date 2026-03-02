@@ -11,10 +11,10 @@ namespace MMIv8_Ktype.Api
 
             if (result is IResultWrapper wrapper && !wrapper.IsSuccess)
                 return wrapper.ToProblemDetails();
-                //return Results.Problem(
-                //    detail: wrapper.Error?.Description,
-                //    statusCode: 400,
-                //    title: "Request failed");
+                ////return Results.Problem(
+                ////    detail: wrapper.Error?.Description,
+                ////    statusCode: 400,
+                ////    title: "Request failed");
             else
                 return result;
         }

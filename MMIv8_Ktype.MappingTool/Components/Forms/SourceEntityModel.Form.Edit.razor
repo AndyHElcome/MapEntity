@@ -1,0 +1,183 @@
+﻿@using DevExpress.Blazor
+@using MMIv8_Ktype.Api
+@using MMIv8_Ktype.Api.Endpoints
+@using MMIv8_Ktype.Api.Requests
+@using MMIv8_Ktype.Api.Responses
+@using MMIv8_Ktype.MappingTool.Components.DataGrids
+@using MMIv8_Ktype.Models
+@using MMIv8_Ktype.Models.Collections
+@using MMIv8_Ktype.Models.Indexes
+@using Serilog
+@using Serilog.Events
+@using System.Linq.Expressions
+
+
+@typeparam T where T : SourceEntity
+
+
+<div >
+    <DxFormLayout Data="@EditItem" Enabled="@Display">
+
+        <DxFormLayoutItem Field="@nameof(MongoSourceEntityModel.Make)"
+						  Context="makeddl"
+						  Caption="Make:"
+						  CaptionPosition="CaptionPosition.Vertical">
+
+            <DxDropDownBox @bind-Value="@SelectedMake"            
+                           QueryDisplayText="QueryText"
+                           DropDownWidthMode="DropDownWidthMode.ContentOrEditorWidth"
+                           ClearButtonDisplayMode="DataEditorClearButtonDisplayMode.Never"
+                           NullText="Select a make..."
+                           InputId="ddbSearchLookup"
+                           ReadOnly="@ReadOnly">
+
+                <DropDownBodyTemplate>
+                    <DxListBox DataAsync="@((cxt) => LoadMakesAsync())" TData="string" TValue="string"
+                               Value="@(GetListBoxValues(context.DropDownBox))"
+                               ValueChanged="@(value => MakeValuesChanged(value, context.DropDownBox))"                               
+                               SelectionMode="ListBoxSelectionMode.Single"
+                               ShowCheckboxes="false"
+                               ShowSearchBox="true"
+                               ShowSelectAllCheckbox="false">
+                    </DxListBox>
+                </DropDownBodyTemplate>
+            </DxDropDownBox>
+        </DxFormLayoutItem>
+
+        <DxFormLayoutItem Field="@nameof(MongoSourceEntityModel.Model)"                          
+						  Context="modelddl"
+						  Caption="Model:"
+						  CaptionPosition="CaptionPosition.Vertical">
+
+            <DxDropDownBox @bind-Value="@SelectedModel"
+                           QueryDisplayText="QueryText"
+                           DropDownWidthMode="DropDownWidthMode.ContentOrEditorWidth"
+                           ClearButtonDisplayMode="DataEditorClearButtonDisplayMode.Never"
+                           NullText="Select a model..."
+                           InputId="ddbModelSearchLookup"
+                           ReadOnly="@(ReadOnly || SelectedMake is null || SelectedMake as string == string.Empty)">
+
+                <DropDownBodyTemplate>
+                    <DxListBox DataAsync="@((cxt) => LoadModelsAsync())" TData="string" TValue="string"
+                               Value="@(GetListBoxValues(context.DropDownBox))"                               
+                               ValueChanged="@(value => ModelValuesChanged(value, context.DropDownBox))"
+                               SelectionMode="ListBoxSelectionMode.Single"
+                               ShowCheckboxes="false"
+                               ShowSearchBox="true"
+                               ShowSelectAllCheckbox="false">
+                    </DxListBox>
+                </DropDownBodyTemplate>
+            </DxDropDownBox>
+        </DxFormLayoutItem>
+
+    </DxFormLayout>
+</div>
+
+
+
+@code {
+    private MongoSourceEntityModel _editItem;
+
+    [Parameter, EditorRequired] public MongoSourceEntityModel EditItem
+    {
+        get => _editItem;
+        set
+        {
+            if (_editItem == value)
+                return;
+
+            _editItem = value;
+            EditItemChanged.InvokeAsync(value);
+        } 
+    }
+
+    [Parameter] public EventCallback<MongoSourceEntityModel> EditItemChanged { get; set; }
+
+
+    [Parameter, EditorRequired] public ISourceEntityEndpoints<T> SourceEntityEndpoints { get; set; }
+    [Parameter] public bool Display { get; set; } = true;
+
+    object? SelectedMake { get; set; } = null;
+    object? SelectedModel { get; set; } = null;
+
+    public bool ReadOnly { get; set; }
+
+	//TODO Could add cache for makes and models to avoid multiple calls to the API when opening the dropdowns multiple times
+    async Task<IEnumerable<string>> LoadMakesAsync()
+    {
+        var response = await SourceEntityEndpoints.GetMakes(null, null);
+
+        if (response.Value != null)
+            return response.Value;
+
+        return Enumerable.Empty<string>();
+    }
+
+    //TODO Could add cache for makes and models to avoid multiple calls to the API when opening the dropdowns multiple times
+    //Would need to clear cache on Make change
+    async Task<IEnumerable<string>> LoadModelsAsync()
+    {
+        var response = await SourceEntityEndpoints.GetModels([ SelectedMake as string ], null);
+
+        if (response.Value != null)
+            return response.Value;
+
+        return Enumerable.Empty<string>();
+    }
+
+    async Task Confirm()
+    {
+        await GetSourceEntityModel();
+    }
+
+    async Task GetSourceEntityModel()
+    {
+        var response = await SourceEntityEndpoints.GetByMakeModel(SelectedMake as string, SelectedModel as string);
+
+        if (response.Value != null)
+        {
+            EditItem = response.Value;
+        }
+        Log.Debug(EditItem.DocumentId);
+    }
+
+    string GetListBoxValues(IDropDownBox dropDownBox)
+    {
+        return dropDownBox.Value as string ?? string.Empty;
+    }
+
+    void MakeValuesChanged(string value, IDropDownBox dropDownBox)
+    {
+        SelectedModel = null;
+        ListBoxValuesChanged(value, dropDownBox);
+    }
+
+    void ModelValuesChanged(string value, IDropDownBox dropDownBox)
+    {
+        ListBoxValuesChanged(value, dropDownBox);
+
+        GetSourceEntityModel();
+    }
+
+    void ListBoxValuesChanged(string value, IDropDownBox dropDownBox)
+    {
+        dropDownBox.BeginUpdate();
+        dropDownBox.Value = value;
+        dropDownBox.EndUpdate();
+    }
+
+    string QueryText(DropDownBoxQueryDisplayTextContext arg)
+    {
+        return arg.Value as string ?? string.Empty;
+    }
+
+
+    protected override async Task OnInitializedAsync()
+    {
+        SelectedMake = EditItem?.Make ?? string.Empty;
+        SelectedModel = EditItem?.Model ?? string.Empty;
+
+        ReadOnly = EditItem?.DocumentId is not null;
+    }
+}
+

@@ -7,151 +7,23 @@
 @using MMIv8_Ktype.Api.Requests
 @using MMIv8_Ktype.Api.Responses
 @using MMIv8_Ktype.MappingTool.Components.DataGrids
+@using MMIv8_Ktype.MappingTool.Components.Forms
 @using MMIv8_Ktype.Models
 @using MMIv8_Ktype.Models.Collections
+@using MongoDB.Bson
 @using Serilog
 @using Serilog.Events
 
 <PageTitle>Home</PageTitle>
 
-<DxButton Text="Add Item" Click="@(() => ShowPopup(true))" />
-    <MatchEntity_Grid />
+<i>Add current version to navbar or footer, and info and a readme  </i>
     
 
-<style>
-    .form-container {
-        padding-top: 1rem;
-        padding-bottom: 1rem;
-    }
-</style>
 
-<DxPopup @bind-Visible="@PopupVisible"
-         CloseOnEscape="true"
-         ShowCloseButton="true"
-         ShowFooter="true"
-         AllowDrag="true">
-
-    <HeaderTemplate>
-        @(IsNew ? "Add Item" : "Edit Item")
-    </HeaderTemplate>
-
-    <BodyTemplate Context="PopupContext">
-        <div class="form-container">
-            <DxFormLayout>
-
-                <DxListBox Data="@Makes"                    
-                           TextFieldName="Make"
-                           @bind-SearchText="@_searchMake"
-                           @bind-Value="@_make"
-                           ShowSearchBox="true"
-                           SearchTextParseMode="ListSearchTextParseMode.GroupWordsByAnd"
-                           ListRenderMode="ListRenderMode.Virtual"
-                           SelectedDataItemsChanged="(SelectedDataItemsChangedEventArgs<string> args) => LoadModels(args.DataItems)"
-                               >
-
-                </DxListBox>
-
-                <DxListBox Data="@Models"
-                           TextFieldName="Model"
-                           @bind-SearchText="@_searchModel"
-                           @bind-Value="@_model"
-                           ShowSearchBox="true"
-                           SearchTextParseMode="ListSearchTextParseMode.GroupWordsByAnd"
-                           ListRenderMode="ListRenderMode.Virtual"
-                           SelectedDataItemsChanged="(SelectedDataItemsChangedEventArgs<string> args) => LoadData()"
-                           Enabled="@(Models is not null && Models.Count != 0)">
-
-                </DxListBox>
-
-                <DxFormLayoutItem Caption="MMI_SourceEntityModelHash">
-                    <DxTextBox @bind-Text="EditModel.MMI_SourceEntityModelHash" />
-                </DxFormLayoutItem>
-
-            </DxFormLayout>
-        </div>
-    </BodyTemplate>
-
-    <FooterContentTemplate>
-        <DxButton Text="Save" Click="@Save" />
-        <DxButton Text="Cancel" Click="@ClosePopup" RenderStyle="ButtonRenderStyle.Secondary" />
-    </FooterContentTemplate>
-
-</DxPopup>
 
 
 
 
 @code {
-    ISourceTecDocPCEndpoints sourceTecDocPCEndpoints { get; set; } = new RefitClient(Log.Logger).CreateService<ISourceTecDocPCEndpoints>();
 
-    private List<string> Makes { get; set; } = new List<string>();
-    string _searchMake { get; set; } = string.Empty;
-    string _make { get; set; } = string.Empty;
-
-
-    private List<string> Models { get; set; } = new List<string>();
-    string _searchModel { get; set; } = string.Empty;
-    string _model { get; set; } = string.Empty;
-
-    async Task LoadMakes()
-    {
-        var response = await sourceTecDocPCEndpoints.GetMakes(null, null);
-
-        if (response.Value != null)
-            Makes = response.Value;
-    }
-    async Task LoadModels(IEnumerable<string> make)
-    {
-        var response = await sourceTecDocPCEndpoints.GetModels(make.ToArray(), null);
-
-        if (response.Value != null)
-            Models = response.Value;
-    }
-    async Task LoadData()
-    {
-
-    }
-
-
-    private List<MatchMakeModel> matchMakes { get; set; }
-    private bool loading = true;
-
-    private bool PopupVisible { get; set; }
-
-    private bool IsNew { get; set; }
-
-
-
-    private PutMatchMakeModelRequest EditModel { get; set; } = new();
-
-
-    void ShowPopup(bool isNew)
-    {
-        IsNew = isNew;
-        EditModel = isNew ? new PutMatchMakeModelRequest() : new PutMatchMakeModelRequest();
-
-        PopupVisible = true;
-    }
-
-    void ClosePopup()
-    {
-        PopupVisible = false;
-    }
-
-    async Task Save()
-    {
-        // if (IsNew)
-        //     await Api.CreateItemAsync(EditModel);
-        // else
-        //     await Api.UpdateItemAsync(EditModel.Id, EditModel);
-
-        PopupVisible = false;
-    }
-
-
-    protected override async Task OnInitializedAsync()
-    {
-        await LoadMakes();
-
-    }
 }

@@ -3,13 +3,12 @@
 @using MMIv8_Ktype.Api.Endpoints
 @using MMIv8_Ktype.Api.Requests
 @using MMIv8_Ktype.Api.Responses
-@using MMIv8_Ktype.MappingTool.Components.Pagers
 @using MMIv8_Ktype.Models.Collections
 @typeparam TItem 
 @typeparam Tid
 @typeparam TFilter where TFilter : FilterQuery<TItem>
 @typeparam TSort where TSort : SortQuery<TItem>
-@typeparam TEndpoint where TEndpoint : class, IEndpoint, IBaseEndpoint<TItem, Tid, TFilter, TSort>
+@typeparam TEndpoint where TEndpoint : IBaseEndpoint<TItem, Tid, TFilter, TSort>, IVersionEndpoint<TItem, Tid, TFilter>, IEndpoint
 
 <style>
 	.grid-container {
@@ -55,19 +54,17 @@
 </div>
 
 @code {
-	//TODO Slower when not passed as parameter, might need a preload or change of render mode
-	//[Parameter, EditorRequired] public TEndpoint Endpoints { get; set; }
+	[Parameter, EditorRequired] public TEndpoint Endpoints { get; set; }
 	[Parameter, EditorRequired] public TFilter Filter { get; set; }
 	[Parameter, EditorRequired] public TSort Sort { get; set; }
 
 	[Parameter] public RenderFragment? Columns { get; set; }
-
+	
 	[Parameter] public int? StartingPageSize { get; set; } = null;
 	[Parameter] public bool ShowPager { get; set; } = true;
 	[Parameter] public bool ShowPageSizeSelector { get; set; } = true;
 
 
-	public TEndpoint Endpoints { get; set; } = new RefitClient(Log.Logger).CreateService<TEndpoint>();
 	public Models.SerializableResult<PagedResponse<TItem>>? Response { get; set; }
 	public bool loading { get; set; } = true;
 	public bool isError { get; set; } = false;
@@ -100,6 +97,12 @@
 
 	}
 
+	async Task OnChecked(TItem editedItem)
+	{
+		_ = await Endpoints.UpdateStatus(editedItem, Models.Status.Status.Checked);
+		await LoadData();
+	}
+
 	async Task OnPageIndexChanged(int newPageIndex)
 	{
 		pagedRequest = new(newPageIndex, Response?.Value?.PageSize);
@@ -111,6 +114,16 @@
 		pagedRequest = new(1, newPageSize);
 		await LoadData();
 	}
+
+	// protected override async Task OnInitializedAsync()
+	// {
+	// 	if (StartingPageSize.HasValue)
+	// 	{
+	// 		pagedRequest = new(1, StartingPageSize.Value);
+	// 	}
+	// 	await LoadData();
+	// }
+
 
 	protected override async Task OnAfterRenderAsync(bool firstRender)
 	{

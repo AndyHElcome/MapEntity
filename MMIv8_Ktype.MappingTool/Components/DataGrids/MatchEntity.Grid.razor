@@ -12,7 +12,7 @@
 			  TFilter="MatchEntityFilterRequest"
 			  TSort="MatchEntitySortRequest"
 			  TEndpoint="IMatchEntityEndpoints"
-			  Endpoints="@(new RefitClient(Log.Logger).CreateService<IMatchEntityEndpoints>())"
+			  
 			  Filter="@(new MatchEntityFilterRequest())"
 			  Sort="@(new MatchEntitySortRequest())">
 	<Columns>

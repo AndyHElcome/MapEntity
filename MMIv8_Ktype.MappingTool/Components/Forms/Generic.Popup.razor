@@ -1,0 +1,25 @@
+﻿
+
+<DxPopup @bind-Visible="@PopupVisible"
+         CloseOnEscape="true"
+         ShowCloseButton="true"
+         ShowFooter="true"
+         AllowDrag="true"
+         HeaderText="@HeaderText">
+
+    <BodyTemplate Context="PopupContext">
+        @Form
+    </BodyTemplate>
+</DxPopup>
+
+@code {
+    [Parameter] public bool PopupVisible { get; set; } = false;
+	[Parameter, EditorRequired] public string HeaderText { get; set; }
+
+	[Parameter, EditorRequired] public RenderFragment Form { get; set; }
+
+    void ClosePopup()
+    {
+        PopupVisible = false;
+    }
+}

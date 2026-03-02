@@ -1,0 +1,26 @@
+﻿
+<DxMenu Title="Entity Mapping"
+		Orientation="Orientation.Horizontal"
+		DisplayMode="MenuDisplayMode.Auto"
+		CollapseItemsToHamburgerMenu="true"
+		CollapseItemToIconMode="MenuCollapseItemToIconMode.All"
+		SizeMode="SizeMode.Large">
+	<Items>
+		<DxMenuItem Text="Home" IconCssClass="bi bi-house" NavigateUrl="/" />
+		<DxMenuItem Text="Dashboard" IconCssClass="bi bi-pie-chart" NavigateUrl="/dashboard" />
+		<DxMenuItem Text="Make\Model" IconCssClass="bi bi-car-front" NavigateUrl="/matchmakemodel" />
+		<DxMenuItem Text="Refine" IconCssClass="bi bi-eyeglasses" NavigateUrl="/matchrefine" />
+
+		<DxMenuItem Text="Support" IconCssClass="menu-icon-support menu-icon" Visible="false">
+			<Items>
+				<DxMenuItem Text="Getting Started" />
+				<DxMenuItem Text="Documentation" />
+				<DxMenuItem Text="Support Center" />
+				<DxMenuItem Text="Code Examples" />
+				<DxMenuItem Text="Blogs" />
+			</Items>
+		</DxMenuItem>
+		<DxMenuItem Text="Admin" Position="ItemPosition.End" IconCssClass="bi bi-person-circle" NavigateUrl="/admin" />
+	</Items>
+</DxMenu>
+

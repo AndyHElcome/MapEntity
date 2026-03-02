@@ -1,0 +1,27 @@
+﻿@rendermode InteractiveServer
+
+@using MMIv8_Ktype.Api
+@using MMIv8_Ktype.Api.Endpoints
+@using MMIv8_Ktype.Api.Requests
+@using MMIv8_Ktype.Api.Responses
+@using MMIv8_Ktype.Models
+@using MMIv8_Ktype.Models.Collections
+@using MongoDB.Bson
+
+
+<Generic_Grid TItem="User"
+              Tid="ObjectId"
+              TFilter="FilterQuery<User>"
+              TSort="SortQuery<User>"
+              TEndpoint="IUserEndpoints"
+              Filter="@(new FilterQuery<User>())"
+              Sort="@(new SortQuery<User>())">
+    <Columns>
+        <DxGridDataColumn FieldName="@(nameof(User.DocumentId))" />
+        <DxGridDataColumn FieldName="@(nameof(User.Name))" />            
+    </Columns>
+</Generic_Grid>
+
+@code {
+    
+}

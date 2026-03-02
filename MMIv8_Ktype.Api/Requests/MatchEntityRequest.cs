@@ -12,7 +12,7 @@ namespace MMIv8_Ktype.Api.Requests
 
     public class MatchEntitySortRequest : SortQuery<MatchEntity>
     {
-        public new SortDefinition<MatchEntity>? GetSort()
+        public new SortDefinition<MatchEntity> GetSort()
         {
             return base.GetSort();
         }

@@ -25,7 +25,7 @@ internal class Program
 
         Log.Logger = new LoggerConfiguration() // Move to App settings
             .MinimumLevel.Debug()
-            .WriteTo.Console(outputTemplate: "[{Level:u3}] {Message:l}{NewLine}{Exception}")
+            .WriteTo.Console(outputTemplate: "{Timestamp:HH:mm:ss.fff} [{Level:u3}] {Message:l}{NewLine}{Exception}")
             .WriteTo.File($"..\\MMIv8_Ktype.Core\\Logs\\Log.txt",
                           rollOnFileSizeLimit: true,
                           fileSizeLimitBytes: 1048576,

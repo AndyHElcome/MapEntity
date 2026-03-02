@@ -14,7 +14,7 @@ namespace MMIv8_Ktype.Core.Endpoints
 {
     public class MatchMakeModelEndPoints(MatchMakeModelService matchMakeModelService, 
                                          MappingService mappingService,
-                                         BulkMappingService bulkMappingService) : BaseEndpointsWithVersion<MatchMakeModel, ObjectId, FilterQuery<MatchMakeModel>, SortQuery<MatchMakeModel>>(matchMakeModelService), IMatchMakeModelEndpoints
+                                         BulkMappingService bulkMappingService) : BaseEndpointsWithVersion<MatchMakeModel, ObjectId, FilterQuery<MatchMakeModel>, MatchMakeModelSortRequest>(matchMakeModelService), IMatchMakeModelEndpoints
     {
 
         public async Task<SerializableResult<List<MatchMakeModel>>> GenerateMakeModelMatch()

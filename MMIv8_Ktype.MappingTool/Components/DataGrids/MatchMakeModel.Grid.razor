@@ -1,9 +1,14 @@
-﻿@using DevExpress.Blazor.Internal.Editors
+﻿@rendermode InteractiveServer
+
+@using DevExpress.Blazor.Internal.Editors
 @using MMIv8_Ktype.Api
 @using MMIv8_Ktype.Api.Endpoints
 @using MMIv8_Ktype.Api.Requests
 @using MMIv8_Ktype.Api.Responses
+@using MMIv8_Ktype.MappingTool.Components.Forms
+@using MMIv8_Ktype.MappingTool.Components.Pagers
 @using MMIv8_Ktype.Models.Collections
+@using MongoDB.Bson
 
 
 <style>
@@ -11,6 +16,7 @@
 		width: 100%;
 	}
 </style>
+
 
 <div class="grid-container">
 	<DxLoadingPanel @bind-Visible="loading"
@@ -51,6 +57,7 @@
 									<DxButton RenderStyle="ButtonRenderStyle.Link" IconCssClass="bi bi-check fs-5" @onclick="@(() => OnChecked(item))" />						
 								}
 							}
+							<DxButton RenderStyle="ButtonRenderStyle.Link" IconCssClass="bi bi-plus-circle-dotted" @onclick="@(() => OnEditItem(item))" />
 						</CellDisplayTemplate>
 					</DxGridCommandColumn>
 				</Columns>
@@ -72,10 +79,34 @@
 	</DxLoadingPanel>
 </div>
 
+<DxPopup @bind-Visible="@PopupVisible"
+		 CloseOnEscape="true"
+		 ShowCloseButton="true"
+		 ShowFooter="true"
+		 AllowDrag="true"
+		 HeaderText="Add new"
+		 MaxWidth="1000px"
+		 Width="auto"
+		 >
+
+	
+		<MatchMakeModel_Form_Edit EditItem="@EditItem" />
+	
+</DxPopup>
+
+
 @code {
+	//TODO move into generic grid with command columns!!!!!!!!!!!!!!!!!!!!!
+
+
+
 	public Models.SerializableResult<PagedResponse<MatchMakeModel>> Response { get; set; }
 	public bool loading { get; set; } = true;
 	public bool isError { get; set; } = false;
+
+	public bool PopupVisible { get; set; } = false;
+
+	MatchMakeModel EditItem { get; set; } 
 
 	PagedRequest pagedRequest { get; set; } = new();
 
@@ -85,8 +116,9 @@
 	{
 		try
 		{
+			//TODO fix sort
 			loading = true;
-			Response = await matchMakeModelEndpoints.GetByPage(PagedRequest: pagedRequest, new FilterQuery<MatchMakeModel>(), new SortQuery<MatchMakeModel>());
+			Response = await matchMakeModelEndpoints.GetByPage(PagedRequest: pagedRequest, new FilterQuery<MatchMakeModel>(), new MatchMakeModelSortRequest());
 			isError = !Response.IsSuccess;
 			pagedRequest = new(Response.Value?.CurrentPage, Response.Value?.PageSize);
 		}
@@ -106,6 +138,14 @@
 	{
 		_ = await matchMakeModelEndpoints.UpdateStatus(editedItem, Models.Status.Status.Checked);
 		await LoadData();
+	}
+
+
+
+	async Task OnEditItem(MatchMakeModel editedItem)
+	{
+		PopupVisible = true;
+		EditItem = editedItem;
 	}
 
 	async Task OnPageIndexChanged(int newPageIndex)

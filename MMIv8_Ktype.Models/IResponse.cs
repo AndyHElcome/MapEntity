@@ -71,6 +71,7 @@ namespace MMIv8_Ktype.Models
     {
         bool IsSuccess { get; }
         Error? Error { get; }
+
     }
 
     public sealed class SerializableResult<T> : IResultWrapper

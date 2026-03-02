@@ -12,7 +12,7 @@ using Refit;
 namespace MMIv8_Ktype.Api.Endpoints
 {
     [GroupName("MatchMakeModel")]
-    public interface IMatchMakeModelEndpoints : IBaseEndpoint<MatchMakeModel, ObjectId, FilterQuery<MatchMakeModel>, SortQuery<MatchMakeModel>>, IVersionEndpoint<MatchMakeModel, ObjectId, FilterQuery<MatchMakeModel>>, IEndpoint
+    public interface IMatchMakeModelEndpoints : IBaseEndpoint<MatchMakeModel, ObjectId, FilterQuery<MatchMakeModel>, MatchMakeModelSortRequest>, IVersionEndpoint<MatchMakeModel, ObjectId, FilterQuery<MatchMakeModel>>, IEndpoint
     {
 
         [Get("/GetByModels")]

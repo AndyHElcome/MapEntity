@@ -1,9 +1,11 @@
 ﻿// minimal endpoint https://youtu.be/gsAuFIhXz3g?si=MfaGxzKFgLlgWIbR
 // reflection endpoint mapping https://youtu.be/CkGFV5bekbY?si=GkVIYuPIObrZDMu1
+using MongoDB.Driver;
+
 namespace MMIv8_Ktype.Api.Requests
 {
     public class SortQuery<T>
     {
-        public MongoDB.Driver.SortDefinition<T>? GetSort() => null;
+        public SortDefinition<T> GetSort() => Builders<T>.Sort.Combine();
     }
 }
