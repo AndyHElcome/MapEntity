@@ -32,11 +32,11 @@ namespace MMIv8_Ktype.Core.Endpoints
                     c.MatchResult.Failed,
                     c.MatchResult.FailDetail,
                     c.MatchResult.PreviousMatch,
-                    c.MatchRefine.IsCheck,
-                    c.MatchRefine.Difference,
-                    c.MatchRefine.BestScore,
+                    c.MMIv8Entity.MatchRefine.IsCheck,
+                    c.MMIv8Entity.MatchRefine.Difference,
+                    c.MMIv8Entity.MatchRefine.BestScore,
                     c.ScoreSum,
-                    c.MatchRefine.BestScore != null && c.ScoreSum == c.MatchRefine.BestScore, //c.IsBest,
+                    c.MMIv8Entity.MatchRefine.BestScore != null && c.ScoreSum == c.MMIv8Entity.MatchRefine.BestScore, //c.IsBest,
                     c.Matched,
                     c.MatchDetail,
                     c.MatchResult.ComparisonCount == c.MatchResult.PerfectCount, //c.MatchResult.IsPerfect,
@@ -46,10 +46,10 @@ namespace MMIv8_Ktype.Core.Endpoints
             return await matchEntityService.PaginateDocumentsByCursor<MatchEntitySummary, ObjectId>(filter: Filter.GetFilter(), cursor: PagedRequest.GetCursor(), pageSize: PagedRequest.PageSize ?? 0, projection: projection);
         }
 
-        public async Task<SerializableResult<List<MatchRefine>>> GetAllMatchRefine([AsParameters] MatchEntityFilterRequest Filter)
-        {
-            return await matchEntityService.GetDistinctDocuments<MatchRefine>(nameof(MatchEntity.MatchRefine), Filter.GetFilter());
-        }
+        //public async Task<SerializableResult<List<MatchRefine>>> GetAllMatchRefine([AsParameters] MatchEntityFilterRequest Filter)
+        //{
+        //    return await matchEntityService.GetDistinctDocuments<MatchRefine>(nameof(MatchEntity.MatchRefine), Filter.GetFilter());
+        //}
 
         public async Task<SerializableResult<PagedCursorResponse<MatchEntityBackup>>> GetMatchEntityBackup([AsParameters] PagedCursorRequest<ObjectId> PagedRequest)
         {

@@ -1,5 +1,6 @@
 ﻿using Microsoft.AspNetCore.Mvc;
 using MMIv8_Ktype.Api.Requests;
+using MMIv8_Ktype.Api.Responses;
 using MMIv8_Ktype.Core.Contexts;
 using MMIv8_Ktype.Models;
 using MMIv8_Ktype.Models.Collections;
@@ -109,7 +110,7 @@ namespace MMIv8_Ktype.Core.Services.Match
             return Result.Success();
         }
 
-        private async Task<Result<UpdateResult>> UpdateRelatedMatches(MatchMakeModel model, string? detail = null)
+        private async Task<Result<UpdateResultDTO>> UpdateRelatedMatches(MatchMakeModel model, string? detail = null)
         {
             var filterBuilder = Builders<MatchMakeModel>.Filter;
 

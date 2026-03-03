@@ -19,8 +19,8 @@ namespace MMIv8_Ktype.Api.Endpoints
         [Get("/MatchSummary")]
         Task<SerializableResult<PagedCursorResponse<MatchEntitySummary>>> GetAllMatchEntitySummary([AsParameters] PagedCursorRequest<ObjectId> PagedRequest, [AsParameters] MatchEntityFilterRequest Filter);
 
-        [Get("/MatchRefine")]
-        Task<SerializableResult<List<MatchRefine>>> GetAllMatchRefine([AsParameters] MatchEntityFilterRequest Filter);
+        //[Get("/MatchRefine")]
+        //Task<SerializableResult<List<MatchRefine>>> GetAllMatchRefine([AsParameters] MatchEntityFilterRequest Filter);
 
         [Get("/DistinctMMIv8")]
         Task<SerializableResult<List<MMI_V8_Key>>> GetDistinctMMIv8([AsParameters] MatchEntityFilterRequest Filter);

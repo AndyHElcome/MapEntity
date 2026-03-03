@@ -8,11 +8,9 @@ namespace MMIv8_Ktype.Api.Requests
 
     public class MatchMakeModelSortRequest : SortQuery<MatchMakeModel>
     {
-        public new SortDefinition<MatchMakeModel> GetSort()
+        public override SortDefinition<MatchMakeModel> GetSort()
         {
-            return Builders<MatchMakeModel>.Sort
-                .Ascending(c => string.Concat(c.TecDocModel.Make,c.MMIv8Model.Make))
-                .Ascending(c => string.Concat(c.TecDocModel.Model, c.MMIv8Model.Model));
+            return Builders<MatchMakeModel>.Sort.Ascending(c => c.TextSort);
         }
     }
     public record MatchMakeModelRequest(string TD_SourceEntityModelHash, string MMI_SourceEntityModelHash) : IRequest;

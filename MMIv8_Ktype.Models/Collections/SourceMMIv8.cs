@@ -1,7 +1,9 @@
-﻿using MongoDB.Bson;
+﻿using MMIv8_Ktype.Models.DateIntersection;
 using MMIv8_Ktype.Models.Indexes;
-using MMIv8_Ktype.Models.DateIntersection;
+using MMIv8_Ktype.Models.Util;
+using MongoDB.Bson;
 using MongoDB.Bson.Serialization.Attributes;
+using System.Text;
 using System.Text.Json.Serialization;
 
 namespace MMIv8_Ktype.Models.Collections
@@ -15,9 +17,38 @@ namespace MMIv8_Ktype.Models.Collections
 
         [BsonElement]
         public override string SourceEntityModelHash => GlobalHelpers.GenerateKey(new { Manufacturer, Model });
+
+        [BsonElement]
+        public override string TextSort
+        {
+            get
+            {
+                var naturalSortParameters = new NaturalSortParameters
+                {
+                    StripDash = true,
+                    StripSpace = true,
+                    IgnoreDecimalPlaces = true
+                };
+                var stringBuilder = new StringBuilder()
+                    .Append(NaturalSortGenerator.Generate(Manufacturer, naturalSortParameters)).Append('\t')
+                    .Append(NaturalSortGenerator.Generate(Model, naturalSortParameters)).Append('\t')
+                    .Append(NaturalSortGenerator.Generate(SubModel, naturalSortParameters)).Append('\t')
+                    .Append(NaturalSortGenerator.Generate(Mark_or_Series, naturalSortParameters)).Append('\t')
+                    .Append(NaturalSortGenerator.Generate(Token_Identifier, naturalSortParameters)).Append('\t')
+                    .Append(NaturalSortGenerator.Generate(Body, naturalSortParameters)).Append('\t')
+                    .Append(NaturalSortGenerator.Generate(Fuel, naturalSortParameters)).Append('\t')
+                    .Append(NaturalSortGenerator.Generate(Engine_Size.ToString(), naturalSortParameters)).Append('\t')
+                    .Append(NaturalSortGenerator.Generate(Engine_Code, naturalSortParameters));
+
+                return stringBuilder.ToString();
+
+            }
+        }
+
         public string SubModel { get; set; }
         public string Mark_or_Series { get; set; }
         public string Identifier { get; set; }
+
 
         [BsonElement]
         public string Token_Identifier

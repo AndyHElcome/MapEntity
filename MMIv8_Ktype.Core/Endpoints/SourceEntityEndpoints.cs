@@ -11,22 +11,30 @@ using MMIv8_Ktype.Models.Collections;
 using MMIv8_Ktype.Models.Indexes;
 using MongoDB.Bson;
 using MongoDB.Driver;
+using System.Diagnostics;
 using System.Reflection.Metadata;
 
 namespace MMIv8_Ktype.Core.Endpoints
 {
     public class SourceMMIv8Endpoints(SourceMMIv8Service sourceEntityService,
                                       SourceMMIv8EntityModelService sourceEntityModelService,
-                                      SourceMMIv8UpdateService updateService) : SourceEntityEndpoints<SourceMMIv8>(sourceEntityService, sourceEntityModelService, updateService), ISourceMMIv8Endpoints;
+                                      SourceMMIv8UpdateService updateService,
+                                      SourceMMIv8MatchRefineService sourceMatchRefineService) : SourceEntityEndpoints<SourceMMIv8, SourceMMIv8FilterRequest, SourceEntitySortRequest<SourceMMIv8>>(sourceEntityService, sourceEntityModelService, updateService, sourceMatchRefineService), ISourceMMIv8Endpoints;
     
 
     public class SourceTecDocPCEndpoints(SourceTecDocPCService sourceEntityService,
                                          SourceTecDocEntityModelService sourceEntityModelService,
-                                         SourceTecDocPCUpdateService updateService) : SourceEntityEndpoints<SourceTecDocPC>(sourceEntityService, sourceEntityModelService, updateService), ISourceTecDocPCEndpoints;
+                                         SourceTecDocPCUpdateService updateService,
+                                         SourceTecDocPCMatchRefineService sourceMatchRefineService) : SourceEntityEndpoints<SourceTecDocPC, SourceTecDocPCFilterRequest, SourceEntitySortRequest<SourceTecDocPC>>(sourceEntityService, sourceEntityModelService, updateService, sourceMatchRefineService), ISourceTecDocPCEndpoints;
     
 
-    public class SourceEntityEndpoints<T>(SourceEntityService<T> sourceEntityService, SourceEntityModelService sourceEntityModelService, ISourceEntityUpdateService<T> updateService) : BaseEndpoints<T, ObjectId, FilterQuery<T>, SortQuery<T>>(sourceEntityService), ISourceEntityEndpoints<T>
+    public class SourceEntityEndpoints<T, TFilter, TSort>(SourceEntityService<T> sourceEntityService,
+                                          SourceEntityModelService sourceEntityModelService,
+                                          ISourceEntityUpdateService<T> updateService,
+                                          SourceEntityMatchRefineService<T> sourceMatchRefineService) : BaseEndpoints<T, ObjectId, TFilter, TSort>(sourceEntityService), ISourceEntityEndpoints<T>
         where T : SourceEntity
+        where TFilter : SourceEntityFilterRequest<T>
+        where TSort : SourceEntitySortRequest<T>
     {
         public async Task<SerializableResult<T>> GetByExternalId(int ExternalId)
         {
@@ -85,6 +93,11 @@ namespace MMIv8_Ktype.Core.Endpoints
         public async Task<Result> Bulkload(T[] sourceEntities)
         {
             return await sourceEntityService.Create(sourceEntities);
+        }
+
+        public async Task RegenerateTextSort()
+        {
+            await sourceEntityService.RegenerateTextSort();
         }
 
         public async Task<Result> DeleteAll()

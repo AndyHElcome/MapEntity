@@ -25,8 +25,8 @@ namespace MMIv8_Ktype.Api
             _httpClient = new HttpClient( //TODO Get HttpClientSettings from Appsettings and pass into constructor
                 new RequestPropertyHandler(new RequestLoggingHandler(_log)))
             {
-                //BaseAddress = new Uri("https://localhost:7083/"),
-                BaseAddress = new Uri("http://dev-sql.headoffice.elcome.co.uk:5700/"),
+                BaseAddress = new Uri("https://localhost:7083/"),
+                //BaseAddress = new Uri("http://dev-sql.headoffice.elcome.co.uk:5700/"),
             };
 
             _httpClient.Timeout = TimeSpan.FromMinutes(timeout);

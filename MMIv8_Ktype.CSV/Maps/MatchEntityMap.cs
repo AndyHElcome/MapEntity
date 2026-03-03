@@ -37,8 +37,8 @@ namespace MMIv8_Ktype.CSV.Maps
             References<DateIntersectionMap>(m => m.DateIntersection);
             References<StatusHistoryMap>(m => m.Status);
             References<MatchResultMap>(m => m.MatchResult);
-            References<MatchRefineMap>(m => m.MatchRefine);
-            Map(m => m.IsBest);
+            //References<MatchRefineMap>(m => m.MatchRefine);
+            //Map(m => m.IsBest);
 
             Map(m => m.ScoreSum);
             Map(m => m.ScoreAverage);

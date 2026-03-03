@@ -1,6 +1,9 @@
 ﻿using Microsoft.VisualBasic.FileIO;
 using MMIv8_Ktype.Models;
 using MMIv8_Ktype.Models.Collections;
+using MMIv8_Ktype.Models.Indexes;
+using MMIv8_Ktype.Models.Status;
+using MongoDB.Bson;
 using MongoDB.Driver;
 using System;
 using System.Collections.Generic;
@@ -121,5 +124,67 @@ namespace MMIv8_Ktype.Api.Requests
                 KW = this.KW,
                 Engine_Code = this.Engine_Code,
             };
+    }
+
+    public class SourceEntitySortRequest<T> : SortQuery<T>
+        where T : SourceEntity
+    {
+        public override SortDefinition<T> GetSort()
+        {
+            return Builders<T>.Sort.Ascending(c => c.TextSort);
+        }
+    }
+
+    public class SourceEntityFilterRequest<T> : FilterQuery<T>
+            where T : SourceEntity
+    {
+        public string? DocumentId { get; set; }
+        public int? ExternalId { get; set; }
+        public string? SourceEntityModelHash { get; set; }
+        public bool? IsCheck { get; set; }
+        public bool? HasDifference { get; set; }
+        public Status[]? Status { get; set; }
+
+        public override FilterDefinition<T> GetFilter()
+        {
+            var filterBuilder = Builders<T>.Filter;
+            var filter = filterBuilder.Empty;
+
+            if (DocumentId is not null)
+                filter = filter & filterBuilder.Eq(c => c.DocumentId, ObjectId.Parse(DocumentId));
+
+            if (ExternalId is not null)
+                filter = filter & filterBuilder.Eq(c => c.ExternalId, ExternalId);
+
+            if (SourceEntityModelHash is not null)
+                filter = filter & filterBuilder.Eq(c => c.SourceEntityModelHash, SourceEntityModelHash);
+
+            if (IsCheck is not null)
+                filter = filter & filterBuilder.Eq(c => c.MatchRefine.IsCheck, IsCheck);
+
+            if (HasDifference is not null)
+                filter = filter & filterBuilder.Eq(c => c.MatchRefine.Difference, HasDifference);
+
+            if (Status is not null && Status.Length != 0)
+                filter = filter & filterBuilder.In(c => c.Status.Current.Status, Status);
+
+            return filter;
+        }
+    }
+
+    public class SourceTecDocPCFilterRequest : SourceEntityFilterRequest<SourceTecDocPC>
+    {
+        public override FilterDefinition<SourceTecDocPC> GetFilter()
+        {
+            return base.GetFilter();
+        }
+    }
+
+    public class SourceMMIv8FilterRequest : SourceEntityFilterRequest<SourceMMIv8>
+    {
+        public override FilterDefinition<SourceMMIv8> GetFilter()
+        {
+            return base.GetFilter();
+        }
     }
 }

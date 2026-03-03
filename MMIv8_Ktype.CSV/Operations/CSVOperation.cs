@@ -164,7 +164,7 @@ namespace MMIv8_Ktype.CSV.Operations
 
                 do
                 {
-                    response = await matchEntity.GetMatchEntityBackup(cursor, 1000);
+                    response = await matchEntity.GetMatchEntityBackup(new(cursor, 1000));
                     if (!response.IsSuccess)
                         throw new Exception(response.Error!.ToString());
 
@@ -184,7 +184,7 @@ namespace MMIv8_Ktype.CSV.Operations
             filepath = Path.Combine(path, "CheckMMIs.csv");
             using (var csvWriter = new CSVWritingStream(filepath).CsvWriter)
             {
-                var response = await matchEntity.GetDistinctMMIv8(IsCheck: true);
+                var response = await matchEntity.GetDistinctMMIv8(new() { IsCheck = true });
                 if (!response.IsSuccess)
                     throw new Exception(response.Error!.ToString());
                 csvWriter.WriteRecords(response.Value!);
@@ -194,7 +194,7 @@ namespace MMIv8_Ktype.CSV.Operations
             filepath = Path.Combine(path, "CheckedMMIs.csv");
             using (var csvWriter = new CSVWritingStream(filepath).CsvWriter)
             {
-                var response = await matchEntity.GetDistinctMMIv8(IsCheck: false);
+                var response = await matchEntity.GetDistinctMMIv8(new() { IsCheck = false });
                 if (!response.IsSuccess)
                     throw new Exception(response.Error!.ToString());
                 csvWriter.WriteRecords(response.Value!);
@@ -206,7 +206,7 @@ namespace MMIv8_Ktype.CSV.Operations
             filepath = Path.Combine(path, "CurrentRelations.csv");
             using (var csvWriter = new CSVWritingStream(filepath).CsvWriter)
             {
-                var response = await entityRelation.GetCurrentEntityRelations();
+                var response = await entityRelation.GetCurrentEntityRelations(new());
                 if (!response.IsSuccess)
                     throw new Exception(response.Error!.ToString());
                 csvWriter.WriteRecords(response.Value!.Documents);
@@ -216,7 +216,7 @@ namespace MMIv8_Ktype.CSV.Operations
             filepath = Path.Combine(path, "PreviousRelations.csv");
             using (var csvWriter = new CSVWritingStream(filepath).CsvWriter)
             {
-                var response = await entityRelation.GetPreviousEntityRelations();
+                var response = await entityRelation.GetPreviousEntityRelations(new());
                 if (!response.IsSuccess)
                     throw new Exception(response.Error!.ToString());
                 csvWriter.WriteRecords(response.Value!.Documents);

@@ -6,6 +6,6 @@ namespace MMIv8_Ktype.Api.Requests
 {
     public class FilterQuery<T>
     {
-        public MongoDB.Driver.FilterDefinition<T>? GetFilter() => Builders<T>.Filter.Empty;
+        public virtual MongoDB.Driver.FilterDefinition<T>? GetFilter() => Builders<T>.Filter.Empty;
     }
 }

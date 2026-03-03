@@ -1,6 +1,8 @@
 ﻿using MMIv8_Ktype.Models.Status;
+using MMIv8_Ktype.Models.Util;
 using MongoDB.Bson;
 using MongoDB.Bson.Serialization.Attributes;
+using System.Text;
 
 namespace MMIv8_Ktype.Models.Collections
 {
@@ -17,8 +19,32 @@ namespace MMIv8_Ktype.Models.Collections
         public MongoSourceEntityModel MMIv8Model { get; set; }
         public StatusHistory Status { get; set; }
 
-        [Obsolete("VersionProvider Required", true)]
-        [BsonConstructor]
+        [BsonElement]
+        public string TextSort
+        {
+            get
+            {
+                var naturalSortParameters = new NaturalSortParameters
+                {
+                    StripDash = true,
+                    StripSpace = true,
+                    IgnoreDecimalPlaces = true
+                };
+                var stringBuilder = new StringBuilder()
+                    .Append(NaturalSortGenerator.Generate((TecDocModel.Make ?? MMIv8Model.Make).ToLower(), naturalSortParameters)).Append('\t')
+                    .Append(NaturalSortGenerator.Generate((TecDocModel.Model ?? MMIv8Model.Model).ToLower(), naturalSortParameters));
+
+                return stringBuilder.ToString();
+                    
+              } 
+        }
+
+
+
+
+        [ Obsolete("VersionProvider Required", true) ]
+        [ BsonConstructor ]
+
         public MatchMakeModel()
         {
             //throw new NotImplementedException("VersionProvider Required");

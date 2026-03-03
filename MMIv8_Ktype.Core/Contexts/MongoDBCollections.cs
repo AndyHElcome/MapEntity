@@ -27,7 +27,7 @@ namespace MMIv8_Ktype.Core.Contexts
             SourceTecDocPCModel = GetCollection<MongoSourceEntityModel>(mongoDatabase, "SourceTecDocPCModel");
             SourceMMIv8Model = GetCollection<MongoSourceEntityModel>(mongoDatabase, "SourceMMIv8Model");
 
-            MatchRefine = GetCollection<MatchRefine>(mongoDatabase);
+            //MatchRefine = GetCollection<MatchRefine>(mongoDatabase);
 
             CreateAllIndexes(false);
         }
@@ -47,7 +47,7 @@ namespace MMIv8_Ktype.Core.Contexts
         public readonly IMongoCollection<MongoSourceEntityModel> SourceTecDocPCModel;
         public readonly IMongoCollection<MongoSourceEntityModel> SourceMMIv8Model;
         //TODO Create MatchRefine View
-        public readonly IMongoCollection<MatchRefine> MatchRefine;
+        //public readonly IMongoCollection<MatchRefine> MatchRefine;
 
         private static IMongoCollection<T> GetCollection<T>(IMongoDatabase mongoDatabase, string? collectionName = null)
         {
@@ -165,21 +165,22 @@ namespace MMIv8_Ktype.Core.Contexts
             var sourceMMIv8ModelPipeline = PipelineDefinition<SourceMMIv8, MongoSourceEntityModel>.Create(sourceMMIv8ModelAggregate.Stages);
             await mongoDatabase.CreateViewAsync("SourceMMIv8Model", "SourceMMIv8", sourceMMIv8ModelPipeline);
 
+            /*
+                        //WAS WIP MatchRefine View Creation, can be removed
+                        if (regenerate)
+                            await mongoDatabase.DropCollectionAsync("MatchRefine");
 
-            if (regenerate)
-                await mongoDatabase.DropCollectionAsync("MatchRefine");
-
-            //TODO check if MMIv8EntityId needs to be _id for indexes
-            var matchEntityAggregate = MatchEntity.Aggregate()
-                .Group(new BsonDocument
-                    {
-                        { "_id", "$MatchRefine"},
-                    }
-                )
-                .ReplaceRoot<MatchRefine>("$_id");
-            var matchRefinePipeline = PipelineDefinition<MatchEntity, MatchRefine>.Create(matchEntityAggregate.Stages);
-            await mongoDatabase.CreateViewAsync("MatchRefine", "MatchEntity", matchRefinePipeline);
-
+                        //TODO check if MMIv8EntityId needs to be _id for indexes
+                        var matchEntityAggregate = MatchEntity.Aggregate()
+                            .Group(new BsonDocument
+                                {
+                                    { "_id", "$MatchRefine"},
+                                }
+                            )
+                            .ReplaceRoot<MatchRefine>("$_id");
+                        var matchRefinePipeline = PipelineDefinition<MatchEntity, MatchRefine>.Create(matchEntityAggregate.Stages);
+                        await mongoDatabase.CreateViewAsync("MatchRefine", "MatchEntity", matchRefinePipeline);
+            */
 
         }
 
@@ -199,6 +200,12 @@ namespace MMIv8_Ktype.Core.Contexts
                 new (matchEntityIndexBuilder.Ascending(c => c.TecDocEntity.DocumentId),
                      new() { Name = "TecDocEntity.SourceEntityID", Unique = false, Background = true }
                 ),
+                new (matchEntityIndexBuilder.Ascending(c => c.MMIv8Entity.ExternalId),//TODO Remove if change Matchrefine to not use ExternalId
+                     new() { Name = "MMIv8Entity.ExternalId", Unique = false, Background = true }
+                ),
+                new (matchEntityIndexBuilder.Ascending(c => c.TecDocEntity.ExternalId),
+                     new() { Name = "TecDocEntity.ExternalId", Unique = false, Background = true }
+                ),
                 new (matchEntityIndexBuilder.Ascending(c => c.MMIv8Entity.ExternalId)
                                             .Ascending(c => c.TecDocEntity.ExternalId),
                      new() { Name = "MMIv8Entity.ExternalId_TecDocEntity.ExternalId", Unique = true, Background = true }
@@ -216,15 +223,15 @@ namespace MMIv8_Ktype.Core.Contexts
                                             .Ascending(c => c.MatchResult.FailCount),
                      new() { Name = "MatchResult.Failed_FailCount", Unique = false, Background = true }
                 ),
-                new (matchEntityIndexBuilder.Ascending(c => c.MatchRefine),
-                     new() { Name = "MatchRefine", Unique = false, Background = true }
-                ),
-                new (matchEntityIndexBuilder.Ascending(c => c.MatchRefine.IsCheck),
-                     new() { Name = "MatchRefine.IsCheck", Unique = false, Background = true }
-                ),
-                new (matchEntityIndexBuilder.Ascending(c => c.MatchRefine.Difference),
-                     new() { Name = "MatchRefine.Difference", Unique = false, Background = true }
-                ),
+                //new (matchEntityIndexBuilder.Ascending(c => c.MatchRefine),
+                //     new() { Name = "MatchRefine", Unique = false, Background = true }
+                //),
+                //new (matchEntityIndexBuilder.Ascending(c => c.MatchRefine.IsCheck),
+                //     new() { Name = "MatchRefine.IsCheck", Unique = false, Background = true }
+                //),
+                //new (matchEntityIndexBuilder.Ascending(c => c.MatchRefine.Difference),
+                //     new() { Name = "MatchRefine.Difference", Unique = false, Background = true }
+                //),
                 new (matchEntityIndexBuilder.Ascending(c => c.Matched),
                      new() { Name = "Matched", Unique = false, Background = true }
                 ),
@@ -304,6 +311,9 @@ namespace MMIv8_Ktype.Core.Contexts
                 new (matchMakeModelIndexBuilder.Ascending(c => c.Status.Current.Status),
                      new() { Name = "Status.Current.Status", Unique = false, Background = true }
                 ),
+                new (matchMakeModelIndexBuilder.Ascending(c => c.TextSort),
+                     new() { Name = "TextSort", Unique = false, Background = true }
+                ),
             };
 
             CreateIndex(MatchMakeModel, matchMakeModelIndexModels, regenerate);
@@ -331,6 +341,18 @@ namespace MMIv8_Ktype.Core.Contexts
                 new (sourceTecDocPCIndexBuilder.Ascending(c => c.Status.Current.Status),
                      new() { Name = "Status.Current.Status", Unique = false, Background = true }
                 ),
+                new (sourceTecDocPCIndexBuilder.Ascending(c => c.MatchRefine),
+                     new() { Name = "MatchRefine", Unique = false, Background = true }
+                ),
+                new (sourceTecDocPCIndexBuilder.Ascending(c => c.MatchRefine.IsCheck),
+                     new() { Name = "MatchRefine.IsCheck", Unique = false, Background = true }
+                ),
+                new (sourceTecDocPCIndexBuilder.Ascending(c => c.MatchRefine.Difference),
+                     new() { Name = "MatchRefine.Difference", Unique = false, Background = true }
+                ),
+                new (sourceTecDocPCIndexBuilder.Ascending(c => c.TextSort),
+                     new() { Name = "TextSort", Unique = false, Background = true }
+                ),
             };
 
             CreateIndex(SourceTecDocPC, sourceTecDocPCIndexModels, regenerate);
@@ -356,6 +378,18 @@ namespace MMIv8_Ktype.Core.Contexts
                 ),
                 new (sourceMMIv8IndexBuilder.Ascending(c => c.Status.Current.Status),
                      new() { Name = "Status.Current.Status", Unique = false, Background = true }
+                ),
+                new (sourceMMIv8IndexBuilder.Ascending(c => c.MatchRefine),
+                     new() { Name = "MatchRefine", Unique = false, Background = true }
+                ),
+                new (sourceMMIv8IndexBuilder.Ascending(c => c.MatchRefine.IsCheck),
+                     new() { Name = "MatchRefine.IsCheck", Unique = false, Background = true }
+                ),
+                new (sourceMMIv8IndexBuilder.Ascending(c => c.MatchRefine.Difference),
+                     new() { Name = "MatchRefine.Difference", Unique = false, Background = true }
+                ),
+                new (sourceMMIv8IndexBuilder.Ascending(c => c.TextSort),
+                     new() { Name = "TextSort", Unique = false, Background = true }
                 ),
             };
 

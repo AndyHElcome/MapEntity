@@ -16,7 +16,8 @@ using System.Threading.Tasks;
 
 namespace MMIv8_Ktype.Api.Endpoints
 {
-    public interface ISourceEntityEndpoints<T> : IBaseEndpoint<T, ObjectId, FilterQuery<T>, SortQuery<T>>
+    public interface ISourceEntityEndpoints<T> 
+        where T : SourceEntity
     {
         [Get("/GetByExternalId/{ExternalId}")]
         Task<SerializableResult<T>> GetByExternalId(int ExternalId);
@@ -39,17 +40,20 @@ namespace MMIv8_Ktype.Api.Endpoints
         [Put("/Debug/Bulkload")]
         Task<Result> Bulkload(T[] sourceEntities);
 
+        [Post("/Debug/RegenerateTextSort")]
+        Task RegenerateTextSort();
+
         [Delete("/Debug/DeleteAll")]
         Task<Result> DeleteAll();
     }
 
     [GroupName("SourceMMIv8Entity")]
-    public interface ISourceMMIv8Endpoints : ISourceEntityEndpoints<SourceMMIv8>, IEndpoint
+    public interface ISourceMMIv8Endpoints : ISourceEntityEndpoints<SourceMMIv8>, IBaseEndpoint<SourceMMIv8, ObjectId, SourceMMIv8FilterRequest, SourceEntitySortRequest<SourceMMIv8>>, IEndpoint
     {
     }
 
     [GroupName("SourceTecDocPCEntity")]
-    public interface ISourceTecDocPCEndpoints : ISourceEntityEndpoints<SourceTecDocPC>, IEndpoint
+    public interface ISourceTecDocPCEndpoints : ISourceEntityEndpoints<SourceTecDocPC>, IBaseEndpoint<SourceTecDocPC, ObjectId, SourceTecDocPCFilterRequest, SourceEntitySortRequest<SourceTecDocPC>>, IEndpoint
     {
     }
 }

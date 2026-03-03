@@ -1,6 +1,7 @@
 ﻿using MongoDB.Driver;
 using MongoDB.Bson;
 using Serilog;
+using MMIv8_Ktype.Core.Services;
 
 namespace MMIv8_Ktype.Core.Contexts
 {

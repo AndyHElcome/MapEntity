@@ -35,13 +35,15 @@ namespace MMIv8_Ktype.Core.Services.Mapping
                                 MatchBaseService MatchBaseService,
                                 SourceMMIv8Service SourceMMIv8Service,
                                 SourceTecDocPCService SourceTecDocPCService,
+                                SourceMMIv8MatchRefineService SourceMMIv8MatchRefineService,
+                                SourceTecDocPCMatchRefineService SourceTecDocPCMatchRefineService,
                                 VersionService VersionService,
                                 EntityRelationService EntityRelationService,
                                 UserService UserService,
                                 IVersionProvider versionProvider)
     {
         #region Match Make Model
-        public async Task<Result> CreateMakeModelMatch(string TD_SourceEntityModelHash, string MMI_SourceEntityModelHash)
+        public async Task<SerializableResult<MatchMakeModel>> CreateMakeModelMatch(string TD_SourceEntityModelHash, string MMI_SourceEntityModelHash)
         {
             MongoSourceEntityModel tecdocModel = new();
             MongoSourceEntityModel mmiv8Model = new();
@@ -59,15 +61,20 @@ namespace MMIv8_Ktype.Core.Services.Mapping
 
             var createResult = await MatchMakeModelService.Create(newMatchMakeModel);
             if (!createResult.IsSuccess)
-                return createResult;
+                return createResult.Error!;
 
             if (newMatchMakeModel is { TecDocModel: { DocumentId: not null }, MMIv8Model: { DocumentId: not null } })
-                return await StoreEntityMatch(newMatchMakeModel);
-            if (newMatchMakeModel.TecDocModel.DocumentId is not null && newMatchMakeModel.MMIv8Model.DocumentId is not null)
-                throw new Exception("Bad pattern matching");
+            {
+                var storeEntityMatch = await StoreEntityMatch(newMatchMakeModel);
+                if (!storeEntityMatch.IsSuccess)
+                    return storeEntityMatch.Error!;
+            }
+
+            //if (newMatchMakeModel.TecDocModel.DocumentId is not null && newMatchMakeModel.MMIv8Model.DocumentId is not null)
+            //    throw new Exception("Bad pattern matching");
 
 
-            return Result.Success();
+            return Result.Success(newMatchMakeModel);
         }
 
         public async Task<Result> DeleteMakeModelMatch(ObjectId documentId)
@@ -83,6 +90,18 @@ namespace MMIv8_Ktype.Core.Services.Mapping
 
             return deleteMatchMakeModel;
         }
+
+        public async Task RegenerateMakeModelSort()
+        {
+            await foreach( var matchMakeModels in MatchMakeModelService.EnumerateDocuments<MatchMakeModel>(Builders<MatchMakeModel>.Filter.Empty))
+            {
+                foreach(var matchMakeModel in matchMakeModels)
+                {
+                    await MatchMakeModelService.Update(matchMakeModel).AppendUpdate(c => c.Set(f => f.TextSort, matchMakeModel.TextSort)).FindAndUpdateDocument();
+                }
+            }
+        }
+
         #endregion
 
         #region Match Base
@@ -139,14 +158,13 @@ namespace MMIv8_Ktype.Core.Services.Mapping
                 matchEntityResultString = matchEntityResult.Value.Acknowledged ? matchEntityResult.Value.ModifiedCount.ToString() : "notAcknowledged";
             }
 
-            BulkCombinationUpdate matchRefineUpdate = await MatchEntityService.BulkCombinationUpdateMatchRefine(filter);
-            var matchRefineResult = await matchRefineUpdate.CommitBulkWrite();
+            var bulkMatchRefineResult = await BulkCombinationUpdateMatchRefineResult(filter);
             Log.Debug("Match Refine {time}", sw);
-            if (!matchRefineResult.IsSuccess)
-                return matchRefineResult;
+            if (!bulkMatchRefineResult.IsSuccess)
+                return bulkMatchRefineResult;
 
             sw.Stop();
-            Log.Information("Applied changes to {updateMatch} in {time} ({matchEntitiesCount} MatchEntities) ({matchRefineCount} MatchRefine) ", matchBase.ToString(), sw, matchEntityResultString, matchRefineResult.Value.Acknowledged ? matchRefineResult.Value.ModifiedCount : "notAcknowledged");
+            Log.Information("Applied changes to {updateMatch} in {time} ({matchEntitiesCount} MatchEntities) ({matchRefineCount} MatchRefine) ", matchBase.ToString(), sw, matchEntityResultString, bulkMatchRefineResult.Value.Acknowledged ? bulkMatchRefineResult.Value.ModifiedCount : "notAcknowledged");
 
             return Result.Success();
         }
@@ -284,14 +302,13 @@ namespace MMIv8_Ktype.Core.Services.Mapping
             }
             sw.Restart();
 
-            BulkCombinationUpdate matchRefineUpdate = await MatchEntityService.BulkCombinationUpdateMatchRefine(filter);
-            var matchRefineResult = await matchRefineUpdate.CommitBulkWrite();
+            var bulkMatchRefineResult = await BulkCombinationUpdateMatchRefineResult(filter);
             Log.Debug("Match Refine {time}", sw);
-            if (!matchRefineResult.IsSuccess)
-                return matchRefineResult;
+            if (!bulkMatchRefineResult.IsSuccess)
+                return bulkMatchRefineResult;
 
             sw.Stop();
-            Log.Information("Updated {updateMatch} in {time} ({matchEntitiesCount} MatchEntities) ({matchRefineCount} MatchRefine)", matchRefineResult.Value.Acknowledged ? matchRefineResult.Value.ModifiedCount : "notAcknowledged", sw);
+            Log.Information("Updated {updateMatch} in {time} ({matchEntitiesCount} MatchEntities) ({matchRefineCount} MatchRefine)", bulkMatchRefineResult.Value.Acknowledged ? bulkMatchRefineResult.Value.ModifiedCount : "notAcknowledged", sw);
 
             return Result.Success();
         }
@@ -410,8 +427,7 @@ namespace MMIv8_Ktype.Core.Services.Mapping
 
             Log.Debug("Starting MatchRefine Update {time}", sw);
 
-            BulkCombinationUpdate bulkMatchRefineUpdate = await MatchEntityService.BulkCombinationUpdateMatchRefine(filter);
-            var bulkMatchRefineResult = await bulkMatchRefineUpdate.CommitBulkWrite();
+            var bulkMatchRefineResult = await BulkCombinationUpdateMatchRefineResult(filter);
             if (!bulkMatchRefineResult.IsSuccess)
                 return bulkMatchRefineResult;
 
@@ -567,6 +583,24 @@ namespace MMIv8_Ktype.Core.Services.Mapping
             }
         }
 
+        public async Task<Result<ClientBulkWriteResult>> BulkCombinationUpdateMatchRefineResult(FilterDefinition<MatchEntity> filter)
+        {
+            var bulkMatchRefineUpdateTD = SourceTecDocPCMatchRefineService.BulkCombinationUpdateMatchRefine(filter);
+            var bulkMatchRefineUpdateMMI = await SourceMMIv8MatchRefineService.BulkCombinationUpdateMatchRefine(filter);
+
+            //TODO check combine works
+            return await bulkMatchRefineUpdateMMI.Combine(await bulkMatchRefineUpdateTD).CommitBulkWrite();
+        }
+
+        public async Task<Result<ClientBulkWriteResult>> BulkCombinationUpdateMatchRefineResult(IEnumerable<int> tecdocExternalIds, IEnumerable<int> mmiExternalIds)
+        {
+            var bulkMatchRefineUpdateTD = SourceTecDocPCMatchRefineService.BulkCombinationUpdateMatchRefine(tecdocExternalIds);
+            var bulkMatchRefineUpdateMMI = await SourceMMIv8MatchRefineService.BulkCombinationUpdateMatchRefine(mmiExternalIds);
+
+            //TODO check combine works
+            return await bulkMatchRefineUpdateMMI.Combine(await bulkMatchRefineUpdateTD).CommitBulkWrite();
+        }
+
         public async Task<Result> UpdateFailedFlag(UpdateFlagRequest request)
         {
             var sw = Stopwatch.StartNew();
@@ -581,8 +615,7 @@ namespace MMIv8_Ktype.Core.Services.Mapping
             if (!combinationFlagResult.IsSuccess)
                 return combinationFlagResult;
 
-            var bulkMatchRefineUpdate = await MatchEntityService.BulkCombinationUpdateMatchRefine([ request.MMI_V8_Key ]);
-            var bulkMatchRefineResult = await bulkMatchRefineUpdate.CommitBulkWrite();
+            var bulkMatchRefineResult = await BulkCombinationUpdateMatchRefineResult(filter);
             if (!bulkMatchRefineResult.IsSuccess)
                 return bulkMatchRefineResult;
 
@@ -606,8 +639,7 @@ namespace MMIv8_Ktype.Core.Services.Mapping
             if (!combinationFlagResult.IsSuccess)
                 return combinationFlagResult;
 
-            var bulkMatchRefineUpdate = await MatchEntityService.BulkCombinationUpdateMatchRefine([request.MMI_V8_Key]);
-            var bulkMatchRefineResult = await bulkMatchRefineUpdate.CommitBulkWrite();
+            var bulkMatchRefineResult = await BulkCombinationUpdateMatchRefineResult(filter);
             if (!bulkMatchRefineResult.IsSuccess)
                 return bulkMatchRefineResult;
 
@@ -617,6 +649,8 @@ namespace MMIv8_Ktype.Core.Services.Mapping
             return Result.Success();
         }
 
+        //TODO how will this work with MatchRefine per index
+        [Obsolete("need to check implications")]
         public async Task<Result> UpdateMatchRefineStatus(int mmi_V8_Key)
         {
             var sw = Stopwatch.StartNew();
@@ -628,8 +662,7 @@ namespace MMIv8_Ktype.Core.Services.Mapping
             if (!matchEntityResult.IsSuccess)
                 return matchEntityResult;
 
-            var bulkMatchRefineUpdate = await MatchEntityService.BulkCombinationUpdateMatchRefine([ mmi_V8_Key ]);
-            var bulkMatchRefineResult = await bulkMatchRefineUpdate.CommitBulkWrite();
+            var bulkMatchRefineResult = await BulkCombinationUpdateMatchRefineResult(filter);
             if (!bulkMatchRefineResult.IsSuccess)
                 return bulkMatchRefineResult;
 
@@ -639,6 +672,8 @@ namespace MMIv8_Ktype.Core.Services.Mapping
             return Result.Success();
         }
 
+        //TODO Rework
+        [Obsolete("Requires Rework")]
         public async Task<Result> ResetMatchResult(int mmi_V8_Key)
         {
             var sw = Stopwatch.StartNew();
@@ -651,8 +686,7 @@ namespace MMIv8_Ktype.Core.Services.Mapping
             if (!matchEntityResult.IsSuccess)
                 return matchEntityResult;
 
-            var bulkMatchRefineUpdate = await MatchEntityService.BulkCombinationUpdateMatchRefine([ mmi_V8_Key ]);
-            var bulkMatchRefineResult = await bulkMatchRefineUpdate.CommitBulkWrite();
+            var bulkMatchRefineResult = await BulkCombinationUpdateMatchRefineResult(filter);
             if (!bulkMatchRefineResult.IsSuccess)
                 return bulkMatchRefineResult;
 
@@ -716,8 +750,7 @@ namespace MMIv8_Ktype.Core.Services.Mapping
             if (!bulkPreviousFlagResult.IsSuccess)
                 return bulkPreviousFlagResult;
 
-            var bulkMatchRefineUpdate = await MatchEntityService.BulkCombinationUpdateMatchRefine(entityRelations.Select(c => c.MMI_V8_Key).Distinct());
-            var bulkMatchRefineResult = await bulkMatchRefineUpdate.CommitBulkWrite();
+            var bulkMatchRefineResult = await BulkCombinationUpdateMatchRefineResult(entityRelations.Select(c => c.KTypNr).Distinct(), entityRelations.Select(c => c.MMI_V8_Key).Distinct());
             if (!bulkMatchRefineResult.IsSuccess)
                 return bulkMatchRefineResult;
 
@@ -738,8 +771,7 @@ namespace MMIv8_Ktype.Core.Services.Mapping
             if (!bulkPreviousFlagResult.IsSuccess)
                 return bulkPreviousFlagResult;
 
-            var bulkMatchRefineUpdate = await MatchEntityService.BulkCombinationUpdateMatchRefine(entityRelations.Select(c => c.MMI_V8_Key));
-            var bulkMatchRefineResult = await bulkMatchRefineUpdate.CommitBulkWrite();
+            var bulkMatchRefineResult = await BulkCombinationUpdateMatchRefineResult(entityRelations.Select(c => c.KTypNr).Distinct(), entityRelations.Select(c => c.MMI_V8_Key).Distinct());
             if (!bulkMatchRefineResult.IsSuccess)
                 return bulkMatchRefineResult;
 

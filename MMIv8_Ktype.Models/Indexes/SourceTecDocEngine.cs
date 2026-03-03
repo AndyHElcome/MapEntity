@@ -1,5 +1,8 @@
 ﻿using MMIv8_Ktype.Models.DateIntersection;
+using MMIv8_Ktype.Models.Util;
 using MongoDB.Bson;
+using MongoDB.Bson.Serialization.Attributes;
+using System.Text;
 
 namespace MMIv8_Ktype.Models.Indexes
 {
@@ -12,6 +15,16 @@ namespace MMIv8_Ktype.Models.Indexes
 
         [MongoDB.Bson.Serialization.Attributes.BsonElement]
         public override string SourceEntityModelHash => GlobalHelpers.GenerateKey(new { this.Make, this.MCode });
+        [BsonElement]
+        public override string TextSort
+        {
+            get
+            {
+              
+                return string.Empty;
+
+            }
+        }
         public int DFrom { get; set; }
         public int DTo { get; set; }
 

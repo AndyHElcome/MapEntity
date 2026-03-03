@@ -25,10 +25,13 @@ namespace MMIv8_Ktype.Api.Endpoints
         Task<SerializableResult<List<MatchMakeModel>>> GenerateMakeModelMatch();
 
         [Put("/Create")]
-        Task<Result> CreateMatchMakeModel(string TD_SourceEntityModelHash = "", string MMI_SourceEntityModelHash = "");
+        Task<SerializableResult<MatchMakeModel>> CreateMatchMakeModel(string TD_SourceEntityModelHash = "", string MMI_SourceEntityModelHash = "");
 
         [Delete("/{MatchID}")]
         Task<Result> DeleteMakeModelMatch(ObjectId MatchID);
+
+        [Post("/Debug/RegenerateMakeModelSort")]
+        Task RegenerateMakeModelSort();
 
         [Delete("/Debug/DeleteAll")]
         Task<Result> DeleteAll();

@@ -1,4 +1,6 @@
-﻿@using DevExpress.Blazor.Internal.Editors
+﻿@rendermode InteractiveServer
+
+@using DevExpress.Blazor.Internal.Editors
 @using MMIv8_Ktype.Api
 @using MMIv8_Ktype.Api.Endpoints
 @using MMIv8_Ktype.Api.Requests
@@ -7,23 +9,40 @@
 @using MongoDB.Bson
 
 
-<Generic_Grid TItem="MatchRefine"
+<Generic_Grid TItem="SourceMMIv8"
 			  Tid="ObjectId"
-			  TFilter="FilterQuery<MatchRefine>"
-			  TSort="SortQuery<MatchRefine>"
-			  TEndpoint="IMatchRefineEndpoints"
-			  
-			  Filter="@(new FilterQuery<MatchRefine>())"
-			  Sort="@(new SortQuery<MatchRefine>())">
+			  TFilter="SourceMMIv8FilterRequest"
+			  TSort="SourceEntitySortRequest<SourceMMIv8>"
+			  TEndpoint="ISourceMMIv8Endpoints"
+			  Filter="@(new SourceMMIv8FilterRequest())"
+			  Sort="@(new SourceEntitySortRequest<SourceMMIv8>())">
 	<Columns>
-		<DxGridDataColumn FieldName=@nameof(MatchRefine.DocumentId) />
-		<DxGridDataColumn FieldName=@nameof(MatchRefine.BestMatches) />
-		<DxGridDataColumn FieldName=@nameof(MatchRefine.LastMatches) />
-		<DxGridDataColumn FieldName=@nameof(MatchRefine.ChosenMatches) />
-		<DxGridDataColumn FieldName=@nameof(MatchRefine.PassCount) />
-		<DxGridDataColumn FieldName=@nameof(MatchRefine.Difference) />
-		<DxGridDataColumn FieldName=@nameof(MatchRefine.IsCheck) />
-		<DxGridDataColumn FieldName=@nameof(MatchRefine.BestScore) />
+		<DxGridDataColumn FieldName=@nameof(SourceMMIv8.DocumentId) />
+		<DxGridDataColumn FieldName=@nameof(SourceMMIv8.MMI_V8_Key) />
+		<DxGridDataColumn FieldName=@nameof(SourceMMIv8.Manufacturer) />
+		<DxGridDataColumn FieldName=@nameof(SourceMMIv8.Model) />
+		<DxGridDataColumn FieldName=@nameof(SourceMMIv8.SubModel) />
+		<DxGridDataColumn FieldName=@nameof(SourceMMIv8.Mark_or_Series) />
+		<DxGridDataColumn FieldName=@nameof(SourceMMIv8.Token_Identifier) />
+		<DxGridDataColumn FieldName=@nameof(SourceMMIv8.Status) />
+
+		<DxGridDataColumn FieldName="MatchRefine.BestMatches" />
+		<DxGridDataColumn FieldName="MatchRefine.LastMatches" />
+		<DxGridDataColumn FieldName="MatchRefine.ChosenMatches" />
+		<DxGridDataColumn FieldName="MatchRefine.PassCount" />
+		<DxGridDataColumn FieldName="MatchRefine.Difference" />
+		<DxGridDataColumn FieldName="MatchRefine.IsCheck" />
+		<DxGridDataColumn FieldName="MatchRefine.BestScore" />
+
+@* 
+		<DxGridDataColumn FieldName=@nameof(SourceMMIv8.MatchRefine.BestMatches) />
+		<DxGridDataColumn FieldName=@nameof(SourceMMIv8.MatchRefine.LastMatches) />
+		<DxGridDataColumn FieldName=@nameof(SourceMMIv8.MatchRefine.ChosenMatches) />
+		<DxGridDataColumn FieldName=@nameof(SourceMMIv8.MatchRefine.PassCount) />
+		<DxGridDataColumn FieldName=@nameof(SourceMMIv8.MatchRefine.Difference) />
+		<DxGridDataColumn FieldName=@nameof(SourceMMIv8.MatchRefine.IsCheck) />
+		<DxGridDataColumn FieldName=@nameof(SourceMMIv8.MatchRefine.BestScore) /> 
+		 *@
 
 
 	</Columns>

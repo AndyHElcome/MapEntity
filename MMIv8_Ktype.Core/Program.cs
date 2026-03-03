@@ -69,13 +69,15 @@ internal class Program
         builder.Services.AddScoped<SourceMMIv8EntityModelService>();
 
         builder.Services.AddScoped<MatchEntityService>();
-        builder.Services.AddScoped<MatchRefineService>();
+        //builder.Services.AddScoped<MatchRefineService>();
         builder.Services.AddScoped<MatchBaseService>();
         builder.Services.AddScoped<MatchMakeModelService>();
 
         builder.Services.AddScoped<BulkMappingService>();
         builder.Services.AddScoped<MappingService>();
 
+        builder.Services.AddScoped<SourceMMIv8MatchRefineService>();
+        builder.Services.AddScoped<SourceTecDocPCMatchRefineService>();
         builder.Services.AddScoped<SourceMMIv8UpdateService>();
         builder.Services.AddScoped<SourceTecDocPCUpdateService>();
 

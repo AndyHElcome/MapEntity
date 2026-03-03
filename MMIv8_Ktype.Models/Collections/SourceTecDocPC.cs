@@ -5,6 +5,7 @@ using MMIv8_Ktype.Models.Util;
 using MongoDB.Bson;
 using MongoDB.Bson.Serialization.Attributes;
 using System.Dynamic;
+using System.Text;
 using System.Text.Json.Serialization;
 using System.Xml;
 
@@ -51,6 +52,33 @@ namespace MMIv8_Ktype.Models.Collections
 
         [BsonElement]
         public override string SourceEntityModelHash => GlobalHelpers.GenerateKey(new { Make, SalesDesc });
+        [BsonElement]
+        public override string TextSort
+        {
+            get
+            {
+                var naturalSortParameters = new NaturalSortParameters
+                {
+                    StripDash = true,
+                    StripSpace = true,
+                    IgnoreDecimalPlaces = true
+                };
+                var stringBuilder = new StringBuilder()
+                    .Append(NaturalSortGenerator.Generate(Make, naturalSortParameters)).Append('\t')
+                    .Append(NaturalSortGenerator.Generate(Token_Model, naturalSortParameters)).Append('\t')
+                    .Append(NaturalSortGenerator.Generate(Token_Type, naturalSortParameters)).Append('\t')
+                    .Append(NaturalSortGenerator.Generate(SalesDesc, naturalSortParameters)).Append('\t')
+                    .Append(NaturalSortGenerator.Generate(ModelGeneration, naturalSortParameters)).Append('\t')
+                    .Append(NaturalSortGenerator.Generate(TypeDesc, naturalSortParameters)).Append('\t')
+                    .Append(NaturalSortGenerator.Generate(BodyType, naturalSortParameters)).Append('\t')
+                    .Append(NaturalSortGenerator.Generate(FuelType, naturalSortParameters)).Append('\t')
+                    .Append(NaturalSortGenerator.Generate(Litre.ToString(), naturalSortParameters)).Append('\t')
+                    .Append(NaturalSortGenerator.Generate(LinkedEngineCodes, naturalSortParameters));
+
+                return stringBuilder.ToString();
+
+            }
+        }
         public int DFrom { get; set; }
         public int DTo { get; set; }
 

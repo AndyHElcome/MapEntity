@@ -1,4 +1,5 @@
-﻿using MMIv8_Ktype.Core.Contexts;
+﻿using MMIv8_Ktype.Api.Requests;
+using MMIv8_Ktype.Core.Contexts;
 using MMIv8_Ktype.Core.Services.Match;
 using MMIv8_Ktype.Core.Services.Source;
 using MMIv8_Ktype.Models;
@@ -7,12 +8,15 @@ using MMIv8_Ktype.Models.Indexes;
 using MMIv8_Ktype.Models.Status;
 using MongoDB.Driver;
 using Serilog;
+using System.Diagnostics;
 using System.Threading.Tasks;
 
 namespace MMIv8_Ktype.Core.Services.Mapping
 {
+
     public class SourceMMIv8UpdateService(MatchMakeModelService MatchMakeModelService,
                                           MatchEntityService MatchEntityService,
+                                          SourceMMIv8MatchRefineService SourceEntityMatchRefineService,
                                           MappingService MappingService,
                                           SourceMMIv8Service SourceMMIv8Service,
                                           SourceTecDocPCService SourceTecDocPCService,
@@ -20,6 +24,7 @@ namespace MMIv8_Ktype.Core.Services.Mapping
 
         : SourceEntityUpdateService<SourceMMIv8, SourceTecDocPC>(MatchMakeModelService,
                                                                            MatchEntityService,
+                                                                           SourceEntityMatchRefineService,
                                                                            MappingService,
                                                                            SourceMMIv8Service,
                                                                            SourceTecDocPCService,
@@ -28,6 +33,7 @@ namespace MMIv8_Ktype.Core.Services.Mapping
 
     public class SourceTecDocPCUpdateService(MatchMakeModelService MatchMakeModelService,
                                              MatchEntityService MatchEntityService,
+                                             SourceTecDocPCMatchRefineService SourceEntityMatchRefineService,
                                              MappingService MappingService,
                                              SourceMMIv8Service SourceMMIv8Service,
                                              SourceTecDocPCService SourceTecDocPCService,
@@ -35,6 +41,7 @@ namespace MMIv8_Ktype.Core.Services.Mapping
 
         : SourceEntityUpdateService<SourceTecDocPC, SourceMMIv8>(MatchMakeModelService,
                                                                            MatchEntityService,
+                                                                           SourceEntityMatchRefineService,
                                                                            MappingService,
                                                                            SourceTecDocPCService,
                                                                            SourceMMIv8Service,
@@ -49,6 +56,7 @@ namespace MMIv8_Ktype.Core.Services.Mapping
 
     public class SourceEntityUpdateService<TEntity, TOther>(MatchMakeModelService MatchMakeModelService,
                                                             MatchEntityService MatchEntityService,
+                                                            SourceEntityMatchRefineService<TEntity> SourceEntityMatchRefineService,
                                                             MappingService MappingService,
                                                             SourceEntityService<TEntity> SourceEntityService,
                                                             SourceEntityService<TOther> OtherSourceEntityService,
@@ -56,27 +64,6 @@ namespace MMIv8_Ktype.Core.Services.Mapping
         where TEntity : SourceEntity
         where TOther : SourceEntity
     {
-        //public CombinationPipeline<MatchEntity> CombinationPipelineUpdateEntity(SourceEntity sourceEntity) //TODO check this is still updating properly
-        //{
-        //    return typeof(TEntity) switch
-        //    {
-        //        Type t when t == typeof(MongoSourceTecDocPC) => MatchEntityService.UpdateEntity((MongoSourceTecDocPC)sourceEntity),
-        //        Type t when t == typeof(MongoSourceMMIv8) => MatchEntityService.UpdateEntity((MongoSourceMMIv8)sourceEntity),
-        //        _ => throw new NotImplementedException()
-        //    };
-        //}
-
-        public FilterDefinition<MatchEntity> SourceEntityFilter(SourceEntity sourceEntity) //TODO check this is still updating properly
-        {
-            var filterBuilder = Builders<MatchEntity>.Filter;
-            return typeof(TEntity) switch
-            {
-                Type t when t == typeof(SourceTecDocPC) => filterBuilder.Eq(e => e.TecDocEntity.DocumentId, sourceEntity.DocumentId),
-                Type t when t == typeof(SourceMMIv8) => filterBuilder.Eq(e => e.MMIv8Entity.DocumentId, sourceEntity.DocumentId),
-                _ => throw new NotImplementedException()
-            };
-        }
-
         /// <summary>
         /// Checks if Provided Type is the Source Entity Type, if so returns the source Entity, if not returns all of the other index entities.
         /// </summary>
@@ -107,7 +94,7 @@ namespace MMIv8_Ktype.Core.Services.Mapping
         {
             var currentEntityResult = await SourceEntityService.GetByExternalId(sourceEntity.ExternalId);
 
-            var matchEntityFilterSourceEntity = SourceEntityFilter(sourceEntity);
+            var matchEntityFilterSourceEntity = SourceEntityService.SourceEntityFilter(sourceEntity);
             List <MatchMakeModel> newMatchesToCreate = new();
 
             var bulkCombinationUpdate = MatchEntityService.CreateBulkCombinationUpdate();
@@ -152,7 +139,7 @@ namespace MMIv8_Ktype.Core.Services.Mapping
                             var matchEntityUpdate = MatchEntityService.Update(matchMakeModelFilter).AppendPipeline(c => c.AppendStatus(versionProvider.NewStatus(Status.Check, $"Deleted {typeof(TEntity).Name} Entity {sourceEntity.DocumentId} as it changes it's MakeModel")));
                             var matchEntityResult = await matchEntityUpdate.UpdateDocuments();
 
-                            bulkCombinationUpdate.Combine(await MatchEntityService.BulkCombinationUpdateMatchRefine(matchMakeModelFilter));
+                            bulkCombinationUpdate.Combine(await SourceEntityMatchRefineService.BulkCombinationUpdateMatchRefine(matchMakeModelFilter));
                         }
                     }
 

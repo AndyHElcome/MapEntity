@@ -7,7 +7,7 @@ namespace MMIv8_Ktype.Api.Requests
 
     public class VersionSortRequest : SortQuery<Version>
     {
-        public new SortDefinition<Version>? GetSort()
+        public override SortDefinition<Version> GetSort()
         {
             return new SortDefinitionBuilder<Version>().Ascending(c => c.VersionNumber);
         }
@@ -19,7 +19,7 @@ namespace MMIv8_Ktype.Api.Requests
         public string? MMIv8EntityVersion { get; set; } = null;
         public string[]? UserName { get; set; } = null;
 
-        public new FilterDefinition<Version> GetFilter()
+        public override FilterDefinition<Version> GetFilter()
         {
             var filterBuilder = Builders<Version>.Filter;
             var filter = filterBuilder.Empty;

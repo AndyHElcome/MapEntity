@@ -24,7 +24,7 @@
 					ApplyBackgroundShading="true"
 					IndicatorAreaVisible="false"
 					Text="Fetching Data...">
-		@if (!loading)
+		@if (!loading && !isError)
 		{
 			<DxGrid Data="@(Response.Value?.Documents)"
 					FooterDisplayMode="GridFooterDisplayMode.Never"
@@ -32,7 +32,7 @@
 					ShowAllRows="true"
 					AllowSort="false"			>
 				<Columns>
-					<DxGridDataColumn FieldName=@nameof(MatchMakeModel.DocumentId) Visible="false" />
+					<DxGridDataColumn FieldName=@nameof(MatchMakeModel.DocumentId) Visible="true" />
 					<DxGridBandColumn Caption="@(nameof(MatchMakeModel.TecDocModel))">
 						<Columns>
 							<DxGridDataColumn FieldName="@($"{nameof(MatchMakeModel.TecDocModel)}.{nameof(MatchMakeModel.TecDocModel.DocumentId)}")" Caption="@(nameof(MatchMakeModel.TecDocModel.DocumentId))" Visible="false" />
@@ -72,7 +72,7 @@
 		else if (isError)
 		{
 			<div class="alert alert-danger m-0" role="alert">
-				An error occurred while fetching data. @Response.Error?.ToString()
+				An error occurred while fetching data.
 			</div>
 		}
 
@@ -90,7 +90,7 @@
 		 >
 
 	
-		<MatchMakeModel_Form_Edit EditItem="@EditItem" />
+	<MatchMakeModel_Form_Edit EditItem="@EditItem" @bind-Visible="@PopupVisible" />
 	
 </DxPopup>
 
@@ -141,11 +141,16 @@
 	}
 
 
-
+	
 	async Task OnEditItem(MatchMakeModel editedItem)
 	{
 		PopupVisible = true;
 		EditItem = editedItem;
+	}
+
+	void ClosePopup()
+	{
+		PopupVisible = false;
 	}
 
 	async Task OnPageIndexChanged(int newPageIndex)

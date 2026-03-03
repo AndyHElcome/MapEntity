@@ -179,54 +179,60 @@ namespace MMIv8_Ktype.Core.Services.Match
             return bulkCombinationUpdate;
         }
 
-        public async Task<BulkCombinationUpdate> BulkCombinationUpdateMatchRefine(IEnumerable<int> mmi_V8_Keys) //TODO Move into unique MatchRefine Class
-        {
-            var tasks = mmi_V8_Keys.Select(c => CombinationUpdateMatchRefine(c)).ToArray();
+        //[Obsolete("Move to SourceEntity", true)]
+        //public async Task<BulkCombinationUpdate> BulkCombinationUpdateMatchRefine(IEnumerable<int> mmi_V8_Keys) //TODO Move into unique MatchRefine Class
+        //{
+        //    var tasks = mmi_V8_Keys.Select(c => CombinationUpdateMatchRefine(c)).ToArray();
 
-            return new BulkCombinationUpdate(MMIv8_Ktype).AddCombinationUpdate(await Task.WhenAll(tasks));
-        }
+        //    return new BulkCombinationUpdate(MMIv8_Ktype).AddCombinationUpdate(await Task.WhenAll(tasks));
+        //}
 
         public BulkCombinationUpdate CreateBulkCombinationUpdate() //TODO Move into base service with MMIV8KTYPE_CONTEXT
         {
             return new BulkCombinationUpdate(MMIv8_Ktype);
         }
 
-        public async Task<BulkCombinationUpdate> BulkCombinationUpdateMatchRefine(FilterDefinition<MatchEntity> filter) //TODO Move into unique MatchRefine Class
-        {
-            return new BulkCombinationUpdate(MMIv8_Ktype).AddCombinationUpdate(await CombinationUpdateMatchRefinesList(filter));
-        }
+        //[Obsolete("Move to SourceEntity", true)]
+        //public async Task<BulkCombinationUpdate> BulkCombinationUpdateMatchRefine(FilterDefinition<MatchEntity> filter) //TODO Move into unique MatchRefine Class
+        //{
+        //    return new BulkCombinationUpdate(MMIv8_Ktype).AddCombinationUpdate(await CombinationUpdateMatchRefinesList(filter));
+        //}
 
-        public async Task<IEnumerable<CombinationPipeline<MatchEntity>>> CombinationUpdateMatchRefinesList(FilterDefinition<MatchEntity> filter) //TODO Move into unique MatchRefine Class
-        {
-            List<CombinationPipeline<MatchEntity>> combinationUpdates = new();
-            await foreach (var combinationUpdate in CombinationUpdateMatchRefines(filter))
-            {
-                combinationUpdates.Add(combinationUpdate);
-            }
-            return combinationUpdates;
-        }
+        //[Obsolete("Move to SourceEntity", true)]
+        //public async Task<IEnumerable<CombinationPipeline<MatchEntity>>> CombinationUpdateMatchRefinesList(FilterDefinition<MatchEntity> filter) //TODO Move into unique MatchRefine Class
+        //{
+        //    List<CombinationPipeline<MatchEntity>> combinationUpdates = new();
+        //    await foreach (var combinationUpdate in CombinationUpdateMatchRefines(filter))
+        //    {
+        //        combinationUpdates.Add(combinationUpdate);
+        //    }
+        //    return combinationUpdates;
+        //}
 
-        public async IAsyncEnumerable<CombinationPipeline<MatchEntity>> CombinationUpdateMatchRefines(FilterDefinition<MatchEntity> filter) //TODO Move into unique MatchRefine Class
-        {
-            using var mmiv8Entities = await base.GetDistinctCursor<int>("MMIv8Entity.ExternalId", filter);
-            {
-                while (await mmiv8Entities.MoveNextAsync())
-                {
-                    foreach (var mmiv8EntityId in mmiv8Entities.Current)
-                    {
-                        yield return await CombinationUpdateMatchRefine(mmiv8EntityId);
-                    }
-                }
-            }
-        }
+        //[Obsolete("Move to SourceEntity", true)]
+        //public async IAsyncEnumerable<CombinationPipeline<MatchEntity>> CombinationUpdateMatchRefines(FilterDefinition<MatchEntity> filter) //TODO Move into unique MatchRefine Class
+        //{
+        //    using var mmiv8Entities = await base.GetDistinctCursor<int>("MMIv8Entity.ExternalId", filter);
+        //    {
+        //        while (await mmiv8Entities.MoveNextAsync())
+        //        {
+        //            foreach (var mmiv8EntityId in mmiv8Entities.Current)
+        //            {
+        //                yield return await CombinationUpdateMatchRefine(mmiv8EntityId);
+        //            }
+        //        }
+        //    }
+        //}
 
-        public async Task<CombinationPipeline<MatchEntity>> CombinationUpdateMatchRefine(int mmi_V8_Key) //TODO Move into unique MatchRefine Class
-        {
-            var entityFilter = Builders<MatchEntity>.Filter.Eq(c => c.MMIv8Entity.ExternalId, mmi_V8_Key);
-            var matchEntities = await base.GetFindFluent(entityFilter).ToListAsync();
+        //[Obsolete("Move to SourceEntity", true)]
+        //public async Task<CombinationPipeline<MatchEntity>> CombinationUpdateMatchRefine(int mmi_V8_Key) //TODO Move into unique MatchRefine Class
+        //{
+        //    var entityFilter = Builders<MatchEntity>.Filter.Eq(c => c.MMIv8Entity.ExternalId, mmi_V8_Key);
+        //    var matchEntities = await base.GetFindFluent(entityFilter).ToListAsync();
 
-            return base.Update(entityFilter).AppendUpdate(c => c.UpdateMatchRefine(new(matchEntities.ToArray())));
-        }
+        //    return base.Update(entityFilter).AppendUpdate(c => c.UpdateMatchRefine(new(matchEntities.ToArray())));
+        //}
+
 
         public async Task<Result<DeleteResult>> DeleteInvalidDates() 
         {

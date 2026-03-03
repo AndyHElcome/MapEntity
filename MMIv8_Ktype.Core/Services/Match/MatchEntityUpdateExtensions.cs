@@ -57,31 +57,29 @@ namespace MMIv8_Ktype.Core.Services.Match
             return update;
         }
 
+        public static UpdateDefinition<MatchEntity> UpdateEntityMatchRefine(this UpdateDefinition<MatchEntity> update, SourceIndex sourceIndex, MatchRefine matchRefine) // TODO Check this works
+        {
+            return sourceIndex switch
+            {
+                SourceIndex.TecDocPC => update.Set(c => c.TecDocEntity.MatchRefine, (MatchRefine)matchRefine),
+                SourceIndex.MMIv8 => update.Set(c => c.MMIv8Entity.MatchRefine, (MatchRefine)matchRefine),
+                SourceIndex.TecDocEngine => throw new NotImplementedException(),
+                _ => throw new NotImplementedException(),
+            };
+        }
+
         public static UpdateDefinition<MatchEntity> UpdateMakeModelMatch(this UpdateDefinition<MatchEntity> update, MatchMakeModel matchMakeModel) // TODO Check this works
         {
             update = update.Set(c => c.MatchMakeModelMatchID, matchMakeModel.DocumentId);
             return update;
         }
 
-        [Obsolete("not in use?")]
-        public static UpdateDefinition<MatchEntity> UpdateEntity(this UpdateDefinition<MatchEntity> update, SourceTecDocPC sourceEntity)
+        public static UpdateDefinition<MatchEntity> ClearMatchRefine(this UpdateDefinition<MatchEntity> update)
         {
-            update = update.Set(c => c.TecDocEntity, sourceEntity);
+            update = update.Unset("MatchRefine");
             return update;
         }
 
-        [Obsolete("not in use?")]
-        public static UpdateDefinition<MatchEntity> UpdateEntity(this UpdateDefinition<MatchEntity> update, SourceMMIv8 sourceEntity)
-        {
-            update = update.Set(c => c.MMIv8Entity, sourceEntity);
-            return update;
-        }
-
-        public static UpdateDefinition<MatchEntity> UpdateMatchRefine(this UpdateDefinition<MatchEntity> update, MatchRefine matchRefine)
-        {
-            update = update.Set(c => c.MatchRefine, matchRefine);
-            return update;
-        }
 
         public static PipelineDefinition<MatchEntity, MatchEntity> UpdateMatchBase(this PipelineDefinition<MatchEntity, MatchEntity> pipeline, MatchBase matchBase)// TODO Try and convert to driver based query maybe once this is its own class
         {

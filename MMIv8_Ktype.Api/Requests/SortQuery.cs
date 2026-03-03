@@ -6,6 +6,6 @@ namespace MMIv8_Ktype.Api.Requests
 {
     public class SortQuery<T>
     {
-        public SortDefinition<T> GetSort() => Builders<T>.Sort.Combine();
+        public virtual SortDefinition<T> GetSort() => Builders<T>.Sort.Combine();
     }
 }

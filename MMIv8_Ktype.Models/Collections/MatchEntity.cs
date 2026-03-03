@@ -30,12 +30,22 @@ namespace MMIv8_Ktype.Models.Collections
         public Dictionary<MatchBaseType, MatchBase> EntityComparison { get; set; }
 
         public MatchResult MatchResult { get; set; } = new();
-        public MatchRefine MatchRefine { get; set; } = new();
+
+        //[BsonIgnore]
+        //public MatchRefine MatchRefine { get; set; }
         public decimal? ScoreSum { get; set; }
         public decimal? ScoreAverage { get; set; }
 
+        //[Obsolete]
+        //[BsonIgnore]
+        //public bool IsBest => MMIv8Entity.MatchRefine.BestScore is not null && ScoreSum == MMIv8Entity.MatchRefine.BestScore;
+
         [BsonIgnore]
-        public bool IsBest => MatchRefine.BestScore is not null && ScoreSum == MatchRefine.BestScore;
+        public bool IsMMIv8Best => MMIv8Entity.MatchRefine.BestScore is not null && ScoreSum == MMIv8Entity.MatchRefine.BestScore;
+
+        [BsonIgnore]
+        public bool IsTecDocPCBest => TecDocEntity.MatchRefine.BestScore is not null && ScoreSum == TecDocEntity.MatchRefine.BestScore;
+
         public bool Matched { get; set; } = false;
         public string? MatchDetail { get; set; }
 

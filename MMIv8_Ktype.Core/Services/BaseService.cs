@@ -1,24 +1,25 @@
-﻿using MMIv8_Ktype.Core.Contexts;
-using MMIv8_Ktype.Models.Collections;
-using MongoDB.Driver;
-using MongoDB.Bson;
-using MMIv8_Ktype.Models.Indexes;
-using System.Reflection.Metadata;
-using MMIv8_Ktype.Api.Responses;
-using Serilog;
-using System.Diagnostics;
-using Microsoft.AspNetCore.Authentication;
-using MongoDB.Driver.Linq;
-using System.Xml.Linq;
-using MMIv8_Ktype.Models.Status;
-using MMIv8_Ktype.Models;
-using MMIv8_Ktype.Core.Services.Source;
-using System.Net.NetworkInformation;
+﻿using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Mvc.RazorPages;
+using MMIv8_Ktype.Api.Responses;
+using MMIv8_Ktype.Core.Contexts;
 using MMIv8_Ktype.Core.Services;
+using MMIv8_Ktype.Core.Services.Source;
+using MMIv8_Ktype.Models;
+using MMIv8_Ktype.Models.Collections;
+using MMIv8_Ktype.Models.Indexes;
+using MMIv8_Ktype.Models.Status;
 using MMIv8_Ktype.Models.Util;
+using MongoDB.Bson;
+using MongoDB.Driver;
+using MongoDB.Driver.Linq;
+using Serilog;
 using System.Data.SqlTypes;
+using System.Diagnostics;
+using System.Net.NetworkInformation;
+using System.Reflection.Metadata;
 using System.Text.Json;
+using System.Xml.Linq;
+using static System.Net.WebRequestMethods;
 
 namespace MMIv8_Ktype.Core.Services
 {
@@ -69,7 +70,7 @@ namespace MMIv8_Ktype.Core.Services
 
         #region Get Documents
 
-        private protected async Task<IAsyncCursor<TOut>> GetDistinctCursor<TOut>(string fieldName, FilterDefinition<T>? filter = null)
+        internal protected async Task<IAsyncCursor<TOut>> GetDistinctCursor<TOut>(string fieldName, FilterDefinition<T>? filter = null)
         {
             filter ??= Builders<T>.Filter.Empty;
 
@@ -95,7 +96,7 @@ namespace MMIv8_Ktype.Core.Services
             }
         }
 
-        private protected async IAsyncEnumerable<IEnumerable<TOut>> EnumerateDistinctDocuments<TOut>(string fieldName, FilterDefinition<T>? filter = null)
+        internal protected async IAsyncEnumerable<TOut> EnumerateDistinctDocuments<TOut>(string fieldName, FilterDefinition<T>? filter = null)
         {
             filter ??= Builders<T>.Filter.Empty;
 
@@ -106,9 +107,12 @@ namespace MMIv8_Ktype.Core.Services
             using var cursor = await this.GetDistinctCursor<TOut>(fieldName, filter);
             while (await cursor.MoveNextAsync())
             {
-                yield return cursor.Current;
+                foreach (var item in cursor.Current)
+                {
+                    yield return item;
 
-                i += cursor.Current.Count();
+                    i++;
+                }
                 Log.Debug("Enumerating Distinct {Type} {Current} {Time}", typeof(T).Name, i, sw);
             }
 
@@ -225,7 +229,7 @@ namespace MMIv8_Ktype.Core.Services
             }
         }
 
-        private protected async IAsyncEnumerable<IEnumerable<TOut>> EnumerateDocuments<TOut>(FilterDefinition<T> filter, int batchSize = 10000, ProjectionDefinition<T, TOut>? projection = null)
+        internal protected async IAsyncEnumerable<IEnumerable<TOut>> EnumerateDocuments<TOut>(FilterDefinition<T> filter, int batchSize = 10000, ProjectionDefinition<T, TOut>? projection = null)
         {
             Log.Debug("Starting Enumerate {Type}", typeof(T).Name);
             var sw = Stopwatch.StartNew();
@@ -313,6 +317,7 @@ namespace MMIv8_Ktype.Core.Services
 
             return this.Update(filter);
         }
+
         #endregion
 
         #region Deletion
@@ -387,7 +392,7 @@ namespace MMIv8_Ktype.Core.Services
             return await this.Update(document).AppendPipeline(c => c.AppendStatus(VersionProvider.NewStatus(status, detail))).FindAndUpdateDocument();
         }
 
-        public async Task<Result<UpdateResult>> UpdateStatus(FilterDefinition<T> filter, Status status, string? detail = null)
+        public async Task<Result<UpdateResultDTO>> UpdateStatus(FilterDefinition<T> filter, Status status, string? detail = null)
         {
             return await this.Update(filter).AppendPipeline(c => c.AppendStatus(VersionProvider.NewStatus(status, detail))).UpdateDocuments();
         }

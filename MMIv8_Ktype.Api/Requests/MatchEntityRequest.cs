@@ -12,7 +12,7 @@ namespace MMIv8_Ktype.Api.Requests
 
     public class MatchEntitySortRequest : SortQuery<MatchEntity>
     {
-        public new SortDefinition<MatchEntity> GetSort()
+        public override SortDefinition<MatchEntity> GetSort()
         {
             return base.GetSort();
         }
@@ -29,7 +29,7 @@ namespace MMIv8_Ktype.Api.Requests
         public bool? HasDifference { get; set; }
         public Status[]? Status { get; set; }
 
-        public FilterDefinition<MatchEntity> GetFilter()
+        public override FilterDefinition<MatchEntity> GetFilter()
         {
             var filterBuilder = Builders<MatchEntity>.Filter;
             var filter = filterBuilder.Empty;
@@ -44,7 +44,7 @@ namespace MMIv8_Ktype.Api.Requests
                 filter = filter & filterBuilder.Eq(c => c.MMIv8Entity.DocumentId, ObjectId.Parse(MMIv8EntityId));
 
             if (IsCheck is not null)
-                filter = filter & filterBuilder.Eq(c => c.MatchRefine.IsCheck, IsCheck);
+                filter = filter & filterBuilder.Eq(c => c.MMIv8Entity.MatchRefine.IsCheck, IsCheck);
 
             if (IsMatched is not null)
                 filter = filter & filterBuilder.Eq(c => c.Matched, IsMatched);
@@ -53,7 +53,7 @@ namespace MMIv8_Ktype.Api.Requests
                 filter = filter & filterBuilder.Eq(c => c.MatchResult.Failed, IsFailed);
 
             if (HasDifference is not null)
-                filter = filter & filterBuilder.Eq(c => c.MatchRefine.Difference, HasDifference);
+                filter = filter & filterBuilder.Eq(c => c.MMIv8Entity.MatchRefine.Difference, HasDifference);
 
             if (Status is not null && Status.Length != 0)
                 filter = filter & filterBuilder.In(c => c.Status.Current.Status, Status);
@@ -61,4 +61,5 @@ namespace MMIv8_Ktype.Api.Requests
             return filter;
         }
     }
+
 }

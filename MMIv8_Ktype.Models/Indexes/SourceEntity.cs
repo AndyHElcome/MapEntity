@@ -2,9 +2,11 @@
 using MMIv8_Ktype.Models.Collections;
 using MMIv8_Ktype.Models.DateIntersection;
 using MMIv8_Ktype.Models.Status;
+using MMIv8_Ktype.Models.Util;
 using MongoDB.Bson;
 using MongoDB.Bson.Serialization.Attributes;
 using System;
+using System.Text;
 using System.Text.Json.Serialization;
 
 namespace MMIv8_Ktype.Models.Indexes
@@ -24,6 +26,9 @@ namespace MMIv8_Ktype.Models.Indexes
         public abstract DateOnlyRange DateRange { get; }
         public abstract string EntityHash { get; }
         public abstract string SourceEntityModelHash { get; }
+        public abstract string TextSort { get; }
+
+        public MatchRefine MatchRefine { get; set; } = new();
 
         public SourceEntity(SourceIndex sourceIndex, int externalId, IVersionProvider versionProvider)
         {

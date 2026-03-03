@@ -45,14 +45,14 @@ namespace MMIv8_Ktype.AccessMdb
                 expando.BuildExpandoScore(obj.EntityComparison[key], prefix + key.ToString());
             }
 
-            expando.BuildExpando(obj.MatchResult, prefix + nameof(obj.MatchResult))
-                   .BuildExpando(obj.MatchRefine, prefix + nameof(obj.MatchRefine))
-                   .AddProperty(prefix + nameof(obj.ScoreSum), obj.ScoreSum)
-                   .AddProperty(prefix + nameof(obj.ScoreAverage), obj.ScoreAverage)
-                   .AddProperty(prefix + nameof(obj.IsBest), obj.IsBest)
-                   .AddProperty(prefix + nameof(obj.Matched), obj.Matched)
-                   .AddProperty(prefix + nameof(obj.MatchDetail), obj.MatchDetail)
-                   .AddProperty(prefix + nameof(obj.Status.Current.Status), obj.Status.Current.Status);
+            //expando.BuildExpando(obj.MatchResult, prefix + nameof(obj.MatchResult))
+            //       .BuildExpando(obj.MatchRefine, prefix + nameof(obj.MatchRefine))
+            //       .AddProperty(prefix + nameof(obj.ScoreSum), obj.ScoreSum)
+            //       .AddProperty(prefix + nameof(obj.ScoreAverage), obj.ScoreAverage)
+            //       .AddProperty(prefix + nameof(obj.IsBest), obj.IsBest)
+            //       .AddProperty(prefix + nameof(obj.Matched), obj.Matched)
+            //       .AddProperty(prefix + nameof(obj.MatchDetail), obj.MatchDetail)
+            //       .AddProperty(prefix + nameof(obj.Status.Current.Status), obj.Status.Current.Status);
 
             return expando;
         }

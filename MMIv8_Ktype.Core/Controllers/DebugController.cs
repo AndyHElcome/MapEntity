@@ -21,6 +21,7 @@ namespace MMIv8_Ktype.Core.Controllers
                                  MappingService MappingService,
                                  BulkMappingService BulkMappingService,
                                  MongoDBContext mongoDBContext,
+                                 SourceMMIv8MatchRefineService SourceMMIv8MatchRefineService,
                                  IVersionProvider versionProvider) : ControllerBase
     {
         [HttpPost("Entity/BulkReloadAllEntityMatch")]
@@ -58,11 +59,19 @@ namespace MMIv8_Ktype.Core.Controllers
         //    return Ok("updated");
         //}
 
-        [HttpPost("Entity/BulkUpdateMatchRefine")]
+        [HttpPost("Entity/BulkUpdateMatchRefine/{MMI_V8_Key}")]
         public async Task<IActionResult> BulkUpdateMatchRefine(int MMI_V8_Key)
         {
-            var matchRefineUpdate = await MatchEntityService.BulkCombinationUpdateMatchRefine( [ MMI_V8_Key ] );
+            var matchRefineUpdate = await SourceMMIv8MatchRefineService.BulkCombinationUpdateMatchRefine([ MMI_V8_Key ]);
             var matchRefineResult = await matchRefineUpdate.CommitBulkWrite();
+            return Ok(matchRefineResult);
+        }
+
+
+        [HttpPost("Entity/BulkUpdateMatchRefineAll")]
+        public async Task<IActionResult> BulkUpdateMatchRefineAll()
+        {
+            var matchRefineResult = await MappingService.BulkCombinationUpdateMatchRefineResult(Builders<MatchEntity>.Filter.Empty);
             return Ok(matchRefineResult);
         }
 

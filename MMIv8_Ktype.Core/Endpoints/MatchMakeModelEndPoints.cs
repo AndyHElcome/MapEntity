@@ -27,12 +27,17 @@ namespace MMIv8_Ktype.Core.Endpoints
             return await matchMakeModelService.GetByModelIds(TD_SourceEntityModelHash, MMI_SourceEntityModelHash);
         }
 
+        public async Task RegenerateMakeModelSort()
+        {
+            await mappingService.RegenerateMakeModelSort();
+        }
+
         public async Task<SerializableResult<List<MatchMakeModel>>> GetByModelId(SourceIndex SourceIndex, string SourceEntityModelHash)
         {
             return await matchMakeModelService.GetByModelId(SourceIndex, SourceEntityModelHash);
         }
 
-        public async Task<Result> CreateMatchMakeModel(string TD_SourceEntityModelHash = "", string MMI_SourceEntityModelHash = "")
+        public async Task<SerializableResult<MatchMakeModel>> CreateMatchMakeModel(string TD_SourceEntityModelHash = "", string MMI_SourceEntityModelHash = "")
         {
             if (TD_SourceEntityModelHash == "" && MMI_SourceEntityModelHash == "")
                 return Error.Validation("MatchMatchModel.CreateValidation","Both parameters cannot be empty");

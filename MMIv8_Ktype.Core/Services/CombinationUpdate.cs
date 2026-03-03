@@ -1,4 +1,5 @@
-﻿using MMIv8_Ktype.Core.Contexts;
+﻿using MMIv8_Ktype.Api.Responses;
+using MMIv8_Ktype.Core.Contexts;
 using MMIv8_Ktype.Models;
 using MongoDB.Bson.Serialization;
 using MongoDB.Driver;
@@ -9,7 +10,7 @@ namespace MMIv8_Ktype.Core.Services
 {
     public interface ICombinationPipeline
     {
-        Task<Result<UpdateResult>> UpdateDocuments();
+        Task<Result<UpdateResultDTO>> UpdateDocuments();
         BulkWriteModel ToBulkWriteModel();
     }
 
@@ -64,14 +65,14 @@ namespace MMIv8_Ktype.Core.Services
             return this;
         }
 
-        public async Task<Result<UpdateResult>> UpdateDocuments()
+        public async Task<Result<UpdateResultDTO>> UpdateDocuments()
         {
             var sw = Stopwatch.StartNew();
             try
             {
                 var result = await Collection.UpdateManyAsync(Filter, Update);
                 Log.Debug("Updated {Count} {Type} in {time}", result.ModifiedCount, typeof(T).Name, sw);
-                return result;
+                return result ?? new UpdateResultDTO();
             }
             catch (Exception ex)
             {

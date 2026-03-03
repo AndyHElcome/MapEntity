@@ -763,7 +763,7 @@ namespace MMIv8_Ktype.AccessMdb.Operations
 
         }
     }
-
+/*
     public class GenerateMatchRefine : AccessDBOperation
     {
         public string? MakeModelMatchId { get; }
@@ -829,7 +829,7 @@ namespace MMIv8_Ktype.AccessMdb.Operations
                 );
         }
     }
-
+*/
     public class GenerateMatchSummary : AccessDBOperation
     {
         public string? MakeModelMatchId { get; }
@@ -1215,7 +1215,7 @@ namespace MMIv8_Ktype.AccessMdb.Operations
             await base.GenerateTableFromPagedDocuments<SourceMMIv8, SourceMMIv8, ObjectId>(
                 TableName,
                 log,
-                (string? cursor, int pageSize) => sourceEntityEndpoints.GetByCursor(new PagedCursorRequest<ObjectId>() { Cursor = cursor, PageSize = pageSize }, new FilterQuery<SourceMMIv8>()),
+                (string? cursor, int pageSize) => sourceEntityEndpoints.GetByCursor(new PagedCursorRequest<ObjectId>() { Cursor = cursor, PageSize = pageSize }, new SourceMMIv8FilterRequest()),
                 (document) => [ document ],
                 (document) => GlobalHelpers.ObjToDictionary(document),
                 [ nameof(SourceMMIv8.ExternalId) ],
@@ -1233,7 +1233,7 @@ namespace MMIv8_Ktype.AccessMdb.Operations
             await base.GenerateTableFromPagedDocuments<SourceTecDocPC, SourceTecDocPC, ObjectId>(
                 TableName,
                 log,
-                (string? cursor, int pageSize) => sourceEntityEndpoints.GetByCursor(new PagedCursorRequest<ObjectId>() { Cursor = cursor, PageSize = pageSize }, new FilterQuery<SourceTecDocPC>()),
+                (string? cursor, int pageSize) => sourceEntityEndpoints.GetByCursor(new PagedCursorRequest<ObjectId>() { Cursor = cursor, PageSize = pageSize }, new SourceTecDocPCFilterRequest()),
                 (document) => [ document ],
                 (document) => GlobalHelpers.ObjToDictionary(document),
                 [ nameof(SourceTecDocPC.ExternalId) ],
