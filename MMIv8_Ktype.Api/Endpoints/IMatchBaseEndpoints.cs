@@ -9,12 +9,16 @@ using MMIv8_Ktype.Models.Util;
 using MongoDB.Bson;
 using MongoDB.Driver;
 using Refit;
+using System.Security.Cryptography;
 
 namespace MMIv8_Ktype.Api.Endpoints
 {
     [GroupName("MatchBase")]
-    public interface IMatchBaseEndpoints : IBaseEndpoint<MatchBase, string, FilterQuery<MatchBase>, SortQuery<MatchBase>>, IVersionEndpoint<MatchBase, string, FilterQuery<MatchBase>>, IEndpoint
+    public interface IMatchBaseEndpoints : IBaseEndpoint<MatchBase, string, MatchBaseFilterRequest, SortQuery<MatchBase>>, IVersionEndpoint<MatchBase, string, MatchBaseFilterRequest>, IEndpoint
     {
+
+
+
         [Get("/GetByType/{MatchBaseType}")]
         Task<SerializableResult<PagedCursorResponse<MatchBase>>> GetByMatchBaseType([FromRoute] MatchBaseType MatchBaseType, [AsParameters] PagedCursorRequest<string> PagedRequest);
 

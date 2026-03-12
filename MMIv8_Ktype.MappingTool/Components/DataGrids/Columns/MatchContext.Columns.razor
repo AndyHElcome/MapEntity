@@ -1,0 +1,37 @@
+﻿@using MMIv8_Ktype.Models.Collections
+
+@if (Visible)
+{
+	<DxGridDataColumn FieldName=@GetFieldName(nameof(MatchContext.ContextId)) Caption="ContextId" Visible="false" />
+
+	<DxGridDataColumn FieldName=@GetFieldName(nameof(MatchContext.TecDocEntity)) Caption="TecDocEntity">
+		<CellDisplayTemplate Context="displayContext">
+			@{
+				var item = (MatchContext)displayContext.DataItem;
+				string value = item.TecDocEntity.DictToStringWithKey("\r\n");
+			}
+			<span style="white-space: pre;">@value</span>
+		</CellDisplayTemplate>
+	</DxGridDataColumn>
+
+	<DxGridDataColumn FieldName=@GetFieldName(nameof(MatchContext.MMIEntity)) Caption="MMIEntity">
+		<CellDisplayTemplate Context="displayContext">
+			@{
+				var item = (MatchContext)displayContext.DataItem;
+				string value = item.MMIEntity.DictToStringWithKey("\r\n");
+			}
+			<span style="white-space: pre;">@value</span>
+		</CellDisplayTemplate>
+	</DxGridDataColumn>
+
+
+	<DxGridDataColumn FieldName=@GetFieldName(nameof(MatchContext.ScoreOverride)) Caption="ScoreOverride" />
+
+}
+
+@code {
+	[Parameter] public string Prefix { get; set; } = string.Empty;
+	[Parameter] public bool Visible { get; set; } = true;
+	private string GetFieldName(string field) => Prefix == string.Empty ? field : $"{Prefix}.{field}";
+
+}

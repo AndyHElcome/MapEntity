@@ -1,0 +1,30 @@
+﻿@using MMIv8_Ktype.Models.Collections
+@using MMIv8_Ktype.Models.Status
+
+
+@if(Visible)
+{
+
+	<DxGridDataColumn FieldName=@GetFieldName(nameof(StatusHistory.History)) Caption="Status" Visible="@ShowStatus">
+		<CellDisplayTemplate Context="cellContext"  >
+			@{
+				Stack<StatusChange> history = cellContext.Value as Stack<StatusChange> ?? [];
+				string title = string.Join("\r\n", history?.Select(c => c.GridFormat()) ?? [ "No history" ]);
+				string value = history?.Peek().Status.ToString() ?? string.Empty;
+			}
+			<span title="@title">@value</span>
+			
+		</CellDisplayTemplate>
+	</DxGridDataColumn>
+
+	<StatusChange_Columns Prefix="@GetFieldName(nameof(StatusHistory.Current))" Visible="@ShowDetail" ShowStatus="false" />
+}
+
+
+@code {
+	[Parameter] public string Prefix { get; set; } = string.Empty;
+	[Parameter] public bool Visible { get; set; } = true;
+	[Parameter] public bool ShowStatus { get; set; } = true;
+	[Parameter] public bool ShowDetail { get; set; } = false;
+	private string GetFieldName(string field) => Prefix == string.Empty ? field : $"{Prefix}.{field}";
+}

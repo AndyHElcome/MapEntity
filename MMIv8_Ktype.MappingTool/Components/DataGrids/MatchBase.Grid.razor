@@ -1,136 +1,183 @@
-﻿@using DevExpress.Blazor.Internal.Editors
+﻿@rendermode InteractiveServer
+
+@using DevExpress.Blazor.Internal.Editors
+@using DevExpress.Data.Filtering
 @using MMIv8_Ktype.Api
 @using MMIv8_Ktype.Api.Endpoints
 @using MMIv8_Ktype.Api.Requests
 @using MMIv8_Ktype.Api.Responses
+@using MMIv8_Ktype.MappingTool.Components.DataGrids.Columns
 @using MMIv8_Ktype.MappingTool.Components.Pagers
 @using MMIv8_Ktype.Models.Collections
+@using System.Linq.Expressions
+@using MMIv8_Ktype.Models.Status
+@using MMIv8_Ktype.Models.Util
 
 
-<style>
-	.grid-container {
-		width: 100%;
-	}
-</style>
 
-<div class="grid-container">
-	<DxLoadingPanel @bind-Visible="loading"
-					IsContentBlocked="true"
-					ApplyBackgroundShading="true"
-					IndicatorAreaVisible="false"
-					Text="Fetching Data...">
-		@if (!loading)
+<Generic_Grid @ref="@ImpGrid"
+	TItem="MatchBase"
+			  Tid="string"
+			  TFilter="MatchBaseFilterRequest"
+			  TSort="SortQuery<MatchBase>"
+			  TEndpoint="IMatchBaseEndpoints"
+			  Filter="@Filter"
+			  Sort="@Sort"
+			  CustomizeElement="Grid_CustomizeElement"
+			  ShowPager="@ShowPager"
+			  ManualData="@ManualData">
+	<Columns>
+		<MatchBase_Columns ShowMatchContexts="@ShowMatchContexts" ShowOverriden="@ShowOverriden" />
+	</Columns>
+	<DetailRows Context="dcontext"  >
+
+		@if (((MMIv8_Ktype.Models.Collections.MatchBase?)dcontext?.DataItem)?.MatchContexts is null || ((MMIv8_Ktype.Models.Collections.MatchBase)dcontext.DataItem).MatchContexts.Count == 0)
 		{
-			<DxGrid Data="@(Response.Value?.Documents)"
+			<text>No Match Contexts</text>
+		}
+		else
+		{
+			<DxGrid Data="@(((MMIv8_Ktype.Models.Collections.MatchBase)dcontext.DataItem).MatchContexts)"
 					FooterDisplayMode="GridFooterDisplayMode.Never"
 					ColumnResizeMode="GridColumnResizeMode.NextColumn"
 					ShowAllRows="true"
 					AllowSort="false">
 				<Columns>
-					<DxGridDataColumn FieldName=@nameof(MatchBase.DocumentId) />
-					<DxGridDataColumn FieldName=@nameof(MatchBase.MatchBaseType) />
-					<DxGridDataColumn FieldName=@nameof(MatchBase.MatchBaseMethod) />
-					<DxGridDataColumn FieldName=@nameof(MatchBase.TecDocEntity)>
-						<CellDisplayTemplate Context="displayContext">
-							@{
-								var item = (MatchBase)displayContext.DataItem;
-								string value = item.TecDocEntity.DictToStringWithKey("\r\n");
-							}
-							<span style="white-space: pre;">@value</span>
-						</CellDisplayTemplate>
-					</DxGridDataColumn>
-					<DxGridDataColumn FieldName=@nameof(MatchBase.MMIEntity)>
-						<CellDisplayTemplate Context="displayContext">
-							@{
-								var item = (MatchBase)displayContext.DataItem;
-								string value = item.MMIEntity.DictToStringWithKey("\r\n");
-							}
-							<span style ="white-space: pre;">@value</span>
-						</CellDisplayTemplate>
-					</DxGridDataColumn>
-					<DxGridDataColumn FieldName=@nameof(MatchBase.Score) />
-					<DxGridDataColumn FieldName="@($"{nameof(MatchBase.Status)}.{nameof(MatchBase.Status.Current)}")" />
-					<DxGridCommandColumn>
-						<CellDisplayTemplate>
-							@{
-								var item = (MatchBase)context.DataItem;
-								if (item.Status.Current.Status == Models.Status.Status.Check)
-								{
-									<DxButton RenderStyle="ButtonRenderStyle.Link" IconCssClass="bi bi-check fs-5" @onclick="@(() => OnChecked(item))" />						
-								}
-							}
-						</CellDisplayTemplate>
-					</DxGridCommandColumn>
+					<MatchContext_Columns />
 				</Columns>
 			</DxGrid>
-			<PagedCursorResponse_Pager Response="@(Response.Value)"
-									   OnPageChanged="OnPageIndexChanged"
-									   OnPageSizeChanged="OnPageSizeChanged"
-									   ShowPageSizeSelector="true"
-									   ShowSummary="true"
-									   IsLoading="@(loading || isError)" />
 		}
-		else if (isError)
-		{
-			<div class="alert alert-danger m-0" role="alert">
-				An error occurred while fetching data. @Response.Error?.ToString()
-			</div>
-		}
-
-	</DxLoadingPanel>
-</div>
+	</DetailRows>
+	<Toolbar>
+		<DxToolbar ItemRenderStyleMode="ToolbarRenderStyleMode.Contained">
+			<Items>
+				<DxToolbarItem BeginGroup="true" Alignment="ToolbarItemAlignment.Left">
+					<Template Context="toolbar_item_context">
+						<DxDropDownBox Value="@Filter.MatchBaseType"
+									   QueryDisplayText="QueryTextFromList<MatchBaseType>"
+									   DropDownWidthMode="DropDownWidthMode.EditorWidth"
+									   NullText="Select MatchBaseTypes"
+									   InputId="ddbMatchBaseType">
+							<DropDownBodyTemplate>
+								<DxListBox Data="@MatchBaseTypes"
+										   TData="MatchBaseType"
+										   TValue="MatchBaseType"
+										   SelectionMode="ListBoxSelectionMode.Multiple"
+										   ShowCheckboxes="true"
+										   ValuesChanged="@(SelectChange)"
+										   Values="@Filter.MatchBaseType">
+								</DxListBox>
+							</DropDownBodyTemplate>
+						</DxDropDownBox>
+					</Template>
+				</DxToolbarItem>
+				<DxToolbarItem BeginGroup="true" Alignment="ToolbarItemAlignment.Left">
+					<Template Context="toolbar_item_context">
+						<DxDropDownBox Value="@Filter.Status"
+									   QueryDisplayText="QueryTextFromList<Status>"
+									   DropDownWidthMode="DropDownWidthMode.EditorWidth"
+									   NullText="Select Statuses"
+									   InputId="ddbStatus">
+							<DropDownBodyTemplate>
+								<DxListBox Data="@Statuses"
+										   TData="Status"
+										   TValue="Status"
+										   TextFieldName="@nameof(Status)"
+										   SelectionMode="ListBoxSelectionMode.Multiple"
+										   ShowCheckboxes="true"
+										   ValuesChanged="@(SelectChange)"
+										   Values="@Filter.Status">
+								</DxListBox>
+							</DropDownBodyTemplate>
+						</DxDropDownBox>
+					</Template>
+				</DxToolbarItem>
+				<DxToolbarItem BeginGroup="true" Alignment="ToolbarItemAlignment.Left" Visible="false">
+					<Template Context="toolbar_item_context">
+						<DxDropDownBox Value="@Filter.MatchBaseMethod"
+									   QueryDisplayText="QueryTextFromList<MatchBaseMethod>"
+									   DropDownWidthMode="DropDownWidthMode.EditorWidth"
+									   NullText="Select MatchBaseMethods"
+									   InputId="ddbStatus">
+							<DropDownBodyTemplate>
+								<DxListBox Data="@MatchBaseMethods"
+										   TData="MatchBaseMethod"
+										   TValue="MatchBaseMethod"
+										   TextFieldName="@nameof(MatchBaseMethod)"
+										   SelectionMode="ListBoxSelectionMode.Multiple"
+										   ShowCheckboxes="true"
+										   ValuesChanged="@(SelectChange)"
+										   Values="@Filter.MatchBaseMethod">
+								</DxListBox>
+							</DropDownBodyTemplate>
+						</DxDropDownBox>
+					</Template>
+				</DxToolbarItem>
+				<DxToolbarItem Text="Clear Selection" Click="ClearSelection" BeginGroup="true" />
+			</Items>
+		</DxToolbar> 
+	</Toolbar>
+</Generic_Grid>
 
 @code {
-	public Models.SerializableResult<PagedResponse<MatchBase>> Response { get; set; }
-	public bool loading { get; set; } = true;
-	public bool isError { get; set; } = false;
+	Generic_Grid<MatchBase, string, MatchBaseFilterRequest, SortQuery<MatchBase>, IMatchBaseEndpoints> ImpGrid;
+	[Parameter] public MatchBase? SelectedItem { get; set; }
+	[Parameter] public EventCallback<MatchBase?> SelectedItemChanged { get; set; }
 
-	PagedRequest pagedRequest { get; set; } = new();
+	public MatchBaseFilterRequest Filter { get; set; } = new();
+	public SortQuery<MatchBase> Sort { get; set; } = new();
 
-	IMatchBaseEndpoints endpoint { get; init; } = new RefitClient(Log.Logger).CreateService<IMatchBaseEndpoints>();
 
-	async Task LoadData()
+	[Parameter] public List<MatchBase> ManualData { get; set; } = new();
+
+	[Parameter] public bool ShowPager { get; set; } = true;
+
+	[Parameter] public bool ShowOverriden { get; set; } = false;
+	[Parameter] public bool ShowMatchContexts { get; set; } = true;
+
+	[Parameter] public GridSelectionMode GridSelectionMode { get; set; } = GridSelectionMode.Single;
+	[Parameter] public Expression<Func<MatchBase, bool>>? SelectionPredicate { get; set; }
+
+	MatchBaseType[] MatchBaseTypes = Enum.GetValues<MatchBaseType>();
+
+	Status[] Statuses = Enum.GetValues<Status>();
+
+	MatchBaseMethod[] MatchBaseMethods = Enum.GetValues<MatchBaseMethod>();
+
+	string? QueryTextFromList<T>(DropDownBoxQueryDisplayTextContext? arg)
 	{
-		try
+		var names = (arg?.Value as IEnumerable<T>);
+		return names != null && names.Count() > 0 ? string.Join(", ", names) : null;
+	}
+
+	void SelectChange<T>(IEnumerable<T> args)
+	{
+		if (args is IEnumerable<MatchBaseType> matchBaseTypes)
+			Filter.MatchBaseType = args.Count() == 0 ? null : matchBaseTypes.ToArray();
+
+		if (args is IEnumerable<Status> statuses)
+			Filter.Status = args.Count() == 0 ? null : statuses.ToArray();
+
+		if (args is IEnumerable<MatchBaseMethod> matchBaseMethods)
+			Filter.MatchBaseMethod = args.Count() == 0 ? null : matchBaseMethods.ToArray();
+	}
+
+	void ClearSelection(ToolbarItemClickEventArgs args)
+	{
+		Filter.MatchBaseType = null;
+		Filter.Status = null;
+		Filter.MatchBaseMethod = null;
+	}
+
+
+	void Grid_CustomizeElement(GridCustomizeElementEventArgs e)
+	{
+		if (e.ElementType == GridElementType.DataRow && (decimal)e.Grid.GetRowValue(e.VisibleIndex, "Score") == 0)
 		{
-			loading = true;
-			Response = await endpoint.GetByPage(PagedRequest: pagedRequest, new FilterQuery<MatchBase>(), new SortQuery<MatchBase>());
-			isError = !Response.IsSuccess;
-			pagedRequest = new(Response.Value?.CurrentPage, Response.Value?.PageSize);
+			e.CssClass = "highlighted-item";
 		}
-		catch (Exception ex)
-		{
-			isError = true;
-			Console.WriteLine(ex);
-		}
-		finally
-		{
-			loading = false;
-		}
-
 	}
 
-	async Task OnChecked(MatchBase editedItem)
-	{
-		_ = await endpoint.UpdateStatus(editedItem, Models.Status.Status.Checked);
-		await LoadData();
-	}
 
-	async Task OnPageIndexChanged(int newPageIndex)
-	{
-		pagedRequest = new(newPageIndex, Response.Value?.PageSize);
-		await LoadData();
-	}
-
-	async Task OnPageSizeChanged(int newPageSize)
-	{
-		pagedRequest = new(1, newPageSize);
-		await LoadData();
-	}
-
-	protected override async Task OnInitializedAsync()
-	{
-		await LoadData();
-	}
 }
 

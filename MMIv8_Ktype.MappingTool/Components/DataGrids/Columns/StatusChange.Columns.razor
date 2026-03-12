@@ -1,0 +1,19 @@
+﻿@using MMIv8_Ktype.Models.Collections
+@using MMIv8_Ktype.Models.Status
+
+
+@if(Visible)
+{
+	<DxGridDataColumn FieldName=@GetFieldName(nameof(StatusChange.Status)) Caption="Status" Visible="@ShowStatus" />
+	<DxGridDataColumn FieldName=@GetFieldName(nameof(StatusChange.DateOfChange)) Caption="Status Date"  />
+	<DxGridDataColumn FieldName=@GetFieldName(nameof(StatusChange.VersionID)) Caption="VersionID" Visible = "false" />
+	<DxGridDataColumn FieldName=@GetFieldName(nameof(StatusChange.Detail)) Caption="Detail" />
+}
+
+
+@code {
+	[Parameter] public string Prefix { get; set; } = string.Empty;
+	[Parameter] public bool Visible { get; set; } = true;
+	[Parameter] public bool ShowStatus { get; set; } = true;
+	private string GetFieldName(string field) => Prefix == string.Empty ? field : $"{Prefix}.{field}";
+}

@@ -1,0 +1,32 @@
+﻿@using MMIv8_Ktype.Models.Collections
+@using MMIv8_Ktype.Models.Outputs
+
+
+@if (Visible)
+{
+	<DxGridDataColumn FieldName=@GetFieldName(nameof(MatchResult.ComparisonCount)) Caption="ComparisonCount" Visible="false" />
+	<DxGridDataColumn FieldName=@GetFieldName(nameof(MatchResult.MatchCount)) Caption="MatchCount" Visible="false" />
+	<DxGridDataColumn FieldName=@GetFieldName(nameof(MatchResult.PreviousMatch)) Caption="PreviousMatch" />
+	<DxGridDataColumn FieldName=@GetFieldName(nameof(MatchResult.IsPerfect)) Caption="IsPerfect" />
+	<DxGridDataColumn FieldName=@GetFieldName(nameof(MatchResult.Failed)) Caption="Failed">
+		<CellDisplayTemplate Context="displayContext">
+			@{
+				var item = (MatchEntity)displayContext.DataItem;
+				var title = item.MatchResult.FailDetail;
+				var value = item.MatchResult.Failed;
+			}
+			<DxCheckBox Checked="@value" ReadOnly="true" title="@title" />
+		</CellDisplayTemplate>
+	</DxGridDataColumn>
+	<DxGridDataColumn FieldName=@GetFieldName(nameof(MatchResult.FailDetail)) Caption="FailDetail" Visible="false" />
+	<DxGridDataColumn FieldName=@GetFieldName(nameof(MatchResult.FailCount)) Caption="FailCount" Visible="false" />
+	<DxGridDataColumn FieldName=@GetFieldName(nameof(MatchResult.PerfectCount)) Caption="PerfectCount" Visible="false" />
+}
+
+
+@code {
+	[Parameter] public string Prefix { get; set; } = string.Empty;
+	[Parameter] public bool Visible { get; set; } = true;
+	private string GetFieldName(string field) => Prefix == string.Empty ? field : $"{Prefix}.{field}";
+}
+

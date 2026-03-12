@@ -37,6 +37,9 @@ namespace MMIv8_Ktype.Api.Endpoints
         [Put("/Create")]
         Task<Result> Create(T sourceEntities);
 
+        [Post("/Debug/RegenerateMatchRefine/{ExternalId}")]
+        Task<Result> RegenerateMatchRefine(int ExternalId);
+
         [Put("/Debug/Bulkload")]
         Task<Result> Bulkload(T[] sourceEntities);
 

@@ -1,0 +1,58 @@
+﻿@rendermode InteractiveServer
+
+@using DevExpress.Blazor.Internal.Editors
+@using MMIv8_Ktype.Api
+@using MMIv8_Ktype.Api.Endpoints
+@using MMIv8_Ktype.Api.Requests
+@using MMIv8_Ktype.Api.Responses
+@using MMIv8_Ktype.MappingTool.Components.DataGrids.Columns
+@using MMIv8_Ktype.Models.Collections
+@using MMIv8_Ktype.Models.Status
+@using MongoDB.Bson
+
+
+<Generic_Grid TItem="SourceMMIv8"
+			  Tid="ObjectId"
+			  TFilter="SourceMMIv8FilterRequest"
+			  TSort="SourceEntitySortRequest<SourceMMIv8>"
+			  TEndpoint="ISourceMMIv8Endpoints"
+			  SelectedItemChanged="@SelectedItemChanged"
+			  Filter="@Filter"
+			  Sort="@Sort"
+			  StartingPageSize="10">
+	<Columns>
+		<MMIv8Entity_Columns ShowMatchRefine="true" />
+	</Columns>
+	
+	<Toolbar>
+		<DxToolbar ItemRenderStyleMode="ToolbarRenderStyleMode.Contained">
+			<Items>
+				<DxToolbarItem Alignment="ToolbarItemAlignment.Right">
+					<Template Context="toolbar_item_context">
+						<DxCheckBox @bind-Checked="@Filter.HasDifference" AllowIndeterminateStateByClick="true">
+							Difference
+						</DxCheckBox>
+					</Template>
+				</DxToolbarItem>
+				<DxToolbarItem Alignment="ToolbarItemAlignment.Right" BeginGroup="true">
+					<Template Context="toolbar_item_context">
+						<DxCheckBox @bind-Checked="@Filter.IsCheck" AllowIndeterminateStateByClick="true">
+							IsCheck
+						</DxCheckBox>
+					</Template>
+				</DxToolbarItem>
+			</Items>
+		</DxToolbar>
+	</Toolbar>
+</Generic_Grid>
+
+@code {
+	
+	[Parameter] public SourceMMIv8? SelectedItem { get; set; }
+	[Parameter] public EventCallback<SourceMMIv8?> SelectedItemChanged { get; set; }
+
+	public SourceMMIv8FilterRequest Filter { get; set; } = new();
+	[Parameter] public SourceEntitySortRequest<SourceMMIv8> Sort { get; set; } = new();
+
+}
+

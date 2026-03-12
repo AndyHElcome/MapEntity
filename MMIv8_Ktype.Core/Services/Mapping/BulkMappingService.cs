@@ -51,7 +51,59 @@ namespace MMIv8_Ktype.Core.Services.Mapping
                                                             .ThenBy(o => string.Concat(o.MMIv8Model.Model, o.TecDocModel.Model))
                                                             .ToList();
 
-                return matchMakeModels is { Count: > 0} ? matchMakeModels : Error.NoContent("MatchMakeModel.NoContent", "No content found when trying to GenerateMakeModelMatch");
+                return matchMakeModels is { Count: > 0 } ? matchMakeModels : Error.NoContent("MatchMakeModel.NoContent", "No content found when trying to GenerateMakeModelMatch");
+            }
+            catch (Exception ex)
+            {
+                Log.Error(ex, "Error getting Documents for GenerateMakeModelMatch");
+                return Error.Failure($"MatchMakeModel.GenerateMakeModelMatchFailure", $"Error getting Documents. Error: {ex.Message}");
+            }
+        }
+
+        public async Task<Result> PopulateMakeModelMatch()
+        {
+            try
+            {
+                List<MatchMakeModel> currentMatch = await MatchMakeModelService.GetFindFluent().ToListAsync();
+                List<MatchMakeModel> newMatchMakeModels = new();
+
+                var MMIv8Models = await SourceMMIv8EntityModelService.GetByNotId(currentMatch.Select(m => m.MMIv8Model.DocumentId).ToArray());
+                if (!MMIv8Models.IsSuccess && MMIv8Models.Error!.Type != ErrorType.NoContent)
+                    return MMIv8Models.Error;
+
+                var AllTecDocPCModels = await SourceTecDocEntityModelService.GetFindFluent().ToListAsync();
+
+                foreach (var newMMIv8Model in MMIv8Models.Value)
+                {
+                    var quickMatches = AllTecDocPCModels.Where(t => t.Make.RemoveSpecialCharacters() == newMMIv8Model.Make.RemoveSpecialCharacters() && t.Model.RemoveSpecialCharacters() == newMMIv8Model.Model.RemoveSpecialCharacters()).ToList();
+                    
+                    if (quickMatches.Count != 0)
+                        newMatchMakeModels.AddRange(quickMatches.Select(td => new MatchMakeModel(tecDocModel: td, mmiv8Model: newMMIv8Model, versionProvider)));
+                    else
+                        newMatchMakeModels.Add(new MatchMakeModel(tecDocModel: new(), mmiv8Model: newMMIv8Model, versionProvider));
+                }
+
+                var TecDocPCModels = await SourceTecDocEntityModelService.GetByNotId(currentMatch.Select(m => m.TecDocModel.DocumentId).ToArray());
+                if (!TecDocPCModels.IsSuccess && TecDocPCModels.Error!.Type != ErrorType.NoContent)
+                    return TecDocPCModels.Error;
+
+
+                var AllMMIv8Models = await SourceMMIv8EntityModelService.GetFindFluent().ToListAsync();
+
+                foreach (var newTecDocPCModel in TecDocPCModels.Value)
+                {
+                    var quickMatches = AllMMIv8Models.Where(t => t.Make.RemoveSpecialCharacters() == newTecDocPCModel.Make.RemoveSpecialCharacters() && t.Model.RemoveSpecialCharacters() == newTecDocPCModel.Model.RemoveSpecialCharacters()).ToList();
+
+                    if (quickMatches.Count != 0)
+                        newMatchMakeModels.AddRange(quickMatches.Select(mmi => new MatchMakeModel(tecDocModel: newTecDocPCModel, mmiv8Model: mmi, versionProvider)));
+                    else
+                        newMatchMakeModels.Add(new MatchMakeModel(tecDocModel: newTecDocPCModel, mmiv8Model: new(), versionProvider));
+                }
+
+                foreach(var newMatchMakeModel in newMatchMakeModels.GroupBy(i => new { mmiHash = i.MMIv8Model.DocumentId, tdHash = i.TecDocModel.DocumentId }).Select(g => g.Key))
+                    await MappingService.CreateMakeModelMatch(newMatchMakeModel.tdHash, newMatchMakeModel.mmiHash);
+
+                return Result.Success();
             }
             catch (Exception ex)
             {

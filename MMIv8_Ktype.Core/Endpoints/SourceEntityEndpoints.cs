@@ -33,8 +33,8 @@ namespace MMIv8_Ktype.Core.Endpoints
                                           ISourceEntityUpdateService<T> updateService,
                                           SourceEntityMatchRefineService<T> sourceMatchRefineService) : BaseEndpoints<T, ObjectId, TFilter, TSort>(sourceEntityService), ISourceEntityEndpoints<T>
         where T : SourceEntity
-        where TFilter : SourceEntityFilterRequest<T>
-        where TSort : SourceEntitySortRequest<T>
+        where TFilter : SourceEntityFilterRequest<T>, new()
+        where TSort : SourceEntitySortRequest<T>, new()
     {
         public async Task<SerializableResult<T>> GetByExternalId(int ExternalId)
         {
@@ -93,6 +93,12 @@ namespace MMIv8_Ktype.Core.Endpoints
         public async Task<Result> Bulkload(T[] sourceEntities)
         {
             return await sourceEntityService.Create(sourceEntities);
+        }
+
+        public async Task<Result> RegenerateMatchRefine(int ExternalId)
+        {
+           var updateMatchRefine = await sourceMatchRefineService.BulkCombinationUpdateMatchRefine([ ExternalId ]);
+           return await updateMatchRefine.CommitBulkWrite();
         }
 
         public async Task RegenerateTextSort()

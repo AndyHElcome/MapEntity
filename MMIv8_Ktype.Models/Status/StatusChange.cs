@@ -13,5 +13,12 @@ namespace MMIv8_Ktype.Models.Status
         {
             return Status.ToString();
         }
+        public string GridFormat()
+        {
+            if (Detail is not null && Detail != string.Empty)
+                return $"{Status} - {DateOfChange.ToShortDateString()} - ({Detail})";
+            else
+                return $"{Status} - {DateOfChange.ToShortDateString()}";
+        }
     }
 }

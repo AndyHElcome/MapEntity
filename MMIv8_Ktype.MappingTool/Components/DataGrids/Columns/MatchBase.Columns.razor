@@ -1,0 +1,65 @@
+﻿@using MMIv8_Ktype.Models.Collections
+
+@if (Visible)
+{
+	<DxGridDataColumn FieldName=@GetFieldName(nameof(MatchBase.DocumentId)) Caption="DocumentId" Visible="false" />
+	<DxGridDataColumn FieldName=@GetFieldName(nameof(MatchBase.MatchBaseType)) Caption="MatchBaseType" />
+	<DxGridDataColumn FieldName=@GetFieldName(nameof(MatchBase.MatchBaseMethod)) Caption="MatchBaseMethod" Visible="false" />
+
+	<DxGridDataColumn FieldName=@GetFieldName(nameof(MatchBase.TecDocEntity)) Caption="TecDocEntity">
+		<CellDisplayTemplate Context="displayContext">
+			@{
+				var item = (MatchBase)displayContext.DataItem;
+				string value = item.TecDocEntity.DictToString(", ");
+			}
+			<span style="white-space: pre;">@value</span>
+		</CellDisplayTemplate>
+	</DxGridDataColumn>
+
+	<DxGridDataColumn FieldName=@GetFieldName(nameof(MatchBase.MMIEntity)) Caption="MMIEntity">
+		<CellDisplayTemplate Context="displayContext">
+			@{
+				var item = (MatchBase)displayContext.DataItem;
+				string value = item.MMIEntity.DictToString(", ");
+			}
+			<span style="white-space: pre;">@value</span>
+		</CellDisplayTemplate>
+	</DxGridDataColumn>
+
+
+	<DxGridDataColumn FieldName=@GetFieldName(nameof(MatchBase.Score)) Caption="Score" />
+	<DxGridDataColumn FieldName=@GetFieldName(nameof(MatchBase.Overridden)) Caption="Overridden" Visible="false" />
+	<DxGridDataColumn FieldName=@GetFieldName(nameof(MatchBase.OverriddenBy)) Caption="OverriddenBy" Visible="@ShowOverriden">
+		<CellDisplayTemplate Context="displayContext">
+			@{
+				var item = (MatchBase)displayContext.DataItem;
+				var value = item.MatchContexts?.SingleOrDefault(c => c.ContextId == item.OverriddenBy)?.ToString();
+			}
+			<text>@value</text>
+		</CellDisplayTemplate>
+	</DxGridDataColumn>
+
+	<DxGridDataColumn FieldName=@GetFieldName(nameof(MatchBase.MatchContexts)) Caption="MatchContexts" Visible="@ShowMatchContexts">
+		<CellDisplayTemplate Context="displayContext">
+			@{
+				var item = (MatchBase)displayContext.DataItem;
+				string value = string.Join("\r\n", item.MatchContexts?.Select(c => c.ToString()) ?? []);
+			}
+			<span style="white-space: pre;">@value</span>
+		</CellDisplayTemplate>
+	</DxGridDataColumn>
+
+
+
+	<StatusHistory_Columns Prefix="@GetFieldName(nameof(MatchBase.Status))" />
+
+}
+
+@code {
+	[Parameter] public string Prefix { get; set; } = string.Empty;
+	[Parameter] public bool Visible { get; set; } = true;
+	[Parameter] public bool ShowOverriden { get; set; } = false;
+	[Parameter] public bool ShowMatchContexts { get; set; } = false;
+	private string GetFieldName(string field) => Prefix == string.Empty ? field : $"{Prefix}.{field}";
+
+}

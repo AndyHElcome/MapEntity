@@ -1,0 +1,42 @@
+﻿@using MMIv8_Ktype.Models.Collections
+
+@if (Visible)
+{
+	<DxGridDataColumn FieldName=@GetFieldName(nameof(SourceTecDocPC.DocumentId)) Caption="DocumentId" Visible="false" />
+	<DxGridDataColumn FieldName=@GetFieldName(nameof(SourceTecDocPC.KTypNr)) Caption="KTypNr"  DisplayFormat="0"/>
+	<DxGridDataColumn FieldName=@GetFieldName(nameof(SourceTecDocPC.Make)) Caption="Make" />
+	<DxGridDataColumn FieldName=@GetFieldName(nameof(SourceTecDocPC.Token_Model)) Caption="Model" />
+	<DxGridDataColumn FieldName=@GetFieldName(nameof(SourceTecDocPC.Token_Type)) Caption="Type" />
+	<DxGridDataColumn FieldName=@GetFieldName(nameof(SourceTecDocPC.SalesDesc)) Caption="SalesDesc" />
+	<DxGridDataColumn FieldName=@GetFieldName(nameof(SourceTecDocPC.ModelGeneration)) Caption="ModelGeneration" />
+	<DxGridDataColumn FieldName=@GetFieldName(nameof(SourceTecDocPC.TypeDesc)) Caption="TypeDesc" />
+	<DxGridDataColumn FieldName=@GetFieldName(nameof(SourceTecDocPC.DateRange)) Caption="Dates" />
+	<DxGridDataColumn FieldName=@GetFieldName(nameof(SourceTecDocPC.KW)) Caption="KW" />
+	<DxGridDataColumn FieldName=@GetFieldName(nameof(SourceTecDocPC.PS)) Caption="PS" />
+	<DxGridDataColumn FieldName=@GetFieldName(nameof(SourceTecDocPC.Calc_BHP)) Caption="BHP" />
+	<DxGridDataColumn FieldName=@GetFieldName(nameof(SourceTecDocPC.Litre)) Caption="Litre" />
+	<DxGridDataColumn FieldName=@GetFieldName(nameof(SourceTecDocPC.Cyl)) Caption="Cyl" />
+	<DxGridDataColumn FieldName=@GetFieldName(nameof(SourceTecDocPC.Calc_Valve)) Caption="Valve" />
+	<DxGridDataColumn FieldName=@GetFieldName(nameof(SourceTecDocPC.Drive)) Caption="Drive" />
+	<DxGridDataColumn FieldName=@GetFieldName(nameof(SourceTecDocPC.FuelType)) Caption="FuelType" />
+	<DxGridDataColumn FieldName=@GetFieldName(nameof(SourceTecDocPC.BodyType)) Caption="BodyType" />
+	<DxGridDataColumn FieldName=@GetFieldName(nameof(SourceTecDocPC.CCTech)) Caption="CC" />
+	<DxGridDataColumn FieldName=@GetFieldName(nameof(SourceTecDocPC.Door)) Caption="Door" />
+	<DxGridDataColumn FieldName=@GetFieldName(nameof(SourceTecDocPC.LinkedEngineCodes)) Caption="Engines" />
+	<DxGridDataColumn FieldName=@GetFieldName(nameof(SourceTecDocPC.Region)) Caption="Region" />
+
+	<StatusHistory_Columns Prefix="@GetFieldName(nameof(SourceMMIv8.Status))" />
+
+	<MatchRefine_Columns Prefix="@GetFieldName(nameof(SourceMMIv8.MatchRefine))" Visible="@ShowMatchRefine" />
+}
+
+
+
+
+
+@code {
+	[Parameter] public string Prefix { get; set; } = string.Empty;
+	[Parameter] public bool ShowMatchRefine { get; set; } = false;
+	[Parameter] public bool Visible { get; set; } = true;
+	private string GetFieldName(string field) => Prefix == string.Empty ? field : $"{Prefix}.{field}";
+}

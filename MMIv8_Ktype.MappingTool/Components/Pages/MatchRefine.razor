@@ -1,10 +1,47 @@
 ﻿@page "/matchrefine"
+@rendermode InteractiveServer
 
+@using MMIv8_Ktype.Api.Requests
 @using MMIv8_Ktype.MappingTool.Components.DataGrids
+@using MMIv8_Ktype.MappingTool.Components.DataGrids.Columns
+@using MMIv8_Ktype.Models.Collections
 <h3>Match Refine</h3>
 
-    <MatchRefine_Grid />
+
+
+<MMIv8Entity_Grid SelectedItemChanged="@OnMMIv8Changed" />
+
+
+@if (SelectedMMIv8Entity is not null)
+{
+	<MatchEntity_Grid ShowPager="true"
+					  Sort="@(new MatchEntitySortRequest() { ScoreSum = MongoDB.Driver.SortDirection.Descending })"
+					  Filter="@Filter" />
+	
+}
+
+
+
+
 
 @code {
+	private MatchEntityFilterRequest? Filter { get; set; }
+	private SourceMMIv8? SelectedMMIv8Entity { get; set; } = null;
+
+	public async Task OnMMIv8Changed(SourceMMIv8? item)
+	{
+		SelectedMMIv8Entity = item;
+
+		if (item is null)
+		{
+			
+		}
+		else
+		{
+			Filter = new() { MMIv8EntityId = item.DocumentId.ToString() };
+		}
+
+		StateHasChanged();
+	}
 
 }

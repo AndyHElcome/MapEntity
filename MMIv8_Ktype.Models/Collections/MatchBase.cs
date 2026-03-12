@@ -457,7 +457,12 @@ namespace MMIv8_Ktype.Models.Collections
         [JsonIgnore]
         [BsonIgnore]
         public FilterDefinition<MatchEntity> OverrideFilter 
-            => Builders<MatchEntity>.Filter.And([.. TecDocEntity is null ? [ Builders<MatchEntity>.Filter.Empty ] : TecDocEntity.Select(c => Builders<MatchEntity>.Filter.Eq($"TecDocEntity.{c.Key}", c.Value.ToString())), .. MMIEntity is null ? [Builders<MatchEntity>.Filter.Empty] : MMIEntity.Select(c => Builders<MatchEntity>.Filter.Eq($"MMIv8Entity.{c.Key}", c.Value.ToString()))]);
+            => Builders<MatchEntity>.Filter.And(
+                [
+                .. TecDocEntity is null ? [ Builders<MatchEntity>.Filter.Empty ] : TecDocEntity.Select(c => Builders<MatchEntity>.Filter.Eq($"TecDocEntity.{c.Key}", c.Value.ToString())),
+                .. MMIEntity is null ? [Builders<MatchEntity>.Filter.Empty] : MMIEntity.Select(c => Builders<MatchEntity>.Filter.Eq($"MMIv8Entity.{c.Key}", c.Value.ToString()))
+                ]
+            );
 
         public MatchContext(object? tecdocEntityObj, object? mmiEntityObj, decimal scoreOverride)
         {

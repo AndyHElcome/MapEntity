@@ -40,7 +40,7 @@ namespace MMIv8_Ktype.Core.Services
             filter ??= Builders<T>.Filter.Empty;
             var options = new FindOptions { BatchSize = batchSize };
 
-            if (sort != null)
+            if (sort is not null)
                 return Collection.Find(filter, options).Sort(sort);
             else
                 return Collection.Find(filter, options);

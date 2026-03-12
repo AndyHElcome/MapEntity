@@ -30,7 +30,7 @@
 					FooterDisplayMode="GridFooterDisplayMode.Never"
 					ColumnResizeMode="GridColumnResizeMode.NextColumn"
 					ShowAllRows="true"
-					AllowSort="false"			>
+					AllowSort="false">
 				<Columns>
 					<DxGridDataColumn FieldName=@nameof(MatchMakeModel.DocumentId) Visible="true" />
 					<DxGridBandColumn Caption="@(nameof(MatchMakeModel.TecDocModel))">
@@ -105,6 +105,8 @@
 	public bool isError { get; set; } = false;
 
 	public bool PopupVisible { get; set; } = false;
+	
+	private BasicGetByPageRequest<MatchMakeModel, FilterQuery<MatchMakeModel>, MatchMakeModelSortRequest> GetByPageRequest => new( pagedRequest,  new FilterQuery<MatchMakeModel>(),  new MatchMakeModelSortRequest());
 
 	MatchMakeModel EditItem { get; set; } 
 
@@ -118,7 +120,7 @@
 		{
 			//TODO fix sort
 			loading = true;
-			Response = await matchMakeModelEndpoints.GetByPage(PagedRequest: pagedRequest, new FilterQuery<MatchMakeModel>(), new MatchMakeModelSortRequest());
+			Response = await matchMakeModelEndpoints.GetByPage(GetByPageRequest);
 			isError = !Response.IsSuccess;
 			pagedRequest = new(Response.Value?.CurrentPage, Response.Value?.PageSize);
 		}
@@ -136,7 +138,7 @@
 
 	async Task OnChecked(MatchMakeModel editedItem)
 	{
-		_ = await matchMakeModelEndpoints.UpdateStatus(editedItem, Models.Status.Status.Checked);
+		_ = await matchMakeModelEndpoints.UpdateStatusById(editedItem.DocumentId, new UpdateStatusRequest<MatchMakeModel>( Models.Status.Status.Checked , null));
 		await LoadData();
 	}
 

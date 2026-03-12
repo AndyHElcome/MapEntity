@@ -1,4 +1,5 @@
-﻿using MMIv8_Ktype.Models.Collections;
+﻿using MMIv8_Ktype.Models;
+using MMIv8_Ktype.Models.Collections;
 using MMIv8_Ktype.Models.Status;
 using MongoDB.Bson;
 using MongoDB.Driver;
@@ -10,11 +11,23 @@ namespace MMIv8_Ktype.Api.Requests
     public record MMI_V8_Key(int ExternalId) : IRequest;
 
 
+
     public class MatchEntitySortRequest : SortQuery<MatchEntity>
     {
+        public SortDirection? ScoreSum { get; set; }
+
         public override SortDefinition<MatchEntity> GetSort()
         {
-            return base.GetSort();
+            var sortBuilder = Builders<MatchEntity>.Sort;
+            var sort = sortBuilder.Combine();
+
+            if (ScoreSum is not null)
+                if (ScoreSum == SortDirection.Ascending)
+                    sort = sortBuilder.Combine(sort, sortBuilder.Ascending(c => c.ScoreSum));
+                else
+                    sort = sortBuilder.Combine(sort, sortBuilder.Descending(c => c.ScoreSum));
+
+            return sort;
         }
     }
 
@@ -23,10 +36,8 @@ namespace MMIv8_Ktype.Api.Requests
         public string? MakeModelMatchId { get; set; }
         public string? TecDocEntityId { get; set; }
         public string? MMIv8EntityId { get; set; }
-        public bool? IsCheck { get; set; }
         public bool? IsMatched { get; set; }
         public bool? IsFailed { get; set; }
-        public bool? HasDifference { get; set; }
         public Status[]? Status { get; set; }
 
         public override FilterDefinition<MatchEntity> GetFilter()
@@ -43,17 +54,11 @@ namespace MMIv8_Ktype.Api.Requests
             if (MMIv8EntityId is not null)
                 filter = filter & filterBuilder.Eq(c => c.MMIv8Entity.DocumentId, ObjectId.Parse(MMIv8EntityId));
 
-            if (IsCheck is not null)
-                filter = filter & filterBuilder.Eq(c => c.MMIv8Entity.MatchRefine.IsCheck, IsCheck);
-
             if (IsMatched is not null)
                 filter = filter & filterBuilder.Eq(c => c.Matched, IsMatched);
 
             if (IsFailed is not null)
                 filter = filter & filterBuilder.Eq(c => c.MatchResult.Failed, IsFailed);
-
-            if (HasDifference is not null)
-                filter = filter & filterBuilder.Eq(c => c.MMIv8Entity.MatchRefine.Difference, HasDifference);
 
             if (Status is not null && Status.Length != 0)
                 filter = filter & filterBuilder.In(c => c.Status.Current.Status, Status);

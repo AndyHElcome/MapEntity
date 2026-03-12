@@ -209,7 +209,7 @@
 
         public override string ToString()
         {
-            return Start.ToString() + " - " + End.ToString();
+            return Start.ToString("MM/yyyy") + " - " + End.ToString("MM/yyyy");
         }
     }
 }

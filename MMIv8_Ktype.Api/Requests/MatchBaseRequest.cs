@@ -1,12 +1,40 @@
-﻿using Microsoft.AspNetCore.Mvc;
-using MMIv8_Ktype.Models.DateIntersection;
+﻿using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.Mvc;
 using MMIv8_Ktype.Models;
+using MMIv8_Ktype.Models.Collections;
+using MMIv8_Ktype.Models.DateIntersection;
+using MMIv8_Ktype.Models.Status;
 using MMIv8_Ktype.Models.Util;
-using MongoDB.Bson.Serialization.Attributes;
 using MongoDB.Bson;
+using MongoDB.Bson.Serialization.Attributes;
+using MongoDB.Driver;
 
 namespace MMIv8_Ktype.Api.Requests
 {
+
+    public class MatchBaseFilterRequest : FilterQuery<MatchBase>
+    {
+        public MatchBaseType[]? MatchBaseType { get; set; }
+        public MatchBaseMethod[]? MatchBaseMethod { get; set; }
+        public Status[]? Status { get; set; }
+
+        public override FilterDefinition<MatchBase> GetFilter()
+        {
+            var filterBuilder = Builders<MatchBase>.Filter;
+            var filter = filterBuilder.Empty;
+
+            if (MatchBaseType is not null && MatchBaseType.Length != 0)
+                filter = filter & filterBuilder.In(c => c.MatchBaseType, MatchBaseType);
+
+            if (MatchBaseMethod is not null && MatchBaseMethod.Length != 0)
+                filter = filter & filterBuilder.In(c => c.MatchBaseMethod, MatchBaseMethod);
+
+            if (Status is not null && Status.Length != 0)
+                filter = filter & filterBuilder.In(c => c.Status.Current.Status, Status);
+
+            return filter;
+        }
+    }
     public record PutMatchBaseRequest(MatchBaseType MatchBaseType, string MatchHash, decimal NewScore) : IRequest;
     public record PutMatchBaseRequestWithContexts(MatchBaseType MatchBaseType, string MatchHash, decimal NewScore, string Contexts) : IRequest;
     public record DeleteMatchBaseRequest(MatchBaseType MatchBaseType, string MatchHash) : IRequest;

@@ -70,10 +70,6 @@ namespace MMIv8_Ktype.Core.Services.Mapping
                     return storeEntityMatch.Error!;
             }
 
-            //if (newMatchMakeModel.TecDocModel.DocumentId is not null && newMatchMakeModel.MMIv8Model.DocumentId is not null)
-            //    throw new Exception("Bad pattern matching");
-
-
             return Result.Success(newMatchMakeModel);
         }
 
@@ -87,6 +83,10 @@ namespace MMIv8_Ktype.Core.Services.Mapping
             var deleteMatchEntityResult = await MatchEntityService.DeleteByFilter(filter);
             if (!deleteMatchEntityResult.IsSuccess)
                 return deleteMatchEntityResult;
+
+            var updateMatchRefineResult = await BulkCombinationUpdateMatchRefineResult(filter);
+            if (!updateMatchRefineResult.IsSuccess)
+                return updateMatchRefineResult;
 
             return deleteMatchMakeModel;
         }

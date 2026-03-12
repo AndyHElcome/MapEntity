@@ -21,6 +21,10 @@ namespace MMIv8_Ktype.Core.Endpoints
         {
             return await bulkMappingService.GenerateMakeModelMatch();
         }
+        public async Task<Result> PopulateMakeModelMatch()
+        {
+            return await bulkMappingService.PopulateMakeModelMatch();
+        }
 
         public async Task<SerializableResult<MatchMakeModel>> GetMakeModelMatch(string TD_SourceEntityModelHash, string MMI_SourceEntityModelHash)
         {

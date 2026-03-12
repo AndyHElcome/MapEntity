@@ -3,11 +3,12 @@
 @using MMIv8_Ktype.Api.Endpoints
 @using MMIv8_Ktype.Api.Requests
 @using MMIv8_Ktype.Api.Responses
+@using MMIv8_Ktype.MappingTool.Components.Pagers
 @using MMIv8_Ktype.Models.Collections
-@typeparam TItem 
+@typeparam TItem where TItem : ICollectionEntity<Tid>
 @typeparam Tid
-@typeparam TFilter where TFilter : FilterQuery<TItem>
-@typeparam TSort where TSort : SortQuery<TItem>
+@typeparam TFilter where TFilter : FilterQuery<TItem>, new()
+@typeparam TSort where TSort : SortQuery<TItem>, new()
 @typeparam TEndpoint where TEndpoint : IBaseEndpoint<TItem, Tid, TFilter, TSort>, IVersionEndpoint<TItem, Tid, TFilter>, IEndpoint
 
 <style>
@@ -57,9 +58,10 @@
 	[Parameter, EditorRequired] public TEndpoint Endpoints { get; set; }
 	[Parameter, EditorRequired] public TFilter Filter { get; set; }
 	[Parameter, EditorRequired] public TSort Sort { get; set; }
+	private BasicGetByPageRequest<TItem, TFilter, TSort> GetByPageRequest => new( pagedRequest,  Filter,  Sort );
 
 	[Parameter] public RenderFragment? Columns { get; set; }
-	
+
 	[Parameter] public int? StartingPageSize { get; set; } = null;
 	[Parameter] public bool ShowPager { get; set; } = true;
 	[Parameter] public bool ShowPageSizeSelector { get; set; } = true;
@@ -76,7 +78,7 @@
 		try
 		{
 			loading = true;
-			Response = await Endpoints.GetByPage(PagedRequest: pagedRequest, Filter, Sort);
+			Response = await Endpoints.GetByPage(GetByPageRequest);
 
 			if (Response is not null)
 			{
@@ -97,9 +99,11 @@
 
 	}
 
+
+
 	async Task OnChecked(TItem editedItem)
 	{
-		_ = await Endpoints.UpdateStatus(editedItem, Models.Status.Status.Checked);
+		_ = await Endpoints.UpdateStatusById(editedItem.DocumentId, new UpdateStatusRequest<TItem>(Models.Status.Status.Checked, null ));
 		await LoadData();
 	}
 

@@ -21,6 +21,9 @@ namespace MMIv8_Ktype.Api.Endpoints
         [Get("/{SourceIndex}/{SourceEntityModelHash}")]
         Task<SerializableResult<List<MatchMakeModel>>> GetByModelId(SourceIndex SourceIndex, string SourceEntityModelHash);
 
+        [Post("/PopulateMakeModelMatch")]
+        Task<Result> PopulateMakeModelMatch();
+
         [Post("/GenerateModelMatch")]
         Task<SerializableResult<List<MatchMakeModel>>> GenerateMakeModelMatch();
 

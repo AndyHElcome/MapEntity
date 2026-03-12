@@ -18,8 +18,10 @@ using System.Text.RegularExpressions;
 namespace MMIv8_Ktype.Core.Endpoints
 {
     public class MatchBaseEndpoints(MatchBaseService matchBaseService,
-                                    MappingService mappingService) : BaseEndpointsWithVersion<MatchBase, string, FilterQuery<MatchBase>, SortQuery<MatchBase>>(matchBaseService), IMatchBaseEndpoints
+                                    MappingService mappingService) : BaseEndpointsWithVersion<MatchBase, string, MatchBaseFilterRequest, SortQuery<MatchBase>>(matchBaseService), IMatchBaseEndpoints
     {
+
+
         //TODO move this into a filterQuery
         public async Task<SerializableResult<PagedCursorResponse<MatchBase>>> GetByMatchBaseType(MatchBaseType MatchBaseType, [AsParameters] PagedCursorRequest<string> PagedRequest) //TODO change to stream call
         {

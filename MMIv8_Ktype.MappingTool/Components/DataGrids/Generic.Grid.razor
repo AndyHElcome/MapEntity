@@ -1,20 +1,32 @@
 ﻿@using DevExpress.Blazor.Internal.Editors
+@using DevExpress.Data.Filtering
 @using MMIv8_Ktype.Api
 @using MMIv8_Ktype.Api.Endpoints
 @using MMIv8_Ktype.Api.Requests
 @using MMIv8_Ktype.Api.Responses
 @using MMIv8_Ktype.MappingTool.Components.Pagers
+@using MMIv8_Ktype.Models
 @using MMIv8_Ktype.Models.Collections
-@typeparam TItem 
+@using System.Linq.Expressions
+@using MMIv8_Ktype.Models.Status
+@typeparam TItem where TItem : class, ICollectionEntity<Tid>
 @typeparam Tid
-@typeparam TFilter where TFilter : FilterQuery<TItem>
-@typeparam TSort where TSort : SortQuery<TItem>
+@typeparam TFilter where TFilter : FilterQuery<TItem>, new()
+@typeparam TSort where TSort : SortQuery<TItem>, new()
 @typeparam TEndpoint where TEndpoint : class, IEndpoint, IBaseEndpoint<TItem, Tid, TFilter, TSort>
+
 
 <style>
 	.grid-container {
 		width: 100%;
 	}
+	
+
+    .hide-toolbar .dxbl-grid-toolbar-container {
+        display: none;
+    }
+
+
 </style>
 
 <div class="grid-container">
@@ -23,27 +35,53 @@
 					ApplyBackgroundShading="true"
 					IndicatorAreaVisible="false"
 					Text="Fetching Data...">
-	
-			<DxGrid Data="@(Response?.Value?.Documents ?? [])"
-					FooterDisplayMode="GridFooterDisplayMode.Never"
-					ColumnResizeMode="GridColumnResizeMode.NextColumn"
-					ShowAllRows="true"
-					AllowSort="false">
-				<Columns>
-					@Columns
-				</Columns>
-			</DxGrid>
-			@if (ShowPager)
-			{
-				<PagedCursorResponse_Pager Response="@(Response?.Value)"
-										   OnPageChanged="OnPageIndexChanged"
-										   OnPageSizeChanged="OnPageSizeChanged"
-										   ShowPageSizeSelector="@ShowPageSizeSelector"
-										   ShowSummary="true"
-										   IsLoading="@(loading || isError)" />
-			}
 
+		<DxGrid @ref="@GGrid"
+				Data="@(Response?.Value?.Documents ?? [])"
+				FooterDisplayMode="GridFooterDisplayMode.Never"
+				ColumnResizeMode="GridColumnResizeMode.NextColumn"
+				CssClass="@(Toolbar is null ? "hide-toolbar" : null)"
+				ShowAllRows="true"
+				AllowSort="false"
+				SelectedDataItem="@SelectedItem"
+				SelectedDataItemChanged="@OnSelectedDataItemChanged"
+				SelectedDataItems="@selectedDataItems"
+				SelectionMode="@GridSelectionMode"
+				CustomizeElement="CustomizeElement"
+				AllowSelectRowByClick="true"
+				TextWrapEnabled="false"
+				DetailExpandButtonDisplayMode="@(DetailRows is null ? GridDetailExpandButtonDisplayMode.Never : GridDetailExpandButtonDisplayMode.Auto)"
+				
+				>
+			<Columns>
+				@Columns
+			</Columns>
+			<DetailRowTemplate Context="dataContext">
+				@if (DetailRows is not null)
+				{
+					@DetailRows(dataContext)
+				}
+			</DetailRowTemplate>
 		
+
+			<ToolbarTemplate>
+				@if (Toolbar is not null)
+				{
+					@Toolbar
+				}
+			</ToolbarTemplate>
+		</DxGrid>
+		@if (ShowPager)
+		{
+			<PagedCursorResponse_Pager Response="@(Response?.Value)"
+									   OnPageChanged="OnPageIndexChanged"
+									   OnPageSizeChanged="OnPageSizeChanged"
+									   ShowPageSizeSelector="@ShowPageSizeSelector"
+									   ShowSummary="true"
+									   IsLoading="@(loading || isError)" />
+		}
+
+
 		@if (isError)
 		{
 			<div class="alert alert-danger m-0" role="alert">
@@ -55,16 +93,55 @@
 </div>
 
 @code {
+	public IGrid GGrid { get; set; }
 	//TODO Slower when not passed as parameter, might need a preload or change of render mode
 	//[Parameter, EditorRequired] public TEndpoint Endpoints { get; set; }
 	[Parameter, EditorRequired] public TFilter Filter { get; set; }
 	[Parameter, EditorRequired] public TSort Sort { get; set; }
+	private string? lastFilterHash;
+	private string? lastSortHash;
+
+	private BasicGetByPageRequest<TItem, TFilter, TSort> GetByPageRequest => new (pagedRequest, Filter, Sort);
+
 
 	[Parameter] public RenderFragment? Columns { get; set; }
+	[Parameter] public RenderFragment<GridDetailRowTemplateContext>? DetailRows { get; set; } = null;
+	[Parameter] public RenderFragment? Toolbar { get; set; } = null;
+
+	[Parameter] public List<TItem>? ManualData { get; set; } = null;
+	private List<TItem>? lastManualData { get; set; } = null;
 
 	[Parameter] public int? StartingPageSize { get; set; } = null;
 	[Parameter] public bool ShowPager { get; set; } = true;
 	[Parameter] public bool ShowPageSizeSelector { get; set; } = true;
+
+	[Parameter] public GridSelectionMode GridSelectionMode { get; set; } = GridSelectionMode.Single;
+
+	#region Manual Selection
+
+	[Parameter] public TItem? SelectedItem { get; set; }
+	[Parameter] public EventCallback<TItem?> SelectedItemChanged { get; set; }
+
+
+	void OnSelectedDataItemChanged(object newSelection)
+	{
+		SelectedItem = (TItem?)newSelection;
+		SelectedItemChanged.InvokeAsync(SelectedItem);
+	}
+
+	#endregion
+
+	#region Multiple Selection
+	private IReadOnlyList<object> selectedDataItems { get; set; } = new List<object>();
+
+	[Parameter] public Expression<Func<TItem, bool>>? SelectionPredicate { get; set; } = null;
+
+	public IEnumerable<object> ApplySelection(IEnumerable<TItem> source)
+		=> SelectionPredicate is null ? new List<object>() : source.AsQueryable().Where(SelectionPredicate);
+
+
+
+	#endregion
 
 
 	public TEndpoint Endpoints { get; set; } = new RefitClient(Log.Logger).CreateService<TEndpoint>();
@@ -74,18 +151,50 @@
 
 	PagedRequest pagedRequest { get; set; } = new();
 
+
+	protected override async Task OnParametersSetAsync()
+	{
+		string? currentFilterHash = Filter?.GetCacheKey() ?? null;
+		string? currentSortHash = Sort.GetCacheKey() ?? null;
+
+		
+
+		bool manualData = (lastManualData ?? []).SequenceEqual(ManualData ?? []);
+
+		if (currentFilterHash != lastFilterHash || currentSortHash != lastSortHash || !manualData)
+		{
+			lastFilterHash = currentFilterHash;
+			lastSortHash = currentSortHash;
+			lastManualData = ManualData;
+			await LoadData();
+		}
+	}
+
 	async Task LoadData()
 	{
 		try
 		{
 			loading = true;
-			Response = await Endpoints.GetByPage(PagedRequest: pagedRequest, Filter, Sort);
+
+			if (ManualData is not null && ManualData.Count > 0)
+			{
+				ShowPager = false;
+				Response = Result.Success(new PagedResponse<TItem>(ManualData, ManualData.Count, 1, ManualData.Count));
+				isError = false;
+				loading = false;
+				return;
+			}
+
+			Response = await Endpoints.GetByPage(GetByPageRequest);
 
 			if (Response is not null)
 			{
 				isError = !Response.IsSuccess;
 				pagedRequest = new(Response.Value?.CurrentPage, Response.Value?.PageSize);
+
+				selectedDataItems = ApplySelection(Response?.Value?.Documents!).ToList();
 			}
+
 
 		}
 		catch (Exception ex)
@@ -124,6 +233,10 @@
 			StateHasChanged(); // optional if LoadData() already triggers state changes
 		}
 	}
+
+	[Parameter] public Action<GridCustomizeElementEventArgs>? CustomizeElement { get; set; }
+
+
 
 }
 

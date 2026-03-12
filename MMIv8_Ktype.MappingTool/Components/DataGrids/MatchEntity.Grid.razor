@@ -5,32 +5,86 @@
 @using MMIv8_Ktype.Api.Endpoints
 @using MMIv8_Ktype.Api.Requests
 @using MMIv8_Ktype.Api.Responses
+@using MMIv8_Ktype.MappingTool.Components.DataGrids.Columns
 @using MMIv8_Ktype.Models.Collections
 @using MongoDB.Bson
+@using System.Linq.Expressions
 
+<style>
+	.highlighted-item > td {
+		background-color: var(--bs-danger-border-subtle)
+	}
+</style>
 
 <Generic_Grid TItem="MatchEntity"
 			  Tid="ObjectId"
 			  TFilter="MatchEntityFilterRequest"
 			  TSort="MatchEntitySortRequest"
 			  TEndpoint="IMatchEntityEndpoints"
-			  
-			  Filter="@(new MatchEntityFilterRequest())"
-			  Sort="@(new MatchEntitySortRequest())">
+			  Filter="@Filter"
+			  Sort="@Sort"
+			  SelectionPredicate="@SelectionPredicate"
+			  CustomizeElement="Grid_CustomizeElement"
+			  ShowPager="@ShowPager"
+			  SelectedItemChanged="@SelectedItemChanged">
 	<Columns>
-		<DxGridDataColumn FieldName=@nameof(MatchEntity.DocumentId) />				
+		<DxGridDataColumn FieldName=@nameof(MatchEntity.DocumentId) Visible="false"/>				
 		<DxGridBandColumn Caption="@(nameof(MatchEntity.TecDocEntity))">
 			<Columns>
-				<DxGridDataColumn FieldName="@($"{nameof(MatchEntity.TecDocEntity)}.{nameof(MatchEntity.TecDocEntity.DocumentId)}")" Caption="@(nameof(MatchEntity.TecDocEntity.DocumentId))" Visible="false" />
-				<DxGridDataColumn FieldName="@($"{nameof(MatchEntity.TecDocEntity)}.{nameof(MatchEntity.TecDocEntity.Make)}")" Caption="@(nameof(MatchEntity.TecDocEntity.Make))" />
-				<DxGridDataColumn FieldName="@($"{nameof(MatchEntity.TecDocEntity)}.{nameof(MatchEntity.TecDocEntity.Model)}")" Caption="@(nameof(MatchEntity.TecDocEntity.Model))" />
+				<TecDocPCEntity_Columns Prefix=@nameof(MatchEntity.TecDocEntity) />
 			</Columns>
 		</DxGridBandColumn>
-
+		<DxGridDataColumn FieldName=@nameof(MatchEntity.ScoreSum) />
+		<DxGridDataColumn FieldName=@nameof(MatchEntity.Matched)>
+			<CellDisplayTemplate Context="displayContext">
+				@{
+					var item = (MatchEntity)displayContext.DataItem;
+					var title = item.MatchDetail;
+					var value = item.Matched;
+				}
+				<DxCheckBox Checked="@value" ReadOnly="true" title="@title"/>
+			</CellDisplayTemplate>
+		</DxGridDataColumn>
+		<DxGridDataColumn FieldName=@nameof(MatchEntity.MatchDetail) Visible="false" />
+		<MatchResult_Columns Prefix=@nameof(MatchEntity.MatchResult) />
+		<StatusHistory_Columns Prefix="@nameof(MatchEntity.Status)" />
 	</Columns>
+	<DetailRows Context="dcontext">
+
+		@if (((MMIv8_Ktype.Models.Collections.MatchEntity?)dcontext?.DataItem)?.EntityComparison is null || ((MMIv8_Ktype.Models.Collections.MatchEntity)dcontext.DataItem).EntityComparison.Count == 0)
+		{
+			<text>No Match Contexts</text>
+		}
+		else
+		{
+			<MatchBase_Grid ShowPager="false" ShowMatchContexts="false" ShowOverriden="true" ManualData="@(((MMIv8_Ktype.Models.Collections.MatchEntity?)dcontext?.DataItem)?.EntityComparison.Values.ToList())" />
+		}
+
+	</DetailRows>
 </Generic_Grid>
 
 @code {
 
+	[Parameter] public MatchEntity? SelectedItem { get; set; }
+	[Parameter] public EventCallback<MatchEntity?> SelectedItemChanged { get; set; }
+
+	[Parameter] public MatchEntityFilterRequest Filter { get; set; } = new();
+	[Parameter] public MatchEntitySortRequest Sort { get; set; } = new();
+
+
+	[Parameter] public bool ShowPager { get; set; } = true;
+
+	[Parameter] public GridSelectionMode GridSelectionMode { get; set; } = GridSelectionMode.Single;
+	[Parameter] public Expression<Func<MatchEntity, bool>>? SelectionPredicate { get; set; }
+
+
+
+	void Grid_CustomizeElement(GridCustomizeElementEventArgs e)
+	{
+		if (e.ElementType == GridElementType.DataRow && (bool)e.Grid.GetRowValue(e.VisibleIndex, "MatchResult.Failed"))
+		{
+			e.CssClass = "highlighted-item";
+		}
+	}
 }
 
