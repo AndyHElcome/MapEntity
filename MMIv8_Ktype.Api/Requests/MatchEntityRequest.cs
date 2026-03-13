@@ -40,6 +40,19 @@ namespace MMIv8_Ktype.Api.Requests
         public bool? IsFailed { get; set; }
         public Status[]? Status { get; set; }
 
+        public MatchEntityFilterRequest Clone()
+        {
+            return new MatchEntityFilterRequest()
+            {
+                MakeModelMatchId = this.MakeModelMatchId,
+                TecDocEntityId = this.TecDocEntityId,
+                MMIv8EntityId = this.MMIv8EntityId,
+                IsMatched = this.IsMatched,
+                IsFailed = this.IsFailed,
+                Status = this.Status
+            };
+        }
+
         public override FilterDefinition<MatchEntity> GetFilter()
         {
             var filterBuilder = Builders<MatchEntity>.Filter;

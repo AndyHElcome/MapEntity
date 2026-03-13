@@ -1,29 +1,16 @@
-﻿using Microsoft.AspNetCore.Authentication;
-using Microsoft.AspNetCore.Mvc;
-using Microsoft.AspNetCore.Rewrite;
-using Microsoft.Extensions.FileSystemGlobbing.Internal;
-using MMIv8_Ktype.Api.Endpoints;
-using MMIv8_Ktype.Api.Requests;
-using MMIv8_Ktype.Core.Contexts;
-using MMIv8_Ktype.Core.Endpoints;
+﻿using MMIv8_Ktype.Api.Requests;
 using MMIv8_Ktype.Core.Services.Match;
 using MMIv8_Ktype.Core.Services.Source;
 using MMIv8_Ktype.Models;
 using MMIv8_Ktype.Models.Collections;
-using MMIv8_Ktype.Models.Outputs;
 using MMIv8_Ktype.Models.Status;
 using MMIv8_Ktype.Models.Util;
 using MongoDB.Bson;
 using MongoDB.Driver;
 using MongoDB.Driver.Linq;
 using Serilog;
-using System;
-using System.Collections;
-using System.Collections.Generic;
 using System.Diagnostics;
-using System.Linq;
 using System.Text.Json;
-using System.Xml;
 using Version = MMIv8_Ktype.Models.Collections.Version;
 
 namespace MMIv8_Ktype.Core.Services.Mapping
@@ -93,9 +80,9 @@ namespace MMIv8_Ktype.Core.Services.Mapping
 
         public async Task RegenerateMakeModelSort()
         {
-            await foreach( var matchMakeModels in MatchMakeModelService.EnumerateDocuments<MatchMakeModel>(Builders<MatchMakeModel>.Filter.Empty))
+            await foreach (var matchMakeModels in MatchMakeModelService.EnumerateDocuments<MatchMakeModel>(Builders<MatchMakeModel>.Filter.Empty))
             {
-                foreach(var matchMakeModel in matchMakeModels)
+                foreach (var matchMakeModel in matchMakeModels)
                 {
                     await MatchMakeModelService.Update(matchMakeModel).AppendUpdate(c => c.Set(f => f.TextSort, matchMakeModel.TextSort)).FindAndUpdateDocument();
                 }
@@ -130,7 +117,7 @@ namespace MMIv8_Ktype.Core.Services.Mapping
             return Result.Success();
         }
 
-        private async Task<Result> ApplyMatchScore(MatchBase matchBase) 
+        private async Task<Result> ApplyMatchScore(MatchBase matchBase)
         {
             var sw = Stopwatch.StartNew();
 
@@ -288,7 +275,7 @@ namespace MMIv8_Ktype.Core.Services.Mapping
 
             Log.Debug("Retrived {Count} for {MatchBaseType} in {time}", matchBaseAutomatic.Value.Count(), matchBaseType, sw);
 
-            foreach(var matchBase in matchBaseAutomatic.Value)
+            foreach (var matchBase in matchBaseAutomatic.Value)
             {
                 sw.Restart();
 
@@ -385,7 +372,7 @@ namespace MMIv8_Ktype.Core.Services.Mapping
                 else
                     return existingMatchBasesResult;
 
-                if (existingMatchBases is { Count: >0 })
+                if (existingMatchBases is { Count: > 0 })
                 {
                     List<BulkWriteModel> bulks = new();
                     foreach (var existingMatchBase in existingMatchBases)
@@ -399,7 +386,7 @@ namespace MMIv8_Ktype.Core.Services.Mapping
                         }
 
                         CombinationPipeline<MatchEntity> matchEntityUpdate = MatchEntityService.UpdateMissingMatchBase(newMatchBase, filter);
-                        var matchEntityUpdateResult = await matchEntityUpdate.UpdateDocuments();                                             
+                        var matchEntityUpdateResult = await matchEntityUpdate.UpdateDocuments();
                     }
                 }
 
@@ -449,7 +436,7 @@ namespace MMIv8_Ktype.Core.Services.Mapping
                 return createResult;
 
             if (newScore is not null)
-              return await UpdateMatchScore(matchHash, newScore ?? 0);
+                return await UpdateMatchScore(matchHash, newScore ?? 0);
             else
                 return Result.Success();
         }
@@ -552,7 +539,7 @@ namespace MMIv8_Ktype.Core.Services.Mapping
             var tecdocEntities = await SourceTecDocPCService.GetByModelId(makeModelMatch.TecDocModel.DocumentId);
             if (!tecdocEntities.IsSuccess)
                 return tecdocEntities;
-            
+
             var mmiEntities = await SourceMMIv8Service.GetByModelId(makeModelMatch.MMIv8Model.DocumentId);
             if (!mmiEntities.IsSuccess)
                 return mmiEntities;
@@ -563,7 +550,7 @@ namespace MMIv8_Ktype.Core.Services.Mapping
                 if (match.Any())
                     createTasks.Add(this.BulkCreateEntityMatch(match.ToList()));
             }
-            
+
             Task.WaitAll(createTasks.ToArray());
 
             var filter = Builders<MatchEntity>.Filter.Eq(c => c.MatchMakeModelMatchID, makeModelMatch.DocumentId);
@@ -824,10 +811,10 @@ namespace MMIv8_Ktype.Core.Services.Mapping
 
             if (versionResult.IsSuccess && versionResult.Value.Count != 0)
                 return Error.Validation("User.DeletionValidation", $"Cannot Delete user {userName} as it's in use");
-            
+
             if (!versionResult.IsSuccess && versionResult.Error!.Type == ErrorType.NoContent)
                 return await UserService.DeleteByName(userName);
-                
+
             throw new NotImplementedException();
         }
         #endregion

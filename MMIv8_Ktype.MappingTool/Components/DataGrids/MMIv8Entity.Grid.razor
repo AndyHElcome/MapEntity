@@ -19,9 +19,12 @@
 			  SelectedItemChanged="@SelectedItemChanged"
 			  Filter="@Filter"
 			  Sort="@Sort"
-			  StartingPageSize="10">
+			  StartingPageSize="10"
+			  Refresh="RefreshParent"
+			  RefreshGuid="@RefreshGuid"
+			  GridCustomizeCellDisplayText="@((args) =>  columns.Grid_CustomizeCellDisplayText(args))">
 	<Columns>
-		<MMIv8Entity_Columns ShowMatchRefine="true" />
+		<MMIv8Entity_Columns @ref="@columns" ShowMatchRefine="true" />
 	</Columns>
 	
 	<Toolbar>
@@ -47,12 +50,22 @@
 </Generic_Grid>
 
 @code {
-	
+
 	[Parameter] public SourceMMIv8? SelectedItem { get; set; }
 	[Parameter] public EventCallback<SourceMMIv8?> SelectedItemChanged { get; set; }
 
 	public SourceMMIv8FilterRequest Filter { get; set; } = new();
 	[Parameter] public SourceEntitySortRequest<SourceMMIv8> Sort { get; set; } = new();
 
+	[Parameter] public EventCallback<Guid> Refresh { get; set; }
+	[Parameter] public Guid RefreshGuid { get; set; }
+
+	private MMIv8Entity_Columns columns { get; set; }
+
+	protected async Task RefreshParent(Guid refreshGuid)
+	{
+		RefreshGuid = refreshGuid;
+		await Refresh.InvokeAsync(RefreshGuid);
+	}
 }
 

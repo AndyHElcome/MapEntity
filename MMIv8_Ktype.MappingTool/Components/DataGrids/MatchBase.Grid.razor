@@ -25,6 +25,7 @@
 			  Sort="@Sort"
 			  CustomizeElement="Grid_CustomizeElement"
 			  ShowPager="@ShowPager"
+			  ShowToolbar="@ShowToolbar"
 			  ManualData="@ManualData">
 	<Columns>
 		<MatchBase_Columns ShowMatchContexts="@ShowMatchContexts" ShowOverriden="@ShowOverriden" />
@@ -49,7 +50,7 @@
 		}
 	</DetailRows>
 	<Toolbar>
-		<DxToolbar ItemRenderStyleMode="ToolbarRenderStyleMode.Contained">
+		<DxToolbar ItemRenderStyleMode="ToolbarRenderStyleMode.Contained" >
 			<Items>
 				<DxToolbarItem BeginGroup="true" Alignment="ToolbarItemAlignment.Left">
 					<Template Context="toolbar_item_context">
@@ -129,8 +130,9 @@
 
 
 	[Parameter] public List<MatchBase> ManualData { get; set; } = new();
-
+	
 	[Parameter] public bool ShowPager { get; set; } = true;
+	[Parameter] public bool ShowToolbar { get; set; } = true;
 
 	[Parameter] public bool ShowOverriden { get; set; } = false;
 	[Parameter] public bool ShowMatchContexts { get; set; } = true;

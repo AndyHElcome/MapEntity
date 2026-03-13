@@ -37,10 +37,11 @@
 					Text="Fetching Data...">
 
 		<DxGrid @ref="@GGrid"
+			
 				Data="@(Response?.Value?.Documents ?? [])"
 				FooterDisplayMode="GridFooterDisplayMode.Never"
 				ColumnResizeMode="GridColumnResizeMode.NextColumn"
-				CssClass="@(Toolbar is null ? "hide-toolbar" : null)"
+				CssClass="@(showToolbar ? null : "hide-toolbar" )"
 				ShowAllRows="true"
 				AllowSort="false"
 				SelectedDataItem="@SelectedItem"
@@ -51,8 +52,8 @@
 				AllowSelectRowByClick="true"
 				TextWrapEnabled="false"
 				DetailExpandButtonDisplayMode="@(DetailRows is null ? GridDetailExpandButtonDisplayMode.Never : GridDetailExpandButtonDisplayMode.Auto)"
-				
-				>
+				ShowGroupedColumns="@(GridCustomizeCellDisplayText is not null)"
+				CustomizeCellDisplayText="GridCustomizeCellDisplayText">
 			<Columns>
 				@Columns
 			</Columns>
@@ -65,7 +66,7 @@
 		
 
 			<ToolbarTemplate>
-				@if (Toolbar is not null)
+				@if (showToolbar)
 				{
 					@Toolbar
 				}
@@ -96,10 +97,14 @@
 	public IGrid GGrid { get; set; }
 	//TODO Slower when not passed as parameter, might need a preload or change of render mode
 	//[Parameter, EditorRequired] public TEndpoint Endpoints { get; set; }
-	[Parameter, EditorRequired] public TFilter Filter { get; set; }
-	[Parameter, EditorRequired] public TSort Sort { get; set; }
+	[Parameter, EditorRequired] public TFilter? Filter { get; set; } = null;
+	[Parameter, EditorRequired] public TSort? Sort { get; set; } = null;
 	private string? lastFilterHash;
 	private string? lastSortHash;
+
+	[Parameter] public EventCallback<Guid> Refresh { get; set; }
+	[Parameter] public Guid RefreshGuid { get; set; }
+	private Guid? lastRefreshGuid;
 
 	private BasicGetByPageRequest<TItem, TFilter, TSort> GetByPageRequest => new (pagedRequest, Filter, Sort);
 
@@ -107,15 +112,19 @@
 	[Parameter] public RenderFragment? Columns { get; set; }
 	[Parameter] public RenderFragment<GridDetailRowTemplateContext>? DetailRows { get; set; } = null;
 	[Parameter] public RenderFragment? Toolbar { get; set; } = null;
+	[Parameter] public bool ShowToolbar { get; set; } = true;
+	private bool showToolbar => ShowToolbar && Toolbar is not null;
 
 	[Parameter] public List<TItem>? ManualData { get; set; } = null;
 	private List<TItem>? lastManualData { get; set; } = null;
 
-	[Parameter] public int? StartingPageSize { get; set; } = null;
+	[Parameter] public int? StartingPageSize { get; set; } 
 	[Parameter] public bool ShowPager { get; set; } = true;
 	[Parameter] public bool ShowPageSizeSelector { get; set; } = true;
 
 	[Parameter] public GridSelectionMode GridSelectionMode { get; set; } = GridSelectionMode.Single;
+
+	[Parameter]	public Action<GridCustomizeCellDisplayTextEventArgs> GridCustomizeCellDisplayText {get; set; }
 
 	#region Manual Selection
 
@@ -144,7 +153,7 @@
 	#endregion
 
 
-	public TEndpoint Endpoints { get; set; } = new RefitClient(Log.Logger).CreateService<TEndpoint>();
+	[Parameter] public TEndpoint Endpoints { get; set; } = new RefitClient(Log.Logger).CreateService<TEndpoint>();
 	public Models.SerializableResult<PagedResponse<TItem>>? Response { get; set; }
 	public bool loading { get; set; } = true;
 	public bool isError { get; set; } = false;
@@ -154,23 +163,29 @@
 
 	protected override async Task OnParametersSetAsync()
 	{
-		string? currentFilterHash = Filter?.GetCacheKey() ?? null;
+
+		if (loading)
+			return;
+
+		string? currentFilterHash = Filter.GetCacheKey() ?? null;
 		string? currentSortHash = Sort.GetCacheKey() ?? null;
 
-		
 
-		bool manualData = (lastManualData ?? []).SequenceEqual(ManualData ?? []);
 
-		if (currentFilterHash != lastFilterHash || currentSortHash != lastSortHash || !manualData)
+		bool checkManualData = (lastManualData ?? []).SequenceEqual(ManualData ?? []);
+
+		if (currentFilterHash != lastFilterHash || currentSortHash != lastSortHash || !checkManualData || lastRefreshGuid != RefreshGuid)
 		{
 			lastFilterHash = currentFilterHash;
 			lastSortHash = currentSortHash;
 			lastManualData = ManualData;
+			lastRefreshGuid = RefreshGuid;
 			await LoadData();
+			await Refresh.InvokeAsync(RefreshGuid);
 		}
 	}
 
-	async Task LoadData()
+	public async Task LoadData()
 	{
 		try
 		{
@@ -182,6 +197,8 @@
 				Response = Result.Success(new PagedResponse<TItem>(ManualData, ManualData.Count, 1, ManualData.Count));
 				isError = false;
 				loading = false;
+				StateHasChanged();
+				GGrid.AutoFitColumnWidths();
 				return;
 			}
 
@@ -206,6 +223,9 @@
 		{
 			loading = false;
 		}
+		
+		StateHasChanged();
+		GGrid.AutoFitColumnWidths();
 
 	}
 
@@ -230,7 +250,6 @@
 				pagedRequest = new(1, StartingPageSize.Value);
 			}
 			await LoadData();
-			StateHasChanged(); // optional if LoadData() already triggers state changes
 		}
 	}
 

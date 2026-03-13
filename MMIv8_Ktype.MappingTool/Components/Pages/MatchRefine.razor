@@ -9,14 +9,18 @@
 
 
 
-<MMIv8Entity_Grid SelectedItemChanged="@OnMMIv8Changed" />
+<MMIv8Entity_Grid SelectedItemChanged="@OnMMIv8Changed"
+				  RefreshGuid="@RefreshGuid" />
 
 
 @if (SelectedMMIv8Entity is not null)
 {
 	<MatchEntity_Grid ShowPager="true"
+		ShowTecdocPCEntity="true"
 					  Sort="@(new MatchEntitySortRequest() { ScoreSum = MongoDB.Driver.SortDirection.Descending })"
-					  Filter="@Filter" />
+					  Filter="@Filter"
+					  Refresh="RefreshParent"
+					  RefreshGuid="@RefreshGuid" />
 	
 }
 
@@ -27,6 +31,13 @@
 @code {
 	private MatchEntityFilterRequest? Filter { get; set; }
 	private SourceMMIv8? SelectedMMIv8Entity { get; set; } = null;
+
+	[Parameter] public Guid RefreshGuid { get; set; } 
+
+	protected async Task RefreshParent(Guid refreshGuid)
+	{
+		RefreshGuid = refreshGuid;
+	}
 
 	public async Task OnMMIv8Changed(SourceMMIv8? item)
 	{

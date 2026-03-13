@@ -21,20 +21,29 @@
 			  TFilter="MatchEntityFilterRequest"
 			  TSort="MatchEntitySortRequest"
 			  TEndpoint="IMatchEntityEndpoints"
+			  Endpoints="MatchEntityEndpoints"
 			  Filter="@Filter"
 			  Sort="@Sort"
 			  SelectionPredicate="@SelectionPredicate"
 			  CustomizeElement="Grid_CustomizeElement"
 			  ShowPager="@ShowPager"
-			  SelectedItemChanged="@SelectedItemChanged">
+			  SelectedItemChanged="@SelectedItemChanged"
+			  Refresh="RefreshParent"
+			  RefreshGuid="@RefreshGuid"
+			  GridCustomizeCellDisplayText="@Grid_CustomizeCellDisplayText">
 	<Columns>
-		<DxGridDataColumn FieldName=@nameof(MatchEntity.DocumentId) Visible="false"/>				
-		<DxGridBandColumn Caption="@(nameof(MatchEntity.TecDocEntity))">
+		<DxGridDataColumn FieldName=@nameof(MatchEntity.DocumentId) Visible="false" />
+		<DxGridBandColumn Caption="@(nameof(MatchEntity.TecDocEntity))" Visible="@ShowTecdocPCEntity">
 			<Columns>
-				<TecDocPCEntity_Columns Prefix=@nameof(MatchEntity.TecDocEntity) />
+				<TecDocPCEntity_Columns @ref="@tdColumns" Prefix=@nameof(MatchEntity.TecDocEntity) Visible="@ShowTecdocPCEntity" />
 			</Columns>
 		</DxGridBandColumn>
-		<DxGridDataColumn FieldName=@nameof(MatchEntity.ScoreSum) />
+		<DxGridBandColumn Caption="@(nameof(MatchEntity.MMIv8Entity))" Visible="@ShowMMIv8Entity">
+			<Columns>
+				<MMIv8Entity_Columns @ref="@mmiColumns" Prefix=@nameof(MatchEntity.MMIv8Entity) Visible="@ShowMMIv8Entity" />
+			</Columns>
+		</DxGridBandColumn>
+		<DxGridDataColumn FieldName=@nameof(MatchEntity.ScoreSum)/>
 		<DxGridDataColumn FieldName=@nameof(MatchEntity.Matched)>
 			<CellDisplayTemplate Context="displayContext">
 				@{
@@ -42,11 +51,12 @@
 					var title = item.MatchDetail;
 					var value = item.Matched;
 				}
-				<DxCheckBox Checked="@value" ReadOnly="true" title="@title"/>
+				<DxCheckBox Checked="@value" ReadOnly="false" title="@title" CheckedChanged="@((bool match) => UpdateMatched(match, item))" />
 			</CellDisplayTemplate>
+
 		</DxGridDataColumn>
 		<DxGridDataColumn FieldName=@nameof(MatchEntity.MatchDetail) Visible="false" />
-		<MatchResult_Columns Prefix=@nameof(MatchEntity.MatchResult) />
+		<MatchResult_Columns Prefix=@nameof(MatchEntity.MatchResult) UpdateFailed="@((args) => UpdateFailed(args.Fail, args.MatchEntity))" />
 		<StatusHistory_Columns Prefix="@nameof(MatchEntity.Status)" />
 	</Columns>
 	<DetailRows Context="dcontext">
@@ -57,13 +67,29 @@
 		}
 		else
 		{
-			<MatchBase_Grid ShowPager="false" ShowMatchContexts="false" ShowOverriden="true" ManualData="@(((MMIv8_Ktype.Models.Collections.MatchEntity?)dcontext?.DataItem)?.EntityComparison.Values.ToList())" />
+			<MatchBase_Grid ShowToolbar="false" ShowPager="false" ShowMatchContexts="false" ShowOverriden="true" ManualData="@(((MMIv8_Ktype.Models.Collections.MatchEntity?)dcontext?.DataItem)?.EntityComparison.Values.ToList())" />
 		}
 
 	</DetailRows>
+	<Toolbar>
+		<DxToolbar ItemRenderStyleMode="ToolbarRenderStyleMode.Contained">
+			<Items>
+				<DxToolbarItem Text="Checked Failed" Alignment="ToolbarItemAlignment.Right" Click="CheckedFailed" BeginGroup="true" />
+			</Items>
+		</DxToolbar>
+	</Toolbar>
 </Generic_Grid>
 
 @code {
+
+	private TecDocPCEntity_Columns tdColumns { get; set; }
+	private MMIv8Entity_Columns mmiColumns { get; set; }
+
+	public void Grid_CustomizeCellDisplayText(GridCustomizeCellDisplayTextEventArgs e)
+	{
+		tdColumns.Grid_CustomizeCellDisplayText(e);
+		mmiColumns.Grid_CustomizeCellDisplayText(e);
+	}
 
 	[Parameter] public MatchEntity? SelectedItem { get; set; }
 	[Parameter] public EventCallback<MatchEntity?> SelectedItemChanged { get; set; }
@@ -71,13 +97,45 @@
 	[Parameter] public MatchEntityFilterRequest Filter { get; set; } = new();
 	[Parameter] public MatchEntitySortRequest Sort { get; set; } = new();
 
+	public IMatchEntityEndpoints MatchEntityEndpoints { get; set; } = new RefitClient(Log.Logger).CreateService<IMatchEntityEndpoints>();
 
 	[Parameter] public bool ShowPager { get; set; } = true;
+
+	[Parameter] public bool ShowMMIv8Entity { get; set; } = false;
+	[Parameter] public bool ShowTecdocPCEntity { get; set; } = false;
 
 	[Parameter] public GridSelectionMode GridSelectionMode { get; set; } = GridSelectionMode.Single;
 	[Parameter] public Expression<Func<MatchEntity, bool>>? SelectionPredicate { get; set; }
 
+	[Parameter] public EventCallback<Guid> Refresh { get; set; }
+	[Parameter] public Guid RefreshGuid { get; set; }
 
+	protected async Task RefreshParent(Guid refreshGuid)
+	{
+		RefreshGuid = refreshGuid;
+		await Refresh.InvokeAsync(RefreshGuid);
+	}
+
+	async Task UpdateMatched(bool match, MatchEntity matchEntity)
+	{
+		await MatchEntityEndpoints.UpdateMatchedFlag(new(matchEntity.TecDocEntity.ExternalId, matchEntity.MMIv8Entity.ExternalId, match, "Matched in MatchRefine"));
+		RefreshGuid = Guid.CreateVersion7();
+	}
+
+	async Task UpdateFailed(bool fail, MatchEntity matchEntity)
+	{
+		//TODO improve so that the user can leave a detail
+		await MatchEntityEndpoints.UpdateFailedFlag(new(matchEntity.TecDocEntity.ExternalId, matchEntity.MMIv8Entity.ExternalId, fail, "Failed in MatchRefine"));
+		RefreshGuid = Guid.CreateVersion7();
+	}
+
+	async Task CheckedFailed()
+	{
+		var newfilter = Filter.Clone();
+		newfilter.IsFailed = true;
+		await MatchEntityEndpoints.UpdateStatuses(new(Models.Status.Status.Checked, "Matched in MatchRefine CheckedFailed", newfilter));
+		RefreshGuid = Guid.CreateVersion7();
+	}
 
 	void Grid_CustomizeElement(GridCustomizeElementEventArgs e)
 	{

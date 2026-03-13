@@ -3,28 +3,37 @@
 @if (Visible)
 {
 	<DxGridDataColumn FieldName=@GetFieldName(nameof(SourceMMIv8.DocumentId)) Caption="DocumentId" Visible="false" />
-	<DxGridDataColumn FieldName=@GetFieldName(nameof(SourceMMIv8.MMI_V8_Key)) Caption="MMIv8Key" DisplayFormat="0" />
-	<DxGridDataColumn FieldName=@GetFieldName(nameof(SourceMMIv8.Manufacturer)) Caption="Manufacturer" />
-	<DxGridDataColumn FieldName=@GetFieldName(nameof(SourceMMIv8.Model)) Caption="Model" />
-	<DxGridDataColumn FieldName=@GetFieldName(nameof(SourceMMIv8.SubModel)) Caption="SubModel" />
-	<DxGridDataColumn FieldName=@GetFieldName(nameof(SourceMMIv8.Mark_or_Series)) Caption="Mark/Series" />
-	<DxGridDataColumn FieldName=@GetFieldName(nameof(SourceMMIv8.Token_Identifier)) Caption="Identifier" />
+	<DxGridDataColumn FieldName=@GetFieldName(nameof(SourceMMIv8.MMI_V8_Key)) Caption="MMIv8Key" DisplayFormat="0"  />
+
+	@* <DxGridDataColumn FieldName=@GetFieldName(nameof(SourceMMIv8.SourceEntityModelHash)) Caption="GModel" Visible="false" GroupIndex="0" GroupInterval="GridColumnGroupInterval.DisplayText" /> *@
+
+	<DxGridDataColumn FieldName=@GetFieldName(nameof(SourceMMIv8.Manufacturer)) Caption="Manufacturer"  />
+	
+	<DxGridDataColumn FieldName=@GetFieldName(nameof(SourceMMIv8.Model)) Caption="Model" Visible="false" />
+	<DxGridDataColumn FieldName=@GetFieldName(nameof(SourceMMIv8.SubModel)) Caption="SubModel" Visible="false" />
+	<DxGridDataColumn FieldName=@GetFieldName(nameof(SourceMMIv8.Mark_or_Series)) Caption="Mark/Series" Visible="false" />
+	<DxGridDataColumn FieldName=@GetFieldName(nameof(SourceMMIv8.Token_Identifier)) Caption="Identifier" Visible="false" />
+
+	<DxGridDataColumn FieldName="ModelInfo" Caption="Model Info"
+					  UnboundType="GridUnboundColumnType.String"
+					  UnboundExpression=@($"[{GetFieldName(nameof(SourceMMIv8.Model))}] + ' ' +[{GetFieldName(nameof(SourceMMIv8.SubModel))}] + ' ' +[{GetFieldName(nameof(SourceMMIv8.Mark_or_Series))}] + ' ' +[{GetFieldName(nameof(SourceMMIv8.Token_Identifier))}]") />
+
 	<DxGridDataColumn FieldName=@GetFieldName(nameof(SourceMMIv8.DateRange)) Caption="Dates" />
-	<DxGridDataColumn FieldName=@GetFieldName(nameof(SourceMMIv8.Engine_Size)) Caption="Litre" />
-	<DxGridDataColumn FieldName=@GetFieldName(nameof(SourceMMIv8.Cylinders)) Caption="Cyl" />
-	<DxGridDataColumn FieldName=@GetFieldName(nameof(SourceMMIv8.Cylinder_Layout)) Caption="Layout" />
-	<DxGridDataColumn FieldName=@GetFieldName(nameof(SourceMMIv8.Cam)) Caption="Cam" />
-	<DxGridDataColumn FieldName=@GetFieldName(nameof(SourceMMIv8.Valve)) Caption="Valve" />
 	<DxGridDataColumn FieldName=@GetFieldName(nameof(SourceMMIv8.Body)) Caption="Body" />
-	<DxGridDataColumn FieldName=@GetFieldName(nameof(SourceMMIv8.Doors)) Caption="Doors" />
-	<DxGridDataColumn FieldName=@GetFieldName(nameof(SourceMMIv8.Transmission)) Caption="Transmission" />
-	<DxGridDataColumn FieldName=@GetFieldName(nameof(SourceMMIv8.Gears)) Caption="Gears" />
-	<DxGridDataColumn FieldName=@GetFieldName(nameof(SourceMMIv8.Exact_CC)) Caption="CC" />
 	<DxGridDataColumn FieldName=@GetFieldName(nameof(SourceMMIv8.Drive)) Caption="Drive" />
 	<DxGridDataColumn FieldName=@GetFieldName(nameof(SourceMMIv8.Fuel)) Caption="Fuel" />
-	<DxGridDataColumn FieldName=@GetFieldName(nameof(SourceMMIv8.BHP)) Caption="BHP" />
+	<DxGridDataColumn FieldName=@GetFieldName(nameof(SourceMMIv8.Engine_Size)) Caption="Litre" />
 	<DxGridDataColumn FieldName=@GetFieldName(nameof(SourceMMIv8.KW)) Caption="KW" />
+	<DxGridDataColumn FieldName=@GetFieldName(nameof(SourceMMIv8.BHP)) Caption="BHP" />
+	<DxGridDataColumn FieldName=@GetFieldName(nameof(SourceMMIv8.Exact_CC)) Caption="CC" />
+	<DxGridDataColumn FieldName=@GetFieldName(nameof(SourceMMIv8.Cylinders)) Caption="Cyl" />
+	<DxGridDataColumn FieldName=@GetFieldName(nameof(SourceMMIv8.Valve)) Caption="Valve" />
 	<DxGridDataColumn FieldName=@GetFieldName(nameof(SourceMMIv8.Engine_Code)) Caption="Engine" />
+	<DxGridDataColumn FieldName=@GetFieldName(nameof(SourceMMIv8.Doors)) Caption="Doors" />
+	<DxGridDataColumn FieldName=@GetFieldName(nameof(SourceMMIv8.Cylinder_Layout)) Caption="Layout" />
+	<DxGridDataColumn FieldName=@GetFieldName(nameof(SourceMMIv8.Cam)) Caption="Cam" />
+	<DxGridDataColumn FieldName=@GetFieldName(nameof(SourceMMIv8.Transmission)) Caption="Transmission" />
+	<DxGridDataColumn FieldName=@GetFieldName(nameof(SourceMMIv8.Gears)) Caption="Gears" />
 
 	<StatusHistory_Columns Prefix="@GetFieldName(nameof(SourceMMIv8.Status))" />
 
@@ -38,4 +47,17 @@
 	[Parameter] public bool ShowMatchRefine { get; set; } = false;
 	[Parameter] public bool Visible { get; set; } = true;
 	private string GetFieldName(string field) => Prefix == string.Empty ? field : $"{Prefix}.{field}";
+
+
+
+	public void Grid_CustomizeCellDisplayText(GridCustomizeCellDisplayTextEventArgs e)
+	{
+		if (e.FieldName == GetFieldName(nameof(SourceMMIv8.SourceEntityModelHash)))
+		{
+			var make = e.GetRowValue(GetFieldName(nameof(SourceMMIv8.Manufacturer)));
+			var model = e.GetRowValue(GetFieldName(nameof(SourceMMIv8.Model)));
+			
+			e.DisplayText = $"{make} {model}";
+		}
+	}
 }

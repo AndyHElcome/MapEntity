@@ -4,25 +4,35 @@
 {
 	<DxGridDataColumn FieldName=@GetFieldName(nameof(SourceTecDocPC.DocumentId)) Caption="DocumentId" Visible="false" />
 	<DxGridDataColumn FieldName=@GetFieldName(nameof(SourceTecDocPC.KTypNr)) Caption="KTypNr"  DisplayFormat="0"/>
+
+	@* 	<DxGridDataColumn FieldName=@GetFieldName(nameof(SourceTecDocPC.SourceEntityModelHash)) Caption="Model Info" GroupInterval="GridColumnGroupInterval.DisplayText" /> *@
+
+
 	<DxGridDataColumn FieldName=@GetFieldName(nameof(SourceTecDocPC.Make)) Caption="Make" />
-	<DxGridDataColumn FieldName=@GetFieldName(nameof(SourceTecDocPC.Token_Model)) Caption="Model" />
-	<DxGridDataColumn FieldName=@GetFieldName(nameof(SourceTecDocPC.Token_Type)) Caption="Type" />
-	<DxGridDataColumn FieldName=@GetFieldName(nameof(SourceTecDocPC.SalesDesc)) Caption="SalesDesc" />
-	<DxGridDataColumn FieldName=@GetFieldName(nameof(SourceTecDocPC.ModelGeneration)) Caption="ModelGeneration" />
-	<DxGridDataColumn FieldName=@GetFieldName(nameof(SourceTecDocPC.TypeDesc)) Caption="TypeDesc" />
+
+	<DxGridDataColumn FieldName=@GetFieldName(nameof(SourceTecDocPC.SalesDesc)) Caption="SalesDesc" Visible="false" />
+	<DxGridDataColumn FieldName=@GetFieldName(nameof(SourceTecDocPC.Token_Model)) Caption="Model" Visible="false" />
+	<DxGridDataColumn FieldName=@GetFieldName(nameof(SourceTecDocPC.ModelGeneration)) Caption="ModelGeneration" Visible="false" />
+	<DxGridDataColumn FieldName=@GetFieldName(nameof(SourceTecDocPC.Token_Type)) Caption="Type" Visible="false" />
+	<DxGridDataColumn FieldName=@GetFieldName(nameof(SourceTecDocPC.TypeDesc)) Caption="TypeDesc" Visible="false" />
+
+	<DxGridDataColumn FieldName="ModelInfo" Caption="Model Info"
+					  UnboundType="GridUnboundColumnType.String"
+					  UnboundExpression=@($"[{GetFieldName(nameof(SourceTecDocPC.SalesDesc))}] + ' ' + [{GetFieldName(nameof(SourceTecDocPC.Token_Model))}] + ' ' +[{GetFieldName(nameof(SourceTecDocPC.ModelGeneration))}] + ' ' +[{GetFieldName(nameof(SourceTecDocPC.Token_Type))}] + ' ' +[{GetFieldName(nameof(SourceTecDocPC.TypeDesc))}]") />
+
 	<DxGridDataColumn FieldName=@GetFieldName(nameof(SourceTecDocPC.DateRange)) Caption="Dates" />
-	<DxGridDataColumn FieldName=@GetFieldName(nameof(SourceTecDocPC.KW)) Caption="KW" />
-	<DxGridDataColumn FieldName=@GetFieldName(nameof(SourceTecDocPC.PS)) Caption="PS" />
-	<DxGridDataColumn FieldName=@GetFieldName(nameof(SourceTecDocPC.Calc_BHP)) Caption="BHP" />
+	<DxGridDataColumn FieldName=@GetFieldName(nameof(SourceTecDocPC.BodyType)) Caption="Body" />
+	<DxGridDataColumn FieldName=@GetFieldName(nameof(SourceTecDocPC.Drive)) Caption="Drive" />
+	<DxGridDataColumn FieldName=@GetFieldName(nameof(SourceTecDocPC.FuelType)) Caption="Fuel" />
 	<DxGridDataColumn FieldName=@GetFieldName(nameof(SourceTecDocPC.Litre)) Caption="Litre" />
+	<DxGridDataColumn FieldName=@GetFieldName(nameof(SourceTecDocPC.KW)) Caption="KW" />
+	<DxGridDataColumn FieldName=@GetFieldName(nameof(SourceTecDocPC.PS)) Caption="PS" Visible="false" />
+	<DxGridDataColumn FieldName=@GetFieldName(nameof(SourceTecDocPC.Calc_BHP)) Caption="BHP" />
+	<DxGridDataColumn FieldName=@GetFieldName(nameof(SourceTecDocPC.CCTech)) Caption="CC" />
 	<DxGridDataColumn FieldName=@GetFieldName(nameof(SourceTecDocPC.Cyl)) Caption="Cyl" />
 	<DxGridDataColumn FieldName=@GetFieldName(nameof(SourceTecDocPC.Calc_Valve)) Caption="Valve" />
-	<DxGridDataColumn FieldName=@GetFieldName(nameof(SourceTecDocPC.Drive)) Caption="Drive" />
-	<DxGridDataColumn FieldName=@GetFieldName(nameof(SourceTecDocPC.FuelType)) Caption="FuelType" />
-	<DxGridDataColumn FieldName=@GetFieldName(nameof(SourceTecDocPC.BodyType)) Caption="BodyType" />
-	<DxGridDataColumn FieldName=@GetFieldName(nameof(SourceTecDocPC.CCTech)) Caption="CC" />
-	<DxGridDataColumn FieldName=@GetFieldName(nameof(SourceTecDocPC.Door)) Caption="Door" />
 	<DxGridDataColumn FieldName=@GetFieldName(nameof(SourceTecDocPC.LinkedEngineCodes)) Caption="Engines" />
+	<DxGridDataColumn FieldName=@GetFieldName(nameof(SourceTecDocPC.Door)) Caption="Doors" />
 	<DxGridDataColumn FieldName=@GetFieldName(nameof(SourceTecDocPC.Region)) Caption="Region" />
 
 	<StatusHistory_Columns Prefix="@GetFieldName(nameof(SourceMMIv8.Status))" />
@@ -39,4 +49,19 @@
 	[Parameter] public bool ShowMatchRefine { get; set; } = false;
 	[Parameter] public bool Visible { get; set; } = true;
 	private string GetFieldName(string field) => Prefix == string.Empty ? field : $"{Prefix}.{field}";
+
+
+
+	public void Grid_CustomizeCellDisplayText(GridCustomizeCellDisplayTextEventArgs e)
+	{
+		if (e.FieldName == GetFieldName(nameof(SourceTecDocPC.SourceEntityModelHash)))
+		{
+			var salesDesc = e.GetRowValue(GetFieldName(nameof(SourceTecDocPC.SalesDesc)));
+			var model = e.GetRowValue(GetFieldName(nameof(SourceTecDocPC.Token_Model)));
+			var modelGen = e.GetRowValue(GetFieldName(nameof(SourceTecDocPC.ModelGeneration)));
+			var type = e.GetRowValue(GetFieldName(nameof(SourceTecDocPC.Token_Type)));
+			var typeDesc = e.GetRowValue(GetFieldName(nameof(SourceTecDocPC.TypeDesc)));
+			e.DisplayText = $"{salesDesc} {model} {modelGen} {type} {typeDesc}";
+		}
+	}
 }
